@@ -1,0 +1,17 @@
+{
+  "references": {
+    "IRMNGTaxonomy": {
+      "title": "Interim Register of Marine and Nonmarine Genera (IRMNG), from CSIRO.",
+      "url": "http://www.cmar.csiro.au/datacentre/irmng/"
+    }
+  },
+  "resources" : [
+    {
+      "resource_type": "external taxonomy",
+      "source": "IRMNG",
+      "references": ["IRMNGTaxonomy"],
+      "id": "irmng",
+      "maintainer": "Tony Rees"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "references": {
+    "KirkIF": {
+      "str": "Index Fungorum. Download location: derived from database query result files provided by Paul Kirk, 7 April 2014 (personal communication). Web site: http://www.indexfungorum.org/. "
+    }
+  },
+  "resources" : [
+    {
+      "resource_type": "external taxonomy",
+      "source": "Index Fungorum",
+      "id": "if",
+      "references": ["KirkIF"]
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "resources" : [
+    {
+      "id": "ncbi-20161109",
+      "inherits_from": "ncbi",
+      "schema": "NCBI taxonomy",
+      "date": "2016-11-09",
+      "format":"tar+gzip",
+      "url": "https://files.opentreeoflife.org/ncbi/ncbi-20161109/ncbi-20161109.tgz",
+      "copy_status": "snapshot"
+    },
+    {
+      "id": "gbif-20160729",
+      "inherits_from": "gbif",
+      "date": "2016-07-29",
+      "format":"zip",
+      "url": "http://files.opentreeoflife.org/gbif/gbif-20160729/gbif-20160729.zip",
+      "copy_status": "snapshot"
+    },
+    {
+      "id": "irmng-20140131",
+      "inherits_from": "irmng",
+      "date": "2014-01-31",
+      "format":"zip",
+      "url": "http://purl.org/opentree/ott/ott2.8/inputs/IRMNG_DWC-2014-01-30.zip",
+      "copy_status": "snapshot"
+    },
+    {
+      "id": "silva_115",
+      "inherits_from": "silva",
+      "date": "2013-09-16",
+      "format":"tar+gzip",
+      "url": "ftp://ftp.arb-silva.de/release_115/Exports/SSURef_NR99_115_tax_silva.fasta.tgz",
+      "copy_status": "canonical",
+      "version": "115"
+    },
+    {
+      "id": "if-20140407",
+      "inherits_from": "if",
+      "schema": "OTT",
+      "date": "2014-04-07",
+      "format":"tar+gzip",
+      "url": "http://files.opentreeoflife.org/fung/fung-9/fung-9-ot.tgz",
+      "copy_status": "snapshot"
+    },
+    {
+      "id": "ott-id-list-20161118",
+      "url": "http://files.opentreeoflife.org/idlist/idlist-20161118/by_qid.csv.gz",
+      "resource_type": "open tree taxonomy idlist"
+    },
+    {
+      "resource_type": "open tree taxonomy",
+      "id": "ott3.0draft6",
+      "aliases": [
+        "ott3.0"
+      ],
+      "date": "2016-02-26",
+      "format":"tar+gzip",
+      "url": "http://files.opentreeoflife.org/ott/ott3.0/ott3.0.tgz",
+      "inputs": [
+        {
+          "type":"amendments",
+          "SHA": "bcafdea7f2e9231274cae2df2beed7d732ca46c5",
+          "github_repository": "OpenTreeOfLife/amendments-1"
+        },
+        "h2007",
+        "silva_115",
+        "if-20140407",
+        "S2010",
+        "worms-1",
+        "ncbi-20161109",
+        "gbif-20160729",
+        "irmng-20140131",
+        "ott-id-list-20161118"
+      ],
+      "copy_status": "canonical",
+      "preceded_by": "ott2.10"
+    }
+  ],
+  "ott_versions": [
+    "ott3.0"
+  ]
+}

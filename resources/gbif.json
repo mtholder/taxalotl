@@ -1,0 +1,16 @@
+{
+  "references": {
+    "GBIFTaxonomy": {
+      "str": "GBIF Backbone Taxonomy, from the Global Biodiversity Information facility."
+    }
+  },
+  "resources" : [
+    {
+      "resource_type": "external taxonomy",
+      "source": "GBIF",
+      "references": ["GBIFTaxonomy"],
+      "latest_download_url": "http://www.gbif.org/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c",
+      "id": "gbif"
+    }
+  ]
+}
