@@ -65,7 +65,15 @@ def unpack_resources(taxalotl_config, id_list):
         else:
             rw.unpack(taxalotl_config)
 
-
+def main(args):
+    taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
+    if args.which == 'download':
+        download_resources(taxalotl_config, args.resources)
+    elif args.which == 'status':
+        status_of_resources(taxalotl_config, args.resources)
+    elif args.which == 'unpack':
+        unpack_resources(taxalotl_config, args.resources)
+    
 if __name__ == "__main__":
     import argparse
     description = "The main CLI for taxalotl"
@@ -90,10 +98,3 @@ if __name__ == "__main__":
     unpack_p.set_defaults(which="unpack")
 
     args = p.parse_args()
-    taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
-    if args.which == 'download':
-        download_resources(taxalotl_config, args.resources)
-    elif args.which == 'status':
-        status_of_resources(taxalotl_config, args.resources)
-    elif args.which == 'unpack':
-        unpack_resources(taxalotl_config, args.resources)

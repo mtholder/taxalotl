@@ -37,6 +37,7 @@ def write_resources_file(obj, fp):
     with codecs.open(fp, 'w', encoding='utf-8') as outp:
         json.dump(obj, outp, indent=2, sort_keys=True, separators=(',', ': '))
 
+
 _known_res_attr = frozenset(['aliases',
                              'copy_status',
                              'date',
@@ -54,6 +55,8 @@ _known_res_attr = frozenset(['aliases',
                              'url',
                              'version'
                              ])
+
+
 class _ResWrapper(object):
     def __init__(self, obj, parent=None, refs=None):
         for k in _known_res_attr:
@@ -74,8 +77,10 @@ class _ResWrapper(object):
             x = [self.references] if not isinstance(self.references, list) else self.references
             for r in x:
                 if r not in refs:
-                    _LOG.warn("reference '{}' in resource '{}' was not recognized.".format(r, self.id))
+                    _LOG.warn(
+                        "reference '{}' in resource '{}' was not recognized.".format(r, self.id))
         self.config = None
+
     def get_leaf_obj(self):
         if self.children:
             return self.children[-1].get_leaf_obj()
@@ -102,11 +107,9 @@ class _ResWrapper(object):
         dfp = self.download_filepath(config)
         return dfp is not None and os.path.exists(dfp)
 
-
     def has_been_unpacked(self, config=None):
         dfp = self.unpacked_filepath(config)
         return dfp is not None and os.path.exists(dfp)
-
 
     def download(self, config=None):
         dfp = self.download_filepath(config)
@@ -122,7 +125,8 @@ class _ResWrapper(object):
             gunzip_and_untar(dfp, ufp)
             _LOG.debug("gunzip_and_untar from {} to {} completed.".format(dfp, ))
         else:
-            raise NotImplementedError("Unpacking from {} format is not currently supported".format(self.format))
+            raise NotImplementedError(
+                "Unpacking from {} format is not currently supported".format(self.format))
 
     def write_status(self, out, config, indent=''):
         dfp = self.download_filepath(config)
@@ -150,28 +154,36 @@ class _ResWrapper(object):
 
 class ExternalTaxonomyWrapper(_ResWrapper):
     resource_type = 'external taxonomy'
+
     def __init__(self, obj, parent=None, refs=None):
         _ResWrapper.__init__(self, obj, parent=parent, refs=refs)
-        #print("ET obj = {}".format(obj))
+        # print("ET obj = {}".format(obj))
+
 
 class OTTaxonomyWrapper(_ResWrapper):
     resource_type = 'open tree taxonomy'
+
     def __init__(self, obj, parent=None, refs=None):
         _ResWrapper.__init__(self, obj, parent=parent, refs=refs)
 
 
 class OTTaxonomyIdListWrapper(_ResWrapper):
     resource_type = 'open tree taxonomy idlist'
+
     def __init__(self, obj, parent=None, refs=None):
         _ResWrapper.__init__(self, obj, parent=parent, refs=refs)
 
+
 _wrapper_types = [OTTaxonomyWrapper, ExternalTaxonomyWrapper, OTTaxonomyIdListWrapper, ]
+
+
 def get_resource_wrapper(raw, refs, parent=None):
     rt = raw["resource_type"].lower()
     for wt in _wrapper_types:
         if rt == wt.resource_type:
             return wt(raw, parent=parent, refs=refs)
     raise RuntimeError("resource_type '{}' not recognized".format(rt))
+
 
 def get_subclass_resource_wrapper(raw, known_dict, refs):
     par_key = raw["inherits_from"]
@@ -197,7 +209,8 @@ def _wrap_resources(res, refs):
         needed = set(by_par.keys())
         inter = curr_key_set.intersection(needed)
         if not inter:
-            raise RuntimeError("Could not find the base class resources '{}'".format("', '").join(by_par.keys()))
+            raise RuntimeError(
+                "Could not find the base class resources '{}'".format("', '").join(by_par.keys()))
         for k in inter:
             rk_v_list = by_par[k]
             del by_par[k]
@@ -212,6 +225,7 @@ def _wrap_resources(res, refs):
                 aliases[a] = w
     rd.update(aliases)
     return rd, refs
+
 
 class ResourceManager(object):
     _MERGED_FILENAME = ".merged.json"

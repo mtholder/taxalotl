@@ -45,16 +45,21 @@ connecting these to there parents
 -incertae sedis
 """
 
+
 def download_and_unpack(url, parent_dir):
     pass
+
+
 def main(raw_ncbi_dir, out_dir, download_url, download=False):
     assure_dir_exists(out_dir)
     if download:
         download_and_unpack(download_url, raw_ncbi_dir)
     print(raw_ncbi_dir, download)
 
+
 if __name__ == "__main__":
     import argparse
+
     description = "Writes an Open Tree interim taxonomy formatted version fo NCBI's taxonomy"
     p = argparse.ArgumentParser(description=description)
     p.add_argument("--download", action="store_true", default=False,
@@ -64,7 +69,7 @@ if __name__ == "__main__":
     p.add_argument("--out-dir", type=str,
                    help="Path to will hold the OT form of the taxonomy (default from config)")
     p.add_argument("--skip-file", type=str, required=False,
-                    help="Path to will hold the OT form of the taxonomy.")
+                   help="Path to will hold the OT form of the taxonomy.")
     p.add_argument("--url", type=str, help="URL to download the raw taxonomy from.")
     p.add_argument("--resources-dir", type=str, help="the resources directory (optional)")
     p.add_argument("--config", type=str, help="the taxalotl.conf filepath (optional)")

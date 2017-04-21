@@ -5,11 +5,13 @@ from taxalotl.resource_manager import ResourceManager
 
 import os
 
+
 def _none_for_missing_config_get(config, section, option, default=None):
     try:
         return config.get(section, option)
     except:
         return default
+
 
 class TaxalotlConfig(object):
     def __init__(self,
@@ -28,7 +30,9 @@ class TaxalotlConfig(object):
                 if os.path.exists(home_loc):
                     filepath = home_loc
         if filepath is None:
-            raise ValueError("filepath to taxalotl.conf must be provided (or it must be in the current dir, or ~/.taxalotl).")
+            m = "filepath to taxalotl.conf must be provided (or it must be in the current dir, " \
+                "or ~/.taxalotl)."
+            raise ValueError(m)
         if not os.path.isfile(filepath):
             raise ValueError('No config file found at "{}"'.format(filepath))
         self._filepath = filepath
@@ -59,9 +63,11 @@ class TaxalotlConfig(object):
     def resources_mgr(self):
         if self._resources_mgr is None:
             if self.resources_dir is None:
-                raise RuntimeError("The resources dir must be provided in the config file or the current dir")
+                raise RuntimeError(
+                    "The resources dir must be provided in the config file or the current dir")
             if not os.path.isdir(self.resources_dir):
-                raise RuntimeError('"{}" is not an existing resources dir.'.format(self.resources_dir))
+                raise RuntimeError(
+                    '"{}" is not an existing resources dir.'.format(self.resources_dir))
             self._resources_mgr = ResourceManager(self.resources_dir)
             for v in self._resources_mgr.resources.values():
                 v.config = self
