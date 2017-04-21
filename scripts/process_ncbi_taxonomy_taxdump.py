@@ -67,6 +67,8 @@ if __name__ == "__main__":
     p.add_argument("--url", type=str, help="URL to download the raw taxonomy from.")
     p.add_argument("--resources-dir", type=str, help="the resources directory (optional)")
     args = p.parse_args()
+    if not args.resources_dir and os.path.exists('taxalotl') and os.path.exists('resources'):
+        args.resources_dir = 'resources'
     if args.resources_dir:
         cfg = ResourceManager(args.resources_dir)
         if not args.url:
