@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import sys
-import os
 from taxalotl import TaxalotlConfig
 def main(taxalotl_config):
     rm = taxalotl_config.resources_mgr

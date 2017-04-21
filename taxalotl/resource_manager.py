@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from peyotl import get_logger
+from peyotl import get_logger, download_large_file
 import codecs
 import json
 import os
@@ -63,6 +63,7 @@ class _ResWrapper(object):
         self.parent = parent
         self.children = []
         if self.parent:
+            parent.children.append(self)
             for k in _known_res_attr:
                 pv = getattr(parent, k, None)
                 if obj.get(k) is None and pv is not None:
@@ -73,16 +74,42 @@ class _ResWrapper(object):
             for r in x:
                 if r not in refs:
                     _LOG.warn("reference '{}' in resource '{}' was not recognized.".format(r, self.id))
-
-    def download_filepath(self, config):
+        self.config = None
+    def get_leaf_obj(self):
+        if self.children:
+            return self.children[-1].get_leaf_obj()
+        return self
+    def download_filepath(self, config=None):
         if self.format is None or self.url is None:
             return None
         fn = os.path.split(self.url)[-1]
-        return os.path.join(config.raw_downloads_dir, fn)
+        c = config if config else self.config
+        return os.path.join(c.raw_downloads_dir, fn)
+    @property
+    def is_abstract(self):
+        try:
+            return self.download_filepath() is None
+        except:
+            return True
+    def has_been_downloaded(self, config=None):
+        dfp = self.download_filepath(config)
+        return dfp is not None and os.path.exists(dfp)
+    def download(self, config=None):
+        dfp = self.download_filepath(config)
+        _LOG.debug("Starting download from {} to {}".format(self.url, dfp))
+        download_large_file(self.url, dfp)
+        _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
+
     def write_status(self, out, config, indent=''):
         dfp = self.download_filepath(config)
         if dfp is None:
-            out.write("{}: {}. {}. This is a class of resource, not a downloadable artifact.\n".format(self.id, self.resource_type, self.source))
+            lo = self.get_leaf_obj()
+            if lo == self:
+                suff = ''
+            else:
+                suff = ' the most recent version appears to be {}'.format(lo.id)
+            template = "{}: {}. {}. This is a class of resource, not a downloadable artifact{}.\n"
+            out.write(template.format(self.id, self.resource_type, self.source, suff))
             return
         out.write('{}:\n{}{}: {}'.format(self.id, indent, self.resource_type, self.source))
         if self.version:

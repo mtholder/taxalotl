@@ -63,4 +63,6 @@ class TaxalotlConfig(object):
             if not os.path.isdir(self.resources_dir):
                 raise RuntimeError('"{}" is not an existing resources dir.'.format(self.resources_dir))
             self._resources_mgr = ResourceManager(self.resources_dir)
+            for v in self._resources_mgr.resources.values():
+                v.config = self
         return self._resources_mgr

@@ -16,7 +16,7 @@ from __future__ import print_function
 #  - change skipids from list to dictionary for speed
 import sys
 import os
-from taxalotl import ResourceManager
+from taxalotl import ResourceManager, TaxalotlConfig
 from peyotl.utility import assure_dir_exists, download_large_file
 from collections import Counter
 
@@ -67,11 +67,9 @@ if __name__ == "__main__":
                     help="Path to will hold the OT form of the taxonomy.")
     p.add_argument("--url", type=str, help="URL to download the raw taxonomy from.")
     p.add_argument("--resources-dir", type=str, help="the resources directory (optional)")
-    p.add_argument("--resources-dir", type=str, help="the taxalotl.conf filepath (optional)")
+    p.add_argument("--config", type=str, help="the taxalotl.conf filepath (optional)")
     args = p.parse_args()
-    if not args.resources_dir:
-        os.path.exists('taxalotl') and os.path.exists('resources'):
-        args.resources_dir = 'resources'
+    tc = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
     if args.resources_dir:
         cfg = ResourceManager(args.resources_dir)
         if not args.url:

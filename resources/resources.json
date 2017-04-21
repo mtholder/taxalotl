@@ -6,7 +6,7 @@
       "schema": "NCBI taxonomy",
       "date": "2016-11-09",
       "format":"tar+gzip",
-      "url": "https://files.opentreeoflife.org/ncbi/ncbi-20161109/ncbi-20161109.tgz",
+      "url": "http://files.opentreeoflife.org/ncbi/ncbi-20161109/ncbi-20161109.tgz",
       "copy_status": "snapshot"
     },
     {
