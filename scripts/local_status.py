@@ -8,7 +8,9 @@ def main(taxalotl_config):
     ks = rm.resources.keys()
     ks.sort()
     for k in ks:
-        print(k)
+        r = rm.resources[k]
+        r.write_status(sys.stdout, taxalotl_config, indent='  ')
+
 
 if __name__ == "__main__":
     import argparse

@@ -45,6 +45,8 @@
     },
     {
       "id": "ott-id-list-20161118",
+      "format": "gzip",
+      "schema": "OTT ID CSV",
       "url": "http://files.opentreeoflife.org/idlist/idlist-20161118/by_qid.csv.gz",
       "resource_type": "open tree taxonomy idlist"
     },
@@ -56,6 +58,7 @@
       ],
       "date": "2016-02-26",
       "format":"tar+gzip",
+      "schema": "OTT",
       "url": "http://files.opentreeoflife.org/ott/ott3.0/ott3.0.tgz",
       "inputs": [
         {

@@ -59,13 +59,40 @@ class _ResWrapper(object):
             self.__dict__[k] = obj.get(k)
         for k in obj.keys():
             if k not in _known_res_attr:
-                print("Key '{}' not recognized".format(k))
+                raise RuntimeError("Key '{}' not recognized".format(k))
+        self.parent = parent
+        self.children = []
+        if self.parent:
+            for k in _known_res_attr:
+                pv = getattr(parent, k, None)
+                if obj.get(k) is None and pv is not None:
+                    setattr(self, k, pv)
         self.id = obj['id']
         if self.references:
             x = [self.references] if not isinstance(self.references, list) else self.references
             for r in x:
                 if r not in refs:
                     _LOG.warn("reference '{}' in resource '{}' was not recognized.".format(r, self.id))
+
+    def download_filepath(self, config):
+        if self.format is None or self.url is None:
+            return None
+        fn = os.path.split(self.url)[-1]
+        return os.path.join(config.raw_downloads_dir, fn)
+    def write_status(self, out, config, indent=''):
+        dfp = self.download_filepath(config)
+        if dfp is None:
+            out.write("{}: {}. {}. This is a class of resource, not a downloadable artifact.\n".format(self.id, self.resource_type, self.source))
+            return
+        out.write('{}:\n{}{}: {}'.format(self.id, indent, self.resource_type, self.source))
+        if self.version:
+            out.write(' version {}\n'.format(self.version))
+        else:
+            out.write(' (unversioned)\n')
+        out.write("{}date: {}\n".format(indent, self.date if self.date else 'unknown'))
+        s = "is at" if os.path.exists(dfp) else "not yet downloaded to"
+        out.write("{}Raw ({} schema in {} format) {} {}\n".format(indent, self.schema, self.format, s, dfp))
+
 
 class ExternalTaxonomyWrapper(_ResWrapper):
     resource_type = 'external taxonomy'
@@ -77,6 +104,7 @@ class OTTaxonomyWrapper(_ResWrapper):
     resource_type = 'open tree taxonomy'
     def __init__(self, obj, parent=None, refs=None):
         _ResWrapper.__init__(self, obj, parent=parent, refs=refs)
+
 
 class OTTaxonomyIdListWrapper(_ResWrapper):
     resource_type = 'open tree taxonomy idlist'
