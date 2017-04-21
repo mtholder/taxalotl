@@ -123,6 +123,7 @@ class _ResWrapper(object):
             _LOG.debug("gunzip_and_untar from {} to {} completed.".format(dfp, ))
         else:
             raise NotImplementedError("Unpacking from {} format is not currently supported".format(self.format))
+
     def write_status(self, out, config, indent=''):
         dfp = self.download_filepath(config)
         if dfp is None:
@@ -141,7 +142,10 @@ class _ResWrapper(object):
             out.write(' (unversioned)\n')
         out.write("{}date: {}\n".format(indent, self.date if self.date else 'unknown'))
         s = "is at" if os.path.exists(dfp) else "not yet downloaded to"
-        out.write("{}Raw ({} schema in {} format) {} {}\n".format(indent, self.schema, self.format, s, dfp))
+        out.write("{}Raw ({} format) {} {}\n".format(indent, self.format, s, dfp))
+        ufp = self.unpacked_filepath(config)
+        s = "is at" if os.path.exists(ufp) else "not yet unpacked to"
+        out.write("{}Raw ({} schema) {} {}\n".format(indent, self.schema, s, ufp))
 
 
 class ExternalTaxonomyWrapper(_ResWrapper):
