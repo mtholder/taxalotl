@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from peyotl import get_logger, download_large_file
+from peyotl import (download_large_file,
+                    get_logger, gunzip, gunzip_and_untar)
 import codecs
 import json
 import os
@@ -79,27 +80,49 @@ class _ResWrapper(object):
         if self.children:
             return self.children[-1].get_leaf_obj()
         return self
+
     def download_filepath(self, config=None):
-        if self.format is None or self.url is None:
+        if self.is_abstract:
             return None
         fn = os.path.split(self.url)[-1]
         c = config if config else self.config
         return os.path.join(c.raw_downloads_dir, fn)
+
+    def unpacked_filepath(self, config=None):
+        if self.is_abstract:
+            return None
+        c = config if config else self.config
+        return os.path.join(c.raw_downloads_dir, self.id)
+
     @property
     def is_abstract(self):
-        try:
-            return self.download_filepath() is None
-        except:
-            return True
+        return self.format is None or self.url is None or self.schema is None
+
     def has_been_downloaded(self, config=None):
         dfp = self.download_filepath(config)
         return dfp is not None and os.path.exists(dfp)
+
+
+    def has_been_unpacked(self, config=None):
+        dfp = self.unpacked_filepath(config)
+        return dfp is not None and os.path.exists(dfp)
+
+
     def download(self, config=None):
         dfp = self.download_filepath(config)
         _LOG.debug("Starting download from {} to {}".format(self.url, dfp))
         download_large_file(self.url, dfp)
         _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
 
+    def unpack(self, config):
+        if self.format == 'tar+gzip':
+            ufp = self.unpacked_filepath(config)
+            dfp = self.download_filepath(config)
+            _LOG.debug("Starting gunzip_and_untar from {} to {}".format(dfp, ))
+            gunzip_and_untar(dfp, ufp)
+            _LOG.debug("gunzip_and_untar from {} to {} completed.".format(dfp, ))
+        else:
+            raise NotImplementedError("Unpacking from {} format is not currently supported".format(self.format))
     def write_status(self, out, config, indent=''):
         dfp = self.download_filepath(config)
         if dfp is None:

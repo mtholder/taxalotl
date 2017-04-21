@@ -15,21 +15,38 @@ def terminalize_if_needed(wrapper, action):
             _LOG.info(m.format(action, wrapper.id, orig_w.id))
     return wrapper
 
-def download_resource(taxalotl_config, id_list):
-    rm = taxalotl_config.resources_mgr
-    res = rm.resources
-    print(res.keys())
+def get_terminalized_res_by_id(resource_dict, res_id, for_action):
+    try:
+        rw = resource_dict[res_id]
+    except:
+        raise ValueError("Unknown resource ID '{}'".format(res_id))
+    return terminalize_if_needed(rw, for_action)
+
+
+def download_resources(taxalotl_config, id_list):
+    res = taxalotl_config.resources_mgr.resources
     for rid in id_list:
-        try:
-            rw = res[rid]
-        except:
-            raise ValueError("Unknown resource ID '{}'".format(rid))
-        rw = terminalize_if_needed(rw, 'download')
+        rw = get_terminalized_res_by_id(res, rid, 'download')
         if rw.has_been_downloaded(taxalotl_config):
             m = "{} was already present at {}"
             _LOG.info(m.format(rw.id, rw.download_filepath(taxalotl_config)))
         else:
             rw.download(taxalotl_config)
+
+def unpack_resources(taxalotl_config, id_list):
+    res = taxalotl_config.resources_mgr.resources
+    for rid in id_list:
+        rw = get_terminalized_res_by_id(res, rid, 'unpack')
+        if not rw.has_been_downloaded(taxalotl_config):
+            m = "{} will be downloaded first..."
+            _LOG.info(m.format(rw.id))
+            download_resource(taxalotl_config, [rw.id])
+        if rw.has_been_unpacked(taxalotl_config):
+            m = "{} was already present at {}"
+            _LOG.info(m.format(rw.id, rw.unpacked_filepath(taxalotl_config)))
+        else:
+            rw.unpack(taxalotl_config)
+
 
 if __name__ == "__main__":
     import argparse
@@ -48,4 +65,6 @@ if __name__ == "__main__":
     args = p.parse_args()
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
     if args.which == 'download':
-        download_resource(taxalotl_config, args.resources)
+        download_resources(taxalotl_config, args.resources)
+    elif args.which == 'unpack':
+        unpack_resources(taxalotl_config, args.resources)
