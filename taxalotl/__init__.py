@@ -1,94 +1,66 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from peyotl import get_logger
-import codecs
-import json
+from taxalotl.resource_manager import ResourceManager
+
 import os
-_LOG = get_logger(__name__)
 
-_ALLOWED_RESOURCE_KEYS = frozenset(["resources", "references", "ott_versions", "next"])
-def read_resource_file(fp):
+def _none_for_missing_config_get(config, section, option, default=None):
     try:
-        with codecs.open(fp, 'rU', encoding='utf-8') as inp:
-            o = json.load(inp)
-        for k in o.keys():
-            if k not in _ALLOWED_RESOURCE_KEYS:
-                raise RuntimeError("Unrecognized key '{}'".format(k))
-        ref = o.get("resources")
-        if ref and isinstance(ref, list):
-            rd = {}
-            for el in ref:
-                key = el["id"]
-                if key in rd:
-                    raise RuntimeError('The id "{}" was repeated'.format(key))
-                rd[key] = el
-            o["resources"] = rd
-        return o
+        return config.get(section, option)
     except:
-        _LOG.exception("Error reading JSON from \"{}\"".format(fp))
-        raise
+        return default
 
-def write_resources_file(obj, fp):
-    with codecs.open(fp, 'w', encoding='utf-8') as outp:
-        json.dump(obj, outp, indent=2, sort_keys=True, separators=(',', ': '))
+class TaxalotlConfig(object):
+    def __init__(self,
+                 filepath=None,
+                 raw_downloads_dir=None,
+                 processed_dir=None,
+                 resources_dir=None):
+        def_resources = ''
+        if filepath is None:
+            if os.path.exists("taxalotl.conf"):
+                filepath = os.path.abspath("taxalotl.conf")
+                if resources_dir is None and os.path.exists('resources'):
+                    def_resources = os.path.abspath("resources")
+            else:
+                home_loc = os.path.expanduser("~/.taxalotl")
+                if os.path.exists(home_loc):
+                    filepath = home_loc
+        if filepath is None:
+            raise ValueError("filepath to taxalotl.conf must be provided (or it must be in the current dir, or ~/.taxalotl).")
+        if not os.path.isfile(filepath):
+            raise ValueError('No config file found at "{}"'.format(filepath))
+        self._filepath = filepath
+        try:
+            # noinspection PyCompatibility
+            from ConfigParser import SafeConfigParser
+        except ImportError:
+            # noinspection PyCompatibility,PyUnresolvedReferences
+            from configparser import ConfigParser as SafeConfigParser  # pylint: disable=F0401
+        cfg = SafeConfigParser()
+        cfg.read([filepath])
+        #
+        rdd = raw_downloads_dir
+        if rdd is None:
+            rdd = _none_for_missing_config_get(cfg, 'paths', 'raw')
+        pd = processed_dir
+        if pd is None:
+            pd = _none_for_missing_config_get(cfg, 'paths', 'processed')
+        resd = resources_dir
+        if resd is None:
+            resd = _none_for_missing_config_get(cfg, 'paths', 'resources', def_resources)
+        self.raw_downloads_dir = rdd
+        self.processed_dir = pd
+        self.resources_dir = resd
+        self._resources_mgr = None
 
-class ResourceManager(object):
-    _MERGED_FILENAME = ".merged.json"
-    def __init__(self, resource_dir, update_merged=True):
-        self.resource_dir = resource_dir
-        self.resources = {}
-        self.references = {}
-        self._filepath_read = None
-        if update_merged:
-            self._update_merged()
-        self.read_merged()
-
-    def _update_merged(self):
-        needs_update = False
-        inputs = []
-        mfp = os.path.join(self.resource_dir, ResourceManager._MERGED_FILENAME)
-        if os.path.exists(mfp):
-            mtt = os.path.getmtime(mfp)
-        else:
-            needs_update = True
-        for f in os.listdir(self.resource_dir):
-            if f.endswith(".json") and f != ResourceManager._MERGED_FILENAME:
-                print(f)
-                ni = os.path.join(self.resource_dir, f)
-                inputs.append(ni)
-                if (not needs_update):
-                    if os.path.getmtime(ni) > mtt:
-                        needs_update = True
-        if needs_update:
-            md = {}
-            for fp in inputs:
-                o = read_resource_file(fp)
-                for r in ["references", "resources"]:
-                    mrd = md.get(r, {})
-                    mrk = set(mrd.keys())
-                    ord = o.get(r, {})
-                    ork = set(ord.keys())
-                    i = ork.intersection(mrk)
-                    if i:
-                        m = 'IDs repeated in {} and previous resource files: "{}"'
-                        raise RuntimeError(m.format(fp, '" "'.join(list(i))))
-                    mrd.update(ord)
-                    md[r] = mrd
-                    print(mrd)
-                for u in ["ott_versions", "next"]:
-                    if u in o:
-                        if u in md:
-                            m = 'Unique key "{}" repeated in {} and previous resource files'
-                            raise RuntimeError(m.format(u, fp))
-                        else:
-                            md[u] = o[u]
-            write_resources_file(md, mfp)
-
-    def read_merged(self):
-        mfp = os.path.join(self.resource_dir, ResourceManager._MERGED_FILENAME)
-        o = read_resource_file(mfp)
-        self.resources.update(o.get("resources", {}))
-        self.references.update(o.get("references", {}))
-        print("resources = {}".format(self.resources))
-        print("references = {}".format(self.references))
-        self._filepath_read = mfp
+    @property
+    def resources_mgr(self):
+        if self._resources_mgr is None:
+            if self.resources_dir is None:
+                raise RuntimeError("The resources dir must be provided in the config file or the current dir")
+            if not os.path.isdir(self.resources_dir):
+                raise RuntimeError('"{}" is not an existing resources dir.'.format(self.resources_dir))
+            self._resources_mgr = ResourceManager(self.resources_dir)
+        return self._resources_mgr

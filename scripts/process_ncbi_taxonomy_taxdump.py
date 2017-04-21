@@ -52,6 +52,7 @@ def main(raw_ncbi_dir, out_dir, download_url, download=False):
     if download:
         download_and_unpack(download_url, raw_ncbi_dir)
     print(raw_ncbi_dir, download)
+
 if __name__ == "__main__":
     import argparse
     description = "Writes an Open Tree interim taxonomy formatted version fo NCBI's taxonomy"
@@ -59,15 +60,17 @@ if __name__ == "__main__":
     p.add_argument("--download", action="store_true", default=False,
                    help="If present, the ncbi taxonomy will be downloaded to the \"raw\" directory")
     p.add_argument("--raw-dir", type=str,
-                   help="Path to that is the parent of the raw NCBI download")
+                   help="Path to that is the parent of the raw NCBI download (default from config file)")
     p.add_argument("--out-dir", type=str,
-                   help="Path to will hold the OT form of the taxonomy.")
+                   help="Path to will hold the OT form of the taxonomy (default from config)")
     p.add_argument("--skip-file", type=str, required=False,
                     help="Path to will hold the OT form of the taxonomy.")
     p.add_argument("--url", type=str, help="URL to download the raw taxonomy from.")
     p.add_argument("--resources-dir", type=str, help="the resources directory (optional)")
+    p.add_argument("--resources-dir", type=str, help="the taxalotl.conf filepath (optional)")
     args = p.parse_args()
-    if not args.resources_dir and os.path.exists('taxalotl') and os.path.exists('resources'):
+    if not args.resources_dir:
+        os.path.exists('taxalotl') and os.path.exists('resources'):
         args.resources_dir = 'resources'
     if args.resources_dir:
         cfg = ResourceManager(args.resources_dir)
