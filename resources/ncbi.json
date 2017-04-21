@@ -1,7 +1,9 @@
 {
   "references": {
     "NCBITaxonomy": {
-      "str": "NCBI Taxonomy, from the US National Center on Biotechnology Information. Web site: http://www.ncbi.nlm.nih.gov/Taxonomy/. "
+      "title": "NCBI Taxonomy",
+      "author": "US National Center on Biotechnology Information",
+      "url": "http://www.ncbi.nlm.nih.gov/Taxonomy/"
     }
   },
   "resources" : [

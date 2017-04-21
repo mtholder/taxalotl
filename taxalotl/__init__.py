@@ -30,7 +30,7 @@ def read_resource_file(fp):
 
 def write_resources_file(obj, fp):
     with codecs.open(fp, 'w', encoding='utf-8') as outp:
-        json.dump(obj, outp, indent=2)
+        json.dump(obj, outp, indent=2, sort_keys=True, separators=(',', ': '))
 
 class ResourceManager(object):
     _MERGED_FILENAME = ".merged.json"

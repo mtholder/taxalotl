@@ -1,7 +1,8 @@
 {
   "references": {
     "WRMS": {
-      "str": "http://www.marinespecies.org/aphia.php"
+      "title": "WoRMS: World Registry of Marine Species",
+      "url": "http://www.marinespecies.org/aphia.php"
     }
   },
   "resources" : [

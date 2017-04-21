@@ -1,7 +1,22 @@
 {
   "references": {
     "QuastEtAl2013": {
-      "str": "Quast C, Pruesse E, Yilmaz P, Gerken J, Schweer T, Yarza P, Peplies J, Glöckner FO (2013) The SILVA ribosomal RNA gene database project: improved data processing and web-based tools. Nucleic Acids Research 41 (D1): D590-D596. Web site: http://www.arb-silva.de/."
+      "authors": [
+       "C. Quast",
+        "E. Pruesse",
+        "P. Yilmaz",
+        "J. Gerken",
+        "T. Schweer",
+        "P. Yarza",
+        "J Peplies",
+        "F. O. Glöckner"],
+      "year": 2013,
+      "title": "The SILVA ribosomal RNA gene database project: improved data processing and web-based tools",
+      "journal": "Nucleic Acids Research",
+      "volume": 41,
+      "issue": "D1",
+      "page_range" : ["D590", "D596"],
+      "url": "http://www.arb-silva.de/"
     }
   },
   "resources" : [

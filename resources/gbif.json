@@ -1,7 +1,8 @@
 {
   "references": {
     "GBIFTaxonomy": {
-      "str": "GBIF Backbone Taxonomy, from the Global Biodiversity Information facility."
+      "title": "GBIF Backbone Taxonomy, from the Global Biodiversity Information facility.",
+      "url": "http://www.gbif.org/"
     }
   },
   "resources" : [
