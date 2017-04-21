@@ -131,7 +131,7 @@ class _ResWrapper(object):
             if lo == self:
                 suff = ''
             else:
-                suff = ' the most recent version appears to be {}'.format(lo.id)
+                suff = ' the most recent version appears to be "{}"'.format(lo.id)
             template = "{}: {}. {}. This is a class of resource, not a downloadable artifact{}.\n"
             out.write(template.format(self.id, self.resource_type, self.source, suff))
             return

@@ -15,11 +15,14 @@ def terminalize_if_needed(wrapper, action):
             _LOG.info(m.format(action, wrapper.id, orig_w.id))
     return wrapper
 
-def get_terminalized_res_by_id(resource_dict, res_id, for_action):
+def get_res_by_id(resource_dict, res_id):
     try:
-        rw = resource_dict[res_id]
+        return resource_dict[res_id]
     except:
         raise ValueError("Unknown resource ID '{}'".format(res_id))
+
+def get_terminalized_res_by_id(resource_dict, res_id, for_action):
+    rw = get_res_by_id(resource_dict=resource_dict, res_id=res_id)
     return terminalize_if_needed(rw, for_action)
 
 
@@ -32,6 +35,21 @@ def download_resources(taxalotl_config, id_list):
             _LOG.info(m.format(rw.id, rw.download_filepath(taxalotl_config)))
         else:
             rw.download(taxalotl_config)
+
+def status_of_resources(taxalotl_config, id_list):
+    res = taxalotl_config.resources_mgr.resources
+    terminalize = True
+    if not id_list:
+        terminalize = False
+        id_list = list(res.keys())
+        id_list.sort()
+    for rid in id_list:
+        if terminalize:
+            rw = get_terminalized_res_by_id(res, rid, 'status')
+        else:
+            rw = get_res_by_id(res, rid)
+        rw.write_status(sys.stdout, taxalotl_config, indent='  ')
+
 
 def unpack_resources(taxalotl_config, id_list):
     res = taxalotl_config.resources_mgr.resources
@@ -56,15 +74,26 @@ if __name__ == "__main__":
     p.add_argument("--config", type=str, help="the taxalotl.conf filepath (optional)")
     p.set_defaults(which="all")
     subp = p.add_subparsers(help="command help")
+    #
     download_p = subp.add_parser('download', help="download an artifact to your local filesystem")
     download_p.add_argument('resources', nargs="+", help="IDs of the resources to download")
     download_p.set_defaults(which="download")
-    unpack_p = subp.add_parser('unpack', help="unpack an artifact to your local filesystem (downloads if necessary)")
-    unpack_p.add_argument('resources', nargs="+", help="IDs of the resources to download")
+    #
+    status_p = subp.add_parser('status',
+                               help="report the status of a resource (or all resources)")
+    status_p.add_argument('resources', nargs="*", help="IDs of the resources to report status on")
+    status_p.set_defaults(which="status")
+    #
+    unpack_p = subp.add_parser('unpack',
+                               help="unpack an artifact to your local filesystem (downloads if necessary)")
+    unpack_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
     unpack_p.set_defaults(which="unpack")
+
     args = p.parse_args()
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
     if args.which == 'download':
         download_resources(taxalotl_config, args.resources)
+    elif args.which == 'status':
+        status_of_resources(taxalotl_config, args.resources)
     elif args.which == 'unpack':
         unpack_resources(taxalotl_config, args.resources)
