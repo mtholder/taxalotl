@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from peyotl import (download_large_file,
-                    get_logger, gunzip, gunzip_and_untar)
+from peyotl import (assure_dir_exists,
+                    download_large_file,
+                    get_logger, gunzip, gunzip_and_untar,
+                    write_as_json)
 import codecs
 import json
+import time
 import os
 
 _LOG = get_logger(__name__)
+
 
 _ALLOWED_RESOURCE_KEYS = frozenset(["resources", "references", "ott_versions", "next"])
 
@@ -99,6 +103,12 @@ class _ResWrapper(object):
         c = config if config else self.config
         return os.path.join(c.raw_downloads_dir, self.id)
 
+    def normalized_filepath(self, config=None):
+        if self.is_abstract:
+            return None
+        c = config if config else self.config
+        return os.path.join(c.normalized_dir, self.id)
+
     @property
     def is_abstract(self):
         return self.format is None or self.url is None or self.schema is None
@@ -111,6 +121,12 @@ class _ResWrapper(object):
         dfp = self.unpacked_filepath(config)
         return dfp is not None and os.path.exists(dfp)
 
+    def has_been_normalized(self, config=None):
+        dfp = self.normalized_filepath(config)
+        return dfp is not None \
+               and os.path.exists(dfp) \
+               and os.path.exists(os.path.join(dfp, 'taxonomy.tsv'))
+
     def download(self, config=None):
         dfp = self.download_filepath(config)
         _LOG.debug("Starting download from {} to {}".format(self.url, dfp))
@@ -121,9 +137,19 @@ class _ResWrapper(object):
         if self.format == 'tar+gzip':
             ufp = self.unpacked_filepath(config)
             dfp = self.download_filepath(config)
-            _LOG.debug("Starting gunzip_and_untar from {} to {}".format(dfp, ))
+            _LOG.debug("Starting gunzip_and_untar from {} to {}".format(dfp, ufp))
             gunzip_and_untar(dfp, ufp)
-            _LOG.debug("gunzip_and_untar from {} to {} completed.".format(dfp, ))
+            _LOG.debug("gunzip_and_untar from {} to {} completed.".format(dfp, ufp))
+        else:
+            raise NotImplementedError(
+                "Unpacking from {} format is not currently supported".format(self.format))
+
+    def normalize(self, config):
+        schema = self.schema.lower()
+        ufp = self.unpacked_filepath(config)
+        nfp = self.normalized_filepath(config)
+        if schema == "ncbi taxonomy":
+            normalize_ncbi(ufp, nfp, self.url)
         else:
             raise NotImplementedError(
                 "Unpacking from {} format is not currently supported".format(self.format))

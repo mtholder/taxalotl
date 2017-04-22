@@ -18,6 +18,7 @@ class TaxalotlConfig(object):
                  filepath=None,
                  raw_downloads_dir=None,
                  processed_dir=None,
+                 normalized_dir=None,
                  resources_dir=None):
         def_resources = ''
         if filepath is None:
@@ -54,8 +55,12 @@ class TaxalotlConfig(object):
         resd = resources_dir
         if resd is None:
             resd = _none_for_missing_config_get(cfg, 'paths', 'resources', def_resources)
+        normd = normalized_dir
+        if normd is None:
+            normd = _none_for_missing_config_get(cfg, 'paths', 'normalized')
         self.raw_downloads_dir = rdd
         self.processed_dir = pd
+        self.normalized_dir = normd
         self.resources_dir = resd
         self._resources_mgr = None
 

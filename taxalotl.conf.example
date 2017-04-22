@@ -1,3 +1,4 @@
 [paths]
 raw = /home/user/scratch/raw
 processed = /home/user/scratch/processed
+normalized = /home/user/scratch/normalized

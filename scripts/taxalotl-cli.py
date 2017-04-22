@@ -65,6 +65,20 @@ def unpack_resources(taxalotl_config, id_list):
         else:
             rw.unpack(taxalotl_config)
 
+def normalize_resources(taxalotl_config, id_list):
+    res = taxalotl_config.resources_mgr.resources
+    for rid in id_list:
+        rw = get_terminalized_res_by_id(res, rid, 'normalize')
+        if not rw.has_been_unpacked(taxalotl_config):
+            m = "{} will be unpacked first..."
+            _LOG.info(m.format(rw.id))
+            unpack_resources(taxalotl_config, [rw.id])
+        if rw.has_been_normalized(taxalotl_config):
+            m = "{} was already normalized at {}"
+            _LOG.info(m.format(rw.id, rw.normalized_filepath(taxalotl_config)))
+        else:
+            rw.normalize(taxalotl_config)
+
 def main(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
     if args.which == 'download':
@@ -73,7 +87,10 @@ def main(args):
         status_of_resources(taxalotl_config, args.resources)
     elif args.which == 'unpack':
         unpack_resources(taxalotl_config, args.resources)
-    
+    elif args.which == 'normalize':
+        normalize_resources(taxalotl_config, args.resources)
+
+
 if __name__ == "__main__":
     import argparse
     description = "The main CLI for taxalotl"
@@ -82,19 +99,25 @@ if __name__ == "__main__":
     p.add_argument("--config", type=str, help="the taxalotl.conf filepath (optional)")
     p.set_defaults(which="all")
     subp = p.add_subparsers(help="command help")
-    #
-    download_p = subp.add_parser('download', help="download an artifact to your local filesystem")
-    download_p.add_argument('resources', nargs="+", help="IDs of the resources to download")
-    download_p.set_defaults(which="download")
-    #
+    # STATUS
     status_p = subp.add_parser('status',
                                help="report the status of a resource (or all resources)")
     status_p.add_argument('resources', nargs="*", help="IDs of the resources to report status on")
     status_p.set_defaults(which="status")
-    #
+    # DOWNLOAD
+    download_p = subp.add_parser('download', help="download an artifact to your local filesystem")
+    download_p.add_argument('resources', nargs="+", help="IDs of the resources to download")
+    download_p.set_defaults(which="download")
+    # UNPACK
     unpack_p = subp.add_parser('unpack',
-                               help="unpack an artifact to your local filesystem (downloads if necessary)")
+                               help="unpack an resource (downloads if necessary)")
     unpack_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
     unpack_p.set_defaults(which="unpack")
+    # NORMALIZE
+    normalize_p = subp.add_parser('normalize',
+                                   help="converts to the OTT format (unpacks if necessary)")
+    normalize_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
+    normalize_p.set_defaults(which="normalize")
 
     args = p.parse_args()
+    main(args)
