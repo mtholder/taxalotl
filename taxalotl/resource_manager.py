@@ -6,7 +6,7 @@ from peyotl import (assure_dir_exists,
                     write_as_json)
 import codecs
 import json
-import time
+from taxalotl.ncbi import normalize_ncbi
 import os
 
 _LOG = get_logger(__name__)

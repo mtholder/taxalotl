@@ -1,3 +1,13 @@
+from __future__ import print_function
+from peyotl import (assure_dir_exists,
+                    get_logger,
+                    write_as_json)
+import codecs
+import time
+import os
+
+_LOG = get_logger(__name__)
+
 
 ###################################################################################################
 # Author: Stephen Smith
@@ -129,7 +139,7 @@ def deal_with_adj_taxa_with_same_names(id_to_parent,
                 # suppress the child
                 suppressed_ids.add(child_id)
                 c_list = id_to_children.get(child_id, [])
-                pc_list = id_to_children.get[par_id]
+                pc_list = id_to_children.get(par_id)
                 pc_list.remove(child_id)
                 pc_list.extend(c_list)
                 for gc in c_list:
@@ -198,7 +208,7 @@ def write_ott_taxonomy(out_fp,
                 out.write('\n')
 
 
-def deal_with_ncbi_env_samples_names(id_to_name, names_to_ids):
+def deal_with_ncbi_env_samples_names(id_to_par, id_to_name, names_to_ids):
     ess = 'environmental samples'
     es_ids = names_to_ids.setdefault(ess, [])
     renamed_ids = set(es_ids)
@@ -237,7 +247,7 @@ def normalize_ncbi(source, destination, url):
                                                                      name_to_ids,
                                                                      synonyms,
                                                                      repeated_names)
-    esr = deal_with_ncbi_env_samples_names(id_to_name, name_to_ids, )
+    esr = deal_with_ncbi_env_samples_names(id_to_par, id_to_name, name_to_ids)
     assure_dir_exists(destination)
     write_ott_taxonomy(os.path.join(destination, 'taxonomy.tsv'),
                        root_nodes,
@@ -246,6 +256,5 @@ def normalize_ncbi(source, destination, url):
                        id_to_rank,
                        id_to_name)
     write_as_json(about_obj, about_fp, indent=2)
-
 
 ###################################################################################################
