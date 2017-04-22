@@ -54,6 +54,7 @@ def add_or_append_to_dict(d, k, v):
         d[k] = [ov, v]
     return True
 
+
 ####################################################################################################
 def parse_ncbi_names_file(names_fp, details_log):
     """Takes a filepath to an NCBI names.dmp file.
@@ -143,6 +144,21 @@ def parse_ncbi_nodes_file(nodes_fp, details_log):
     details_log['num_nodes'] = len(to_par)
     return to_par, to_children, to_rank, root_nodes
 
+
+def parse_ncbi_merged(fp, details_log):
+    forwards_dict = {}
+    if os.path.exists(fp):
+        with codecs.open(fp, 'r', encoding='utf-8') as inp:
+            for line in inp:
+                rs = line.split('\t|')
+                from_id, to_id = int(rs[0]), int(rs[1])
+                forwards_dict[from_id] = to_id
+    details_log['num_forwards'] = len(forwards_dict)
+    _LOG.info('number of merges: {}'.format(len(forwards_dict)))
+    return forwards_dict
+
+
+# noinspection PyBroadException
 def deal_with_adj_taxa_with_same_names(id_to_parent,
                                        id_to_children,
                                        id_to_rank,
@@ -217,6 +233,7 @@ def deal_with_ncbi_env_samples_names(id_to_par, id_to_name, names_to_ids, detail
     details_log['names_decorated_because_env_samp'] = ril
     return renamed_ids
 
+
 ####################################################################################################
 def write_ott_taxonomy_tsv(out_fp,
                            root_nodes,
@@ -276,12 +293,21 @@ def write_ott_synonyms_tsv(out_fp,
     details_log['num_synonyms_written'] = num_syn_written
     details_log['num_ids_with_synonyms_written'] = len(id_order)
 
+
+def write_ott_forwards(out_fp, forwarded_dict):
+    with codecs.open(out_fp, 'w', encoding='utf-8') as out:
+        for key, value in forwarded_dict.items():
+            out.write('{}\t{}\n'.format(key, value))
+
+
 def write_ncbi_details_json(fp, details_log):
     write_as_json(details_log, fp, indent=2)
+
 
 def normalize_ncbi(source, destination, url):
     nodes_fp = os.path.join(source, "nodes.dmp")
     names_fp = os.path.join(source, "names.dmp")
+    merged_fp = os.path.join(source, "merged.dmp")
     about_obj = {"prefix": "ncbi",
                  "prefixDefinition": "http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=",
                  "description": "NCBI Taxonomy",
@@ -289,8 +315,8 @@ def normalize_ncbi(source, destination, url):
                             "date": file_mod_time_to_isotime(nodes_fp)
                             }
                  }
-    about_fp = os.path.join(destination, 'about.json')
     details_log = {}
+    forwarded = parse_ncbi_merged(merged_fp, details_log)
     id_to_par, id_to_children, id_to_rank, root_nodes = parse_ncbi_nodes_file(nodes_fp,
                                                                               details_log)
     # Make sure there is only 1 root, and that its parent is an empty string
@@ -331,6 +357,9 @@ def normalize_ncbi(source, destination, url):
                            details_log)
     write_ncbi_details_json(os.path.join(destination, 'details.json'),
                             details_log)
+    write_ott_forwards(os.path.join(destination, 'forwards.tsv'), forwarded)
+
+    about_fp = os.path.join(destination, 'about.json')
     write_as_json(about_obj, about_fp, indent=2)
 
 ###################################################################################################
