@@ -255,7 +255,7 @@ def write_ott_taxonomy_tsv(out_fp,
                     stack.extend(children)
                 else:
                     num_tips_written += 1
-                out.write('{}\n'.format('\t|\t'.join([str(curr_id), spar_id, name, rank])))
+                out.write('{}\n'.format('\t|\t'.join([str(curr_id), spar_id, name, rank, ''])))
     details_log['num_tips_written'] = num_tips_written
     details_log['num_internals_written'] = num_internals_written
     return syn_id_order
