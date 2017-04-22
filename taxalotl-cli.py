@@ -58,7 +58,7 @@ def unpack_resources(taxalotl_config, id_list):
         if not rw.has_been_downloaded(taxalotl_config):
             m = "{} will be downloaded first..."
             _LOG.info(m.format(rw.id))
-            download_resource(taxalotl_config, [rw.id])
+            download_resources(taxalotl_config, [rw.id])
         if rw.has_been_unpacked(taxalotl_config):
             m = "{} was already present at {}"
             _LOG.info(m.format(rw.id, rw.unpacked_filepath(taxalotl_config)))

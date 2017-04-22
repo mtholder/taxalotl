@@ -1,3 +1,7 @@
 taxalotl.conf
 raw
 processed
+venv
+peyotl
+taxalotl.egg-info
+scratch
