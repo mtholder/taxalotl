@@ -33,12 +33,84 @@ which will:
    4. install the taxalotl package (also using the "develop" 
    command)
 
+The script ends with some comments about the actions you need
+to take to configure the package.
+
 See [peyotl docs](http://opentreeoflife.github.io/peyotl/) for
 info about the config files of peyotl.
 These affect the logging message handling of Taxalotl.
 
 
+## Usage
+The `taxalotl-cli.py` script provides the command-line interface which
+is broken up into several commands.
 
+The syntax `${x}` in the documentation below refers to
+the value of some variable (`x` in this case),
+that should be one of the configuration variables specified in
+the `taxolotl.conf` file.
+    
+
+### status command
+`taxalotl-cli.py status` reports on the status of each "resource".
+
+`taxolotl-cli.py status ncbi` reports just on the status of the
+    ncbi resource.
+
+### download command
+`taxolotl-cli.py download ID` downloads the archive for
+    the `ID` resource into the `${raw}` directory if that
+    archive is not present.
+
+### unpack command
+`taxolotl-cli.py unpack ID` unpacks the archive for
+    the `ID` resource to the `${raw}/ID`.
+Downloads the archive if necessary.
+
+### normalize command
+`taxolotl-cli.py normalize ID` unpacks the raw archive
+for `ID` from `${raw}/ID` into the 
+[OTT Interim Taxonomy](https://github.com/OpenTreeOfLife/reference-taxonomy/wiki/Interim-taxonomy-file-format)
+format in `${normalized}/ID`
+Unpacks the raw archive if necessary.
+
+An "extra" `details.json` file may also be written with 
+more information about the normalization process.
+This information is "extra" in the sense that it was not
+emitted by the reference-taxonomy repo's version of the code.
+
+
+## Structure
+### Resources directory
+That dir should hold descriptions of the taxonomies that
+    are sources of information.
+The file `.merged.json` in that directory is automatically
+    generated as the union of the fields in all of the
+    other files in the directory;
+so you should not edit that file by hand.
+Most info should probably just go in `resources.json`, but
+    you can also put info in a file with the name
+    `<resource-id>.json` to make the resources list more
+    manageable.
+
+### Resources and id aliasing
+Tags used to describe the resources are still in flux.
+Every resource should have either:
+  * a `resource_type` 
+    property (with value "external taxonomy",
+    "open tree taxonomy idlist", or "open tree taxonomy"), or
+  * an `inherits_from` property with the value
+    corresponding to the ID of another resource.
+
+So, there is a resource with `id="ncbi"` that is intended
+    to hold info that applies to any version of the NCBI
+    Taxonomy.
+Specific dated snapshots of NCBI inherit from either that
+    "base" resource or the previous snapshot.
+This will create a directed linear graph. 
+If you use the base id (`ncbi`) in a command that operates
+    on a concrete resource, `taxalotl` will assume that you
+    mean the latest version of that resource.
 
 ## Thanks and stuff
 Thanks to the US NSF
