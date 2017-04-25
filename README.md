@@ -4,6 +4,7 @@ the releases in the OTT series of taxonomies.
 This package might end up just being a sub-package of peyotl,
 or die a young death.
 
+
 The code is based on parts of the
     [reference-taxonomy](https://github.com/OpenTreeOfLife/reference-taxonomy)
     repository, which was written primarily by 
@@ -47,3 +48,4 @@ The package is named after [_Ambystoma mexicanum_](https://en.wikipedia.org/wiki
 and the fact that there are a lot o' taxa...
 and the whole Open Tree of Life thing...
 
+It might become `Taxolotl` instead of `Taxalotl`.
