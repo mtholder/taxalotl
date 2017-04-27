@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from peyotl import (assure_dir_exists,
-                    download_large_file,
-                    get_logger, gunzip, gunzip_and_untar,
-                    write_as_json)
+
 import codecs
 import json
-from taxalotl.ncbi import normalize_ncbi
 import os
 
-_LOG = get_logger(__name__)
+from peyotl import (download_large_file,
+                    get_logger, gunzip_and_untar)
 
+from taxalotl.ncbi import normalize_ncbi
+
+_LOG = get_logger(__name__)
 
 _ALLOWED_RESOURCE_KEYS = frozenset(["resources", "references", "ott_versions", "next"])
 
@@ -61,8 +61,8 @@ _known_res_attr = frozenset(['aliases',
                              ])
 
 
-class _ResWrapper(object):
-    def __init__(self, obj, parent=None, refs=None):
+class ResourceWrapper(object):
+    def __init__(self, obj, parent=None, refs=None, config=None):
         for k in _known_res_attr:
             self.__dict__[k] = obj.get(k)
         for k in obj.keys():
@@ -83,60 +83,70 @@ class _ResWrapper(object):
                 if r not in refs:
                     _LOG.warn(
                         "reference '{}' in resource '{}' was not recognized.".format(r, self.id))
-        self.config = None
+        self._config = config
+
+    @property
+    def config(self):
+        if self._config is None:
+            m = "Inadequately initialized ResourceWrapper: " \
+                "config attribute of a resource must be set."
+            raise RuntimeError(m)
+        return self._config
+
+    @config.setter
+    def config(self, c):
+        self._config = c
 
     def get_leaf_obj(self):
+        # type: () -> ResourceWrapper
         if self.children:
             return self.children[-1].get_leaf_obj()
         return self
 
-    def download_filepath(self, config=None):
+    def download_filepath(self):
         if self.is_abstract:
             return None
         fn = os.path.split(self.url)[-1]
-        c = config if config else self.config
-        return os.path.join(c.raw_downloads_dir, fn)
+        return os.path.join(self.config.raw_downloads_dir, fn)
 
-    def unpacked_filepath(self, config=None):
+    def unpacked_filepath(self):
         if self.is_abstract:
             return None
-        c = config if config else self.config
-        return os.path.join(c.raw_downloads_dir, self.id)
+        return os.path.join(self.config.raw_downloads_dir, self.id)
 
-    def normalized_filepath(self, config=None):
+    def normalized_filepath(self):
         if self.is_abstract:
             return None
-        c = config if config else self.config
-        return os.path.join(c.normalized_dir, self.id)
+        return os.path.join(self.config.normalized_dir, self.id)
 
     @property
     def is_abstract(self):
         return self.format is None or self.url is None or self.schema is None
 
-    def has_been_downloaded(self, config=None):
-        dfp = self.download_filepath(config)
+    def has_been_downloaded(self):
+        dfp = self.download_filepath()
         return dfp is not None and os.path.exists(dfp)
 
-    def has_been_unpacked(self, config=None):
-        dfp = self.unpacked_filepath(config)
+    def has_been_unpacked(self):
+        dfp = self.unpacked_filepath()
         return dfp is not None and os.path.exists(dfp)
 
-    def has_been_normalized(self, config=None):
-        dfp = self.normalized_filepath(config)
-        return dfp is not None \
-               and os.path.exists(dfp) \
-               and os.path.exists(os.path.join(dfp, 'taxonomy.tsv'))
+    def has_been_normalized(self):
+        dfp = self.normalized_filepath()
+        return (dfp is not None
+                and os.path.exists(dfp)
+                and os.path.exists(os.path.join(dfp, 'taxonomy.tsv')))
 
-    def download(self, config=None):
-        dfp = self.download_filepath(config)
+    def download(self):
+        dfp = self.download_filepath()
         _LOG.debug("Starting download from {} to {}".format(self.url, dfp))
         download_large_file(self.url, dfp)
         _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
 
-    def unpack(self, config):
+    def unpack(self):
         if self.format == 'tar+gzip':
-            ufp = self.unpacked_filepath(config)
-            dfp = self.download_filepath(config)
+            ufp = self.unpacked_filepath()
+            dfp = self.download_filepath()
             _LOG.debug("Starting gunzip_and_untar from {} to {}".format(dfp, ufp))
             gunzip_and_untar(dfp, ufp)
             _LOG.debug("gunzip_and_untar from {} to {} completed.".format(dfp, ufp))
@@ -144,18 +154,18 @@ class _ResWrapper(object):
             raise NotImplementedError(
                 "Unpacking from {} format is not currently supported".format(self.format))
 
-    def normalize(self, config):
+    def normalize(self):
         schema = self.schema.lower()
-        ufp = self.unpacked_filepath(config)
-        nfp = self.normalized_filepath(config)
+        ufp = self.unpacked_filepath()
+        nfp = self.normalized_filepath()
         if schema == "ncbi taxonomy":
             normalize_ncbi(ufp, nfp, self.url)
         else:
             raise NotImplementedError(
                 "Unpacking from {} format is not currently supported".format(self.format))
 
-    def write_status(self, out, config, indent=''):
-        dfp = self.download_filepath(config)
+    def write_status(self, out, indent=''):
+        dfp = self.download_filepath()
         if dfp is None:
             lo = self.get_leaf_obj()
             if lo == self:
@@ -173,31 +183,34 @@ class _ResWrapper(object):
         out.write("{}date: {}\n".format(indent, self.date if self.date else 'unknown'))
         s = "is at" if os.path.exists(dfp) else "not yet downloaded to"
         out.write("{}Raw ({} format) {} {}\n".format(indent, self.format, s, dfp))
-        ufp = self.unpacked_filepath(config)
+        ufp = self.unpacked_filepath()
         s = "is at" if os.path.exists(ufp) else "not yet unpacked to"
         out.write("{}Raw ({} schema) {} {}\n".format(indent, self.schema, s, ufp))
 
 
-class ExternalTaxonomyWrapper(_ResWrapper):
+# noinspection PyAbstractClass
+class ExternalTaxonomyWrapper(ResourceWrapper):
     resource_type = 'external taxonomy'
 
     def __init__(self, obj, parent=None, refs=None):
-        _ResWrapper.__init__(self, obj, parent=parent, refs=refs)
+        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
         # print("ET obj = {}".format(obj))
 
 
-class OTTaxonomyWrapper(_ResWrapper):
+# noinspection PyAbstractClass
+class OTTaxonomyWrapper(ResourceWrapper):
     resource_type = 'open tree taxonomy'
 
     def __init__(self, obj, parent=None, refs=None):
-        _ResWrapper.__init__(self, obj, parent=parent, refs=refs)
+        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
 
 
-class OTTaxonomyIdListWrapper(_ResWrapper):
+# noinspection PyAbstractClass
+class OTTaxonomyIdListWrapper(ResourceWrapper):
     resource_type = 'open tree taxonomy idlist'
 
     def __init__(self, obj, parent=None, refs=None):
-        _ResWrapper.__init__(self, obj, parent=parent, refs=refs)
+        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
 
 
 _wrapper_types = [OTTaxonomyWrapper, ExternalTaxonomyWrapper, OTTaxonomyIdListWrapper, ]

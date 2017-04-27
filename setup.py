@@ -9,19 +9,24 @@ import os
 ###############################################################################
 # setuptools/distutils/etc. import and configuration
 try:
+    # noinspection PyUnresolvedReferences
     import ez_setup
+
     try:
         ez_setup_path = " ('" + os.path.abspath(ez_setup.__file__) + "')"
     except OSError:
         ez_setup_path = ""
     sys.stderr.write("using ez_setup%s\n" % ez_setup_path)
     ez_setup.use_setuptools()
+    # noinspection PyUnresolvedReferences
     import setuptools
+
     try:
         setuptools_path = " ('" + os.path.abspath(setuptools.__file__) + "')"
     except OSError:
         setuptools_path = ""
     sys.stderr.write("using setuptools%s\n" % setuptools_path)
+    # noinspection PyUnresolvedReferences
     from setuptools import setup, find_packages
 except ImportError as e:
     sys.stderr.write("using distutils\n")
@@ -29,11 +34,12 @@ except ImportError as e:
 
     sys.stderr.write("using canned package list\n")
     PACKAGES = ['taxalotl',
-               ]
+                ]
     EXTRA_KWARGS = {}
 else:
     sys.stderr.write("searching for packages\n")
     PACKAGES = find_packages()
+    # noinspection PyTypeChecker
     EXTRA_KWARGS = dict(
         include_package_data=True,
         test_suite="taxalotl.test"
@@ -42,7 +48,7 @@ else:
 EXTRA_KWARGS["zip_safe"] = False
 ENTRY_POINTS = {}
 EXTRA_KWARGS['scripts'] = ['taxalotl-cli.py',
-                          ]
+                           ]
 setup(
     name='taxalotl',
     version='0.0dev',  # sync with __version__ in peyotl/__init__.py
@@ -53,8 +59,8 @@ setup(
     author='Mark T. Holder',
     py_modules=['taxalotl'],
     install_requires=['setuptools',
-                      'requests>=2.2.1',
-                     ],
+                      'requests>=2.2.1', 'ez_setup',
+                      ],
     packages=PACKAGES,
     entry_points=ENTRY_POINTS,
     classifiers=[

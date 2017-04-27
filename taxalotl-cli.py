@@ -1,83 +1,63 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import sys
-import os
 from taxalotl import TaxalotlConfig
 from peyotl import get_logger
+
 _LOG = get_logger(__name__)
-
-def terminalize_if_needed(wrapper, action):
-    if wrapper.is_abstract:
-        orig_w = wrapper
-        wrapper = wrapper.get_leaf_obj()
-        if wrapper is not orig_w:
-            m = "{} action being performed on {} as the most recent version of {}"
-            _LOG.info(m.format(action, wrapper.id, orig_w.id))
-    return wrapper
-
-def get_res_by_id(resource_dict, res_id):
-    try:
-        return resource_dict[res_id]
-    except:
-        raise ValueError("Unknown resource ID '{}'".format(res_id))
-
-def get_terminalized_res_by_id(resource_dict, res_id, for_action):
-    rw = get_res_by_id(resource_dict=resource_dict, res_id=res_id)
-    return terminalize_if_needed(rw, for_action)
 
 
 def download_resources(taxalotl_config, id_list):
-    res = taxalotl_config.resources_mgr.resources
     for rid in id_list:
-        rw = get_terminalized_res_by_id(res, rid, 'download')
-        if rw.has_been_downloaded(taxalotl_config):
+        rw = taxalotl_config.get_terminalized_res_by_id(rid, 'download')
+        if rw.has_been_downloaded():
             m = "{} was already present at {}"
             _LOG.info(m.format(rw.id, rw.download_filepath(taxalotl_config)))
         else:
             rw.download(taxalotl_config)
 
+
 def status_of_resources(taxalotl_config, id_list):
-    res = taxalotl_config.resources_mgr.resources
     terminalize = True
     if not id_list:
         terminalize = False
-        id_list = list(res.keys())
+        id_list = list(taxalotl_config.resources_mgr.resources.keys())
         id_list.sort()
     for rid in id_list:
         if terminalize:
-            rw = get_terminalized_res_by_id(res, rid, 'status')
+            rw = taxalotl_config.get_terminalized_res_by_id(rid, 'status')
         else:
-            rw = get_res_by_id(res, rid)
-        rw.write_status(sys.stdout, taxalotl_config, indent='  ')
+            rw = taxalotl_config.get_resource_by_id(rid)
+        rw.write_status(sys.stdout, indent='  ')
 
 
 def unpack_resources(taxalotl_config, id_list):
-    res = taxalotl_config.resources_mgr.resources
     for rid in id_list:
-        rw = get_terminalized_res_by_id(res, rid, 'unpack')
-        if not rw.has_been_downloaded(taxalotl_config):
+        rw = taxalotl_config.get_terminalized_res_by_id(rid, 'unpack')
+        if not rw.has_been_downloaded():
             m = "{} will be downloaded first..."
             _LOG.info(m.format(rw.id))
             download_resources(taxalotl_config, [rw.id])
-        if rw.has_been_unpacked(taxalotl_config):
+        if rw.has_been_unpacked():
             m = "{} was already present at {}"
-            _LOG.info(m.format(rw.id, rw.unpacked_filepath(taxalotl_config)))
+            _LOG.info(m.format(rw.id, rw.unpacked_filepath()))
         else:
-            rw.unpack(taxalotl_config)
+            rw.unpack()
+
 
 def normalize_resources(taxalotl_config, id_list):
-    res = taxalotl_config.resources_mgr.resources
     for rid in id_list:
-        rw = get_terminalized_res_by_id(res, rid, 'normalize')
-        if not rw.has_been_unpacked(taxalotl_config):
+        rw = taxalotl_config.get_terminalized_res_by_id(rid, 'normalize')
+        if not rw.has_been_unpacked():
             m = "{} will be unpacked first..."
             _LOG.info(m.format(rw.id))
             unpack_resources(taxalotl_config, [rw.id])
-        if rw.has_been_normalized(taxalotl_config):
+        if rw.has_been_normalized():
             m = "{} was already normalized at {}"
-            _LOG.info(m.format(rw.id, rw.normalized_filepath(taxalotl_config)))
+            _LOG.info(m.format(rw.id, rw.normalized_filepath()))
         else:
-            rw.normalize(taxalotl_config)
+            rw.normalize()
+
 
 def main(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
@@ -93,6 +73,7 @@ def main(args):
 
 if __name__ == "__main__":
     import argparse
+
     description = "The main CLI for taxalotl"
     p = argparse.ArgumentParser(description=description)
     p.add_argument("--resources-dir", type=str, help="the resources directory (optional)")
@@ -115,9 +96,8 @@ if __name__ == "__main__":
     unpack_p.set_defaults(which="unpack")
     # NORMALIZE
     normalize_p = subp.add_parser('normalize',
-                                   help="converts to the OTT format (unpacks if necessary)")
+                                  help="converts to the OTT format (unpacks if necessary)")
     normalize_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
     normalize_p.set_defaults(which="normalize")
-
-    args = p.parse_args()
-    main(args)
+    # call main
+    main(p.parse_args())
