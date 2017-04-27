@@ -5,7 +5,8 @@ import codecs
 import json
 import os
 
-from peyotl import (download_large_file,
+from peyotl import (assure_dir_exists,
+                    download_large_file,
                     get_logger, gunzip_and_untar)
 
 from taxalotl.ncbi import normalize_ncbi
@@ -27,9 +28,34 @@ def unpack_archive(archive_fp, unpack_fp, archive_format):
         m = "Unpacking from {} format is not currently supported"
         raise NotImplementedError(m.format(archive_format))
 ######################################################################################
+OTT_TAXONOMY_FILENAMES = ("about.json",
+                          "alignment_summary.json",
+                          "choices.tsv",
+                          "conflicts.tsv",
+                          "deprecated.tsv",
+                          "differences.tsv",
+                          "forwards.tsv",
+                          "log.tsv",
+                          "merge_summary.json",
+                          "otu_differences.tsv",
+                          "README.html",
+                          "synonyms.tsv",
+                          "taxonomy.tsv",
+                          "transcript.out",
+                          "version.txt", )
+def copy_taxonomy_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
+    assure_dir_exists(normalized_dirp)
+    for fn in OTT_TAXONOMY_FILENAMES:
+        ufp = os.path.join(unpacked_dirp, fn)
+        if os.path.exists(ufp):
+            dfp = os.path.join(normalized_dirp, fn)
+            os.symlink(ufp, dfp)
+
 def normalize_archive(unpacked_fp, normalized_fp, schema_str, resource_wrapper):
     schema = schema_str.lower()
-    if schema == "ncbi taxonomy":
+    if schema == "ott":
+        copy_taxonomy_by_linking(unpacked_fp, normalized_fp, resource_wrapper)
+    elif schema == "ncbi taxonomy":
         normalize_ncbi(unpacked_fp, normalized_fp, resource_wrapper)
     else:
         m = "Normalization from {} schema is not currently supported"
