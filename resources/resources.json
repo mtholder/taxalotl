@@ -23,6 +23,7 @@
       "inherits_from": "gbif",
       "date": "2016-07-29",
       "format":"zip",
+      "schema": "OTT",
       "url": "http://files.opentreeoflife.org/gbif/gbif-20160729/gbif-20160729.zip",
       "copy_status": "snapshot"
     },

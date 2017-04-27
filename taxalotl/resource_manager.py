@@ -196,6 +196,9 @@ class ResourceWrapper(object):
 
     def download(self):
         dfp = self.download_filepath
+        if dfp is None:
+            m = "Resource {} appears to be abstract, therefore not downloadable"
+            raise RuntimeError(m.format(self.id))
         _LOG.debug("Starting download from {} to {}".format(self.url, dfp))
         download_large_file(self.url, dfp)
         _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
@@ -204,7 +207,6 @@ class ResourceWrapper(object):
         unpack_archive(self.download_filepath, self.unpacked_filepath, self.format, self)
 
     def normalize(self):
-        schema = self.schema.lower()
         normalize_archive(self.unpacked_filepath, self.normalized_filepath, self.schema, self)
 
     def write_status(self, out, indent=''):
