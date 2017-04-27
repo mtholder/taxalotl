@@ -10,6 +10,15 @@
       "copy_status": "snapshot"
     },
     {
+      "inherits_from": "worms",
+      "schema": "OTT",
+      "date": "2015-10-01",
+      "format":"tar+gzip",
+      "url": "http://files.opentreeoflife.org/worms/worms-1/worms-1-ot.tgz",
+      "id": "worms-1",
+      "copy_status": "snapshot"
+    },
+    {
       "id": "gbif-20160729",
       "inherits_from": "gbif",
       "date": "2016-07-29",

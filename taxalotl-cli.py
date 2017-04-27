@@ -5,30 +5,33 @@ from taxalotl import TaxalotlConfig
 from peyotl import get_logger
 
 _LOG = get_logger(__name__)
-
+out_stream = sys.stdout
 
 def download_resources(taxalotl_config, id_list):
     for rid in id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid, 'download')
         if rw.has_been_downloaded():
             m = "{} was already present at {}"
-            _LOG.info(m.format(rw.id, rw.download_filepath(taxalotl_config)))
+            _LOG.info(m.format(rw.id, rw.download_filepath()))
         else:
-            rw.download(taxalotl_config)
+            rw.download()
 
 
-def status_of_resources(taxalotl_config, id_list):
+def status_of_resources(taxalotl_config, id_list, ids_only=False):
     terminalize = True
     if not id_list:
         terminalize = False
         id_list = list(taxalotl_config.resources_mgr.resources.keys())
         id_list.sort()
+        if ids_only:
+            out_stream.write("{}\n".format("\n".join(id_list)))
+            return
     for rid in id_list:
         if terminalize:
             rw = taxalotl_config.get_terminalized_res_by_id(rid, 'status')
         else:
             rw = taxalotl_config.get_resource_by_id(rid)
-        rw.write_status(sys.stdout, indent='  ')
+        rw.write_status(out_stream, indent='  ')
 
 
 def unpack_resources(taxalotl_config, id_list):
@@ -65,7 +68,9 @@ def main(args):
         if args.which == 'download':
             download_resources(taxalotl_config, args.resources)
         elif args.which == 'status':
-            status_of_resources(taxalotl_config, args.resources)
+            status_of_resources(taxalotl_config,
+                                args.resources,
+                                ids_only=args.ids_only)
         elif args.which == 'unpack':
             unpack_resources(taxalotl_config, args.resources)
         elif args.which == 'normalize':
@@ -89,6 +94,10 @@ if __name__ == "__main__":
     status_p = subp.add_parser('status',
                                help="report the status of a resource (or all resources)")
     status_p.add_argument('resources', nargs="*", help="IDs of the resources to report status on")
+    status_p.add_argument("-i", "--ids-only",
+                          action='store_true',
+                          default=False,
+                          help="just list the IDs")
     status_p.set_defaults(which="status")
     # DOWNLOAD
     download_p = subp.add_parser('download', help="download an artifact to your local filesystem")

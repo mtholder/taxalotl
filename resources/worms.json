@@ -8,13 +8,9 @@
   "resources" : [
     {
       "resource_type": "external taxonomy",
-      "source": "WORMS",
-      "schema": "OTT",
-      "date": "2015-10-01",
+      "source": "WoRMS",
       "format":"tar+gzip",
-      "url": "http://files.opentreeoflife.org/worms/worms-1/worms-1-ot.tgz",
-      "id": "worms-1",
-      "copy_status": "snapshot",
+      "id": "worms",
       "references": ["WRMS"]
     }
   ]
