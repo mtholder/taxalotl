@@ -28,6 +28,7 @@
       "date": "2010",
       "format":"text",
       "schema": "OTT",
+      "local_filename": "taxonomy.tsv",
       "url": "http://purl.org/opentree/ott/ott2.8/inputs/lamiales-20140118.tsv",
       "id": "S2010",
       "references": "SchaferhoffEtAt2010",

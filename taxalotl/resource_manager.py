@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
-
+import shutil
 import codecs
 import json
 import os
@@ -18,12 +18,19 @@ _ALLOWED_RESOURCE_KEYS = frozenset(["resources", "references", "ott_versions", "
 
 
 ######################################################################################
-def unpack_archive(archive_fp, unpack_fp, archive_format):
+def unpack_archive(archive_fp, unpack_fp, archive_format, wrapper):
     afl = archive_format.lower()
     if afl in ['tar+gzip']:
         _LOG.debug("gunzip_and_untar from {} to {} ...".format(archive_fp, unpack_fp))
         gunzip_and_untar(archive_fp, unpack_fp)
         _LOG.debug("gunzip_and_untar from {} to {} done.".format(archive_fp, unpack_fp))
+    elif afl == 'text':
+        assure_dir_exists(unpack_fp)
+        try:
+            lfn = wrapper.local_filename
+        except:
+            raise RuntimeError("Resource must have a local_filename if it format=text")
+        shutil.copyfile(archive_fp, os.path.join(unpack_fp, lfn))
     else:
         m = "Unpacking from {} format is not currently supported"
         raise NotImplementedError(m.format(archive_format))
@@ -96,6 +103,7 @@ _known_res_attr = frozenset(['aliases',
                              'inherits_from',
                              'inputs',
                              'latest_download_url',
+                             'local_filename',
                              'maintainer',
                              'preceded_by',
                              'references',
@@ -193,7 +201,7 @@ class ResourceWrapper(object):
         _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
 
     def unpack(self):
-        unpack_archive(self.download_filepath, self.unpacked_filepath, self.format)
+        unpack_archive(self.download_filepath, self.unpacked_filepath, self.format, self)
 
     def normalize(self):
         schema = self.schema.lower()
@@ -216,11 +224,14 @@ class ResourceWrapper(object):
         else:
             out.write(' (unversioned)\n')
         out.write("{}date: {}\n".format(indent, self.date if self.date else 'unknown'))
-        s = "is at" if os.path.exists(dfp) else "not yet downloaded to"
+        s = "is at" if self.has_been_downloaded() else "not yet downloaded to"
         out.write("{}Raw ({} format) {} {}\n".format(indent, self.format, s, dfp))
         ufp = self.unpacked_filepath
-        s = "is at" if os.path.exists(ufp) else "not yet unpacked to"
+        s = "is at" if self.has_been_unpacked() else "not yet unpacked to"
         out.write("{}Raw ({} schema) {} {}\n".format(indent, self.schema, s, ufp))
+        nfp = self.normalized_filepath
+        s = "is at" if self.has_been_normalized() else "not yet normalized to"
+        out.write("{}OTT formatted form {} {}\n".format(indent, s, nfp))
 
 
 # noinspection PyAbstractClass
