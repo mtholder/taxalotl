@@ -61,14 +61,19 @@ def normalize_resources(taxalotl_config, id_list):
 
 def main(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
-    if args.which == 'download':
-        download_resources(taxalotl_config, args.resources)
-    elif args.which == 'status':
-        status_of_resources(taxalotl_config, args.resources)
-    elif args.which == 'unpack':
-        unpack_resources(taxalotl_config, args.resources)
-    elif args.which == 'normalize':
-        normalize_resources(taxalotl_config, args.resources)
+    try:
+        if args.which == 'download':
+            download_resources(taxalotl_config, args.resources)
+        elif args.which == 'status':
+            status_of_resources(taxalotl_config, args.resources)
+        elif args.which == 'unpack':
+            unpack_resources(taxalotl_config, args.resources)
+        elif args.which == 'normalize':
+            normalize_resources(taxalotl_config, args.resources)
+    except Exception as x:
+        if taxalotl_config.crash_with_stacktraces:
+            raise
+        sys.exit('taxalotl-cli: Exiting with exception:\n{}'.format(x))
 
 
 if __name__ == "__main__":

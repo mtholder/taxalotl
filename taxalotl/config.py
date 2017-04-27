@@ -67,6 +67,10 @@ class TaxalotlConfig(object):
         self.normalized_dir = normd
         self.resources_dir = resd
         self._resources_mgr = None
+        cws = _none_for_missing_config_get(cfg, 'behavior', 'crash_with_stacktraces')
+        if cws:
+            cws = cfg.getboolean('behavior', 'crash_with_stacktraces')
+        self.crash_with_stacktraces = bool(cws)
 
     @property
     def resources_mgr(self):
