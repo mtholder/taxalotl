@@ -7,7 +7,8 @@ import os
 
 from peyotl import (assure_dir_exists,
                     download_large_file,
-                    get_logger, gunzip_and_untar)
+                    get_logger, gunzip, gunzip_and_untar,
+                    unzip)
 
 from taxalotl.ncbi import normalize_ncbi
 
@@ -24,6 +25,10 @@ def unpack_archive(archive_fp, unpack_fp, archive_format, wrapper):
         _LOG.debug("gunzip_and_untar from {} to {} ...".format(archive_fp, unpack_fp))
         gunzip_and_untar(archive_fp, unpack_fp)
         _LOG.debug("gunzip_and_untar from {} to {} done.".format(archive_fp, unpack_fp))
+    elif afl == 'zip':
+        _LOG.debug("unzip from {} to {} ...".format(archive_fp, unpack_fp))
+        unzip(archive_fp, unpack_fp)
+        _LOG.debug("unzip from {} to {} done.".format(archive_fp, unpack_fp))
     elif afl == 'text':
         assure_dir_exists(unpack_fp)
         try:
