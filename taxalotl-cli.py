@@ -12,7 +12,7 @@ def download_resources(taxalotl_config, id_list):
         rw = taxalotl_config.get_terminalized_res_by_id(rid, 'download')
         if rw.has_been_downloaded():
             m = "{} was already present at {}"
-            _LOG.info(m.format(rw.id, rw.download_filepath()))
+            _LOG.info(m.format(rw.id, rw.download_filepath))
         else:
             rw.download()
 
@@ -43,7 +43,7 @@ def unpack_resources(taxalotl_config, id_list):
             download_resources(taxalotl_config, [rw.id])
         if rw.has_been_unpacked():
             m = "{} was already present at {}"
-            _LOG.info(m.format(rw.id, rw.unpacked_filepath()))
+            _LOG.info(m.format(rw.id, rw.unpacked_filepath))
         else:
             rw.unpack()
 
@@ -57,7 +57,7 @@ def normalize_resources(taxalotl_config, id_list):
             unpack_resources(taxalotl_config, [rw.id])
         if rw.has_been_normalized():
             m = "{} was already normalized at {}"
-            _LOG.info(m.format(rw.id, rw.normalized_filepath()))
+            _LOG.info(m.format(rw.id, rw.normalized_filepath))
         else:
             rw.normalize()
 

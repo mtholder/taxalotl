@@ -304,7 +304,9 @@ def write_ncbi_details_json(fp, details_log):
     write_as_json(details_log, fp, indent=2)
 
 
-def normalize_ncbi(source, destination, url):
+def normalize_ncbi(source, destination, res_wrapper):
+    url = res_wrapper.url
+
     nodes_fp = os.path.join(source, "nodes.dmp")
     names_fp = os.path.join(source, "names.dmp")
     merged_fp = os.path.join(source, "merged.dmp")

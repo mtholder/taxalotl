@@ -15,6 +15,26 @@ _LOG = get_logger(__name__)
 _ALLOWED_RESOURCE_KEYS = frozenset(["resources", "references", "ott_versions", "next"])
 
 
+
+######################################################################################
+def unpack_archive(archive_fp, unpack_fp, archive_format):
+    afl = archive_format.lower()
+    if afl in ['tar+gzip']:
+        _LOG.debug("gunzip_and_untar from {} to {} ...".format(archive_fp, unpack_fp))
+        gunzip_and_untar(archive_fp, unpack_fp)
+        _LOG.debug("gunzip_and_untar from {} to {} done.".format(archive_fp, unpack_fp))
+    else:
+        m = "Unpacking from {} format is not currently supported"
+        raise NotImplementedError(m.format(archive_format))
+######################################################################################
+def normalize_archive(unpacked_fp, normalized_fp, schema_str, resource_wrapper):
+    schema = schema_str.lower()
+    if schema == "ncbi taxonomy":
+        normalize_ncbi(unpacked_fp, normalized_fp, resource_wrapper)
+    else:
+        m = "Normalization from {} schema is not currently supported"
+        raise NotImplementedError(m.format(schema_str))
+
 def read_resource_file(fp):
     try:
         with codecs.open(fp, 'rU', encoding='utf-8') as inp:
@@ -103,17 +123,20 @@ class ResourceWrapper(object):
             return self.children[-1].get_leaf_obj()
         return self
 
+    @property
     def download_filepath(self):
         if self.is_abstract:
             return None
         fn = os.path.split(self.url)[-1]
         return os.path.join(self.config.raw_downloads_dir, fn)
 
+    @property
     def unpacked_filepath(self):
         if self.is_abstract:
             return None
         return os.path.join(self.config.raw_downloads_dir, self.id)
 
+    @property
     def normalized_filepath(self):
         if self.is_abstract:
             return None
@@ -124,48 +147,34 @@ class ResourceWrapper(object):
         return self.format is None or self.url is None or self.schema is None
 
     def has_been_downloaded(self):
-        dfp = self.download_filepath()
+        dfp = self.download_filepath
         return dfp is not None and os.path.exists(dfp)
 
     def has_been_unpacked(self):
-        dfp = self.unpacked_filepath()
+        dfp = self.unpacked_filepath
         return dfp is not None and os.path.exists(dfp)
 
     def has_been_normalized(self):
-        dfp = self.normalized_filepath()
+        dfp = self.normalized_filepath
         return (dfp is not None
                 and os.path.exists(dfp)
                 and os.path.exists(os.path.join(dfp, 'taxonomy.tsv')))
 
     def download(self):
-        dfp = self.download_filepath()
+        dfp = self.download_filepath
         _LOG.debug("Starting download from {} to {}".format(self.url, dfp))
         download_large_file(self.url, dfp)
         _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
 
     def unpack(self):
-        if self.format == 'tar+gzip':
-            ufp = self.unpacked_filepath()
-            dfp = self.download_filepath()
-            _LOG.debug("Starting gunzip_and_untar from {} to {}".format(dfp, ufp))
-            gunzip_and_untar(dfp, ufp)
-            _LOG.debug("gunzip_and_untar from {} to {} completed.".format(dfp, ufp))
-        else:
-            raise NotImplementedError(
-                "Unpacking from {} format is not currently supported".format(self.format))
+        unpack_archive(self.download_filepath, self.unpacked_filepath, self.format)
 
     def normalize(self):
         schema = self.schema.lower()
-        ufp = self.unpacked_filepath()
-        nfp = self.normalized_filepath()
-        if schema == "ncbi taxonomy":
-            normalize_ncbi(ufp, nfp, self.url)
-        else:
-            raise NotImplementedError(
-                "Unpacking from {} format is not currently supported".format(self.format))
+        normalize_archive(self.unpacked_filepath, self.normalized_filepath, self.schema, self)
 
     def write_status(self, out, indent=''):
-        dfp = self.download_filepath()
+        dfp = self.download_filepath
         if dfp is None:
             lo = self.get_leaf_obj()
             if lo == self:
@@ -183,7 +192,7 @@ class ResourceWrapper(object):
         out.write("{}date: {}\n".format(indent, self.date if self.date else 'unknown'))
         s = "is at" if os.path.exists(dfp) else "not yet downloaded to"
         out.write("{}Raw ({} format) {} {}\n".format(indent, self.format, s, dfp))
-        ufp = self.unpacked_filepath()
+        ufp = self.unpacked_filepath
         s = "is at" if os.path.exists(ufp) else "not yet unpacked to"
         out.write("{}Raw ({} schema) {} {}\n".format(indent, self.schema, s, ufp))
 
