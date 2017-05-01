@@ -11,7 +11,7 @@ from peyotl import (assure_dir_exists,
                     unzip)
 
 from taxalotl.ncbi import normalize_ncbi
-from taxalotl.darwin_core import normalize_darwin_core
+from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 
 _LOG = get_logger(__name__)
 
@@ -34,6 +34,7 @@ def unpack_archive(archive_fp, unpack_fp, archive_format, wrapper):
         assure_dir_exists(unpack_fp)
         try:
             lfn = wrapper.local_filename
+            assert lfn is not None
         except:
             raise RuntimeError("Resource must have a local_filename if it format=text")
         shutil.copyfile(archive_fp, os.path.join(unpack_fp, lfn))
@@ -64,17 +65,19 @@ def copy_taxonomy_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
             dfp = os.path.join(normalized_dirp, fn)
             os.symlink(ufp, dfp)
 
+_schema_to_norm_fn ={"ott": copy_taxonomy_by_linking,
+                     "ncbi": normalize_ncbi,
+                     "http://rs.tdwg.org/dwc/": normalize_darwin_core_taxonomy,
+                     }
+
 def normalize_archive(unpacked_fp, normalized_fp, schema_str, resource_wrapper):
     schema = schema_str.lower()
-    if schema == "ott":
-        copy_taxonomy_by_linking(unpacked_fp, normalized_fp, resource_wrapper)
-    elif schema == "ncbi taxonomy":
-        normalize_ncbi(unpacked_fp, normalized_fp, resource_wrapper)
-    elif schema == "http://rs.tdwg.org/dwc/":
-        normalize_darwin_core(unpacked_fp, normalized_fp, resource_wrapper)
-    else:
+    try:
+        norm_fn = _schema_to_norm_fn[schema]
+    except IndexError:
         m = "Normalization from {} schema is not currently supported"
         raise NotImplementedError(m.format(schema_str))
+    norm_fn(unpacked_fp, normalized_fp, resource_wrapper)
 
 def read_resource_file(fp):
     try:
