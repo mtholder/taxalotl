@@ -31,7 +31,7 @@ def status_of_resources(taxalotl_config, id_list, ids_only=False):
             rw = taxalotl_config.get_terminalized_res_by_id(rid, 'status')
         else:
             rw = taxalotl_config.get_resource_by_id(rid)
-        rw.write_status(out_stream, indent='  ')
+        rw.write_status(out_stream, indent=' '*4)
 
 
 def unpack_resources(taxalotl_config, id_list):
