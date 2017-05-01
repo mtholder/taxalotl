@@ -44,7 +44,7 @@ def write_ott_taxonomy_tsv(out_fp,
                         syn_id_order.append(curr_id)
                     name = id_to_name[curr_id]
                     par_id = id_to_par.get(curr_id)
-                    if not par_id:
+                    if par_id is None:
                         spar_id = ''
                     else:
                         spar_id = str(par_id)

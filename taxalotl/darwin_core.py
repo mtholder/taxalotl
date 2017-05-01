@@ -228,6 +228,14 @@ def prune_ignored(itd, to_ignore):
             stack.append(cid)
     itd.del_ids(seen)
 
+def add_fake_root(itd):
+    itd.to_children[0] = list(itd.root_nodes)
+    itd.to_name[0] = "life"
+    itd.to_par[0] = None
+    for i in itd.root_nodes:
+        itd.to_par[i] = 0
+    itd.root_nodes = set([0])
+
 def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
     proj_out = os.path.join(destination, 'projection.tsv')
@@ -236,6 +244,7 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
         write_gbif_projection_file(proj_in, proj_out)
     itd = InterimTaxonomyData()
     to_remove, to_ignore, paleos = read_gbif_projection(proj_out, itd)
+    add_fake_root(itd)
     remove_if_tips(itd, to_remove)
     o_to_ignore = find_orphaned(itd)
     to_ignore.update(o_to_ignore)
