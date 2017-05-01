@@ -3,10 +3,8 @@ from __future__ import print_function
 import codecs
 import os
 import time
-
-from peyotl import (assure_dir_exists,
-                    get_logger,
-                    write_as_json)
+from peyotl import (add_or_append_to_dict, get_logger)
+from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
 
 _LOG = get_logger(__name__)
 
@@ -39,24 +37,8 @@ def epoch_seconds_to_isotime(sec_since_epoch):
     return time.strftime("%Y-%m-%dT%H:%M:%S", tuple_time)
 
 
-def add_or_append_to_dict(d, k, v):
-    """If dict `d` has key `k`, then the new value of that key will be appended
-    onto a list containing the previous values, otherwise d[k] = v.
-    Creates a lightweight multimap, but not safe if v can be None or a list.
-    returns True if the k now maps to >1 value"""
-    ov = d.get(k)
-    if ov is None:
-        d[k] = v
-        return False
-    if isinstance(ov, list):
-        ov.append(v)
-    else:
-        d[k] = [ov, v]
-    return True
-
-
 ####################################################################################################
-def parse_ncbi_names_file(names_fp, details_log):
+def parse_ncbi_names_file(names_fp, itd):
     """Takes a filepath to an NCBI names.dmp file.
     Returns tuple
          0 id_to_name: node_id int -> str
@@ -64,10 +46,6 @@ def parse_ncbi_names_file(names_fp, details_log):
          2 synonyms node_id -> [(name, type of synonym))
     """
     count = 0
-    id_to_name = {}
-    synonyms = {}
-    names_to_ids = {}
-    repeated_names = set()
     with codecs.open(names_fp, "r", encoding='utf-8') as namesf:
         for line in namesf:
             # if you do \t|\t then you don't get the name class right because it is "\t|"
@@ -93,33 +71,28 @@ def parse_ncbi_names_file(names_fp, details_log):
             # in-part (e.g. Bacteria in-part: Monera)
             # includes (what polarity?)
             if nm_c == "scientific name":
-                id_to_name[node_id] = name
-                if add_or_append_to_dict(names_to_ids, name, node_id):
-                    repeated_names.add(name)
+                itd.register_id_and_name(node_id, name)
             elif nm_c != "in-part":
-                synonyms.setdefault(node_id, []).append((name, nm_c))
+                itd.register_synonym(valid_id=node_id, syn_name=name, name_type=nm_c)
             count += 1
             if count % 100000 == 0:
                 _LOG.info('{} lines of names'.format(count))
     _LOG.info("number of lines in names file: {}".format(count))
-    _LOG.info("number of distinct scientific names: {}".format(len(names_to_ids)))
-    _LOG.info("number of IDs with synonyms: {}".format(len(synonyms)))
-    details_log['num_distinct_names'] = len(names_to_ids)
-    details_log['num_ids_with_synonyms'] = len(synonyms)
-    return id_to_name, names_to_ids, synonyms, repeated_names
+    _LOG.info("number of distinct scientific names: {}".format(len(itd.name_to_ids)))
+    _LOG.info("number of IDs with synonyms: {}".format(len(itd.synonyms)))
 
 
-def parse_ncbi_nodes_file(nodes_fp, details_log):
+def parse_ncbi_nodes_file(nodes_fp, itd):
     """Takes a filepath to an NCBI nodes.dmp and returns 3 dict mapping an ID to:
         - parent ID (can be None or an int)
         - children list (only for internals)
         - rank string (if available
     """
     count = 0
-    to_par = {}  # key is the child id and the value is the parent
-    to_children = {}  # key is the parent and value is the list of children
-    to_rank = {}  # key is the node id and the value is the rank
-    root_nodes = []
+    to_par = itd.to_par  # key is the child id and the value is the parent
+    to_children = itd.to_children  # key is the parent and value is the list of children
+    to_rank = itd.to_rank  # key is the node id and the value is the rank
+    root_nodes = itd.root_nodes
     with codecs.open(nodes_fp, "r", encoding='utf-8') as nodesf:
         for line in nodesf:
             spls = line.split("\t|\t")
@@ -131,7 +104,7 @@ def parse_ncbi_nodes_file(nodes_fp, details_log):
                 par_id = int(ps)
             else:
                 par_id = None
-                root_nodes.append(node_id)
+                root_nodes.add(node_id)
             rank = spls[2].strip()
             to_par[node_id] = par_id
             if rank:
@@ -141,38 +114,34 @@ def parse_ncbi_nodes_file(nodes_fp, details_log):
             if count % 100000 == 0:
                 _LOG.info('{} lines of nodes'.format(count))
     _LOG.info("number of lines in nodes file: {}".format(count))
-    details_log['num_nodes'] = len(to_par)
-    return to_par, to_children, to_rank, root_nodes
 
 
-def parse_ncbi_merged(fp, details_log):
-    forwards_dict = {}
+def parse_ncbi_merged(fp, itd):
     if os.path.exists(fp):
         with codecs.open(fp, 'r', encoding='utf-8') as inp:
             for line in inp:
                 rs = line.split('\t|')
                 from_id, to_id = int(rs[0]), int(rs[1])
-                forwards_dict[from_id] = to_id
-    details_log['num_forwards'] = len(forwards_dict)
-    _LOG.info('number of merges: {}'.format(len(forwards_dict)))
-    return forwards_dict
+                itd.forwards[from_id] = to_id
+    _LOG.info('number of merges: {}'.format(len(itd.forwards)))
 
 
 # noinspection PyBroadException
-def deal_with_adj_taxa_with_same_names(id_to_parent,
-                                       id_to_children,
-                                       id_to_rank,
-                                       id_to_name,
-                                       names_to_ids,
-                                       synonyms,
-                                       repeated_names,
-                                       details_log):
+def deal_with_adj_taxa_with_same_names(itd):
     """Here we look for cases in which a taxon and its parent have the same name.
     1. If the parent is a genus (this is common for subgenera), then we just alter the
         child's name to the form 'NAME CHILDS-RANK NAME'
     2. If the parent is not a genus, then we remove the child ID from the tree.
     """
-    suppressed_ids, renamed_ids = {}, set()
+    id_to_parent = itd.to_par
+    id_to_children = itd.to_children
+    id_to_rank = itd.to_rank
+    id_to_name = itd.to_name
+    names_to_ids = itd.name_to_ids
+    synonyms = itd.synonyms
+    repeated_names = itd.repeated_names
+    suppressed_ids = {}
+    renamed_ids = set()
     for name in repeated_names:
         ids_with_this_name = names_to_ids[name]
         assert isinstance(ids_with_this_name, list) and len(ids_with_this_name) > 1
@@ -211,14 +180,16 @@ def deal_with_adj_taxa_with_same_names(id_to_parent,
                     id_to_parent[gc] = par_id
                 for syn_el in synonyms.get(child_id, []):
                     synonyms.setdefault(par_id, []).append(syn_el)
-    details_log['ids_suppressed_because_same_name_as_par'] = suppressed_ids
+    itd.details_log['ids_suppressed_because_same_name_as_par'] = suppressed_ids
     ril = list(renamed_ids)
     ril.sort()
-    details_log['names_decorated_because_same_name_as_par'] = ril
-    return suppressed_ids, renamed_ids
+    itd.details_log['names_decorated_because_same_name_as_par'] = ril
 
 
-def deal_with_ncbi_env_samples_names(id_to_par, id_to_name, names_to_ids, details_log):
+def deal_with_ncbi_env_samples_names(itd):
+    id_to_par = itd.to_par
+    id_to_name = itd.to_name
+    names_to_ids = itd.name_to_ids
     ess = 'environmental samples'
     es_ids = names_to_ids.setdefault(ess, [])
     renamed_ids = set(es_ids)
@@ -230,138 +201,41 @@ def deal_with_ncbi_env_samples_names(id_to_par, id_to_name, names_to_ids, detail
     del names_to_ids[ess]
     ril = list(renamed_ids)
     ril.sort()
-    details_log['names_decorated_because_env_samp'] = ril
+    itd.details_log['names_decorated_because_env_samp'] = ril
     return renamed_ids
 
 
 ####################################################################################################
-def write_ott_taxonomy_tsv(out_fp,
-                           root_nodes,
-                           id_to_par,
-                           id_to_children,
-                           id_to_rank,
-                           id_to_name,
-                           has_syn_dict,
-                           details_log):
-    """If has_syn_dict is provided, then a list of the IDs that occur in that dict
-    is returned in the order that the IDs were written to taxonomy file. This 
-    allows for the synonyms.tsv file to be written in a similar order, which makes browsing it
-    easier.
-    """
-    if has_syn_dict is None:
-        has_syn_dict = {}
-    syn_id_order = []
-    num_tips_written = 0
-    num_internals_written = 0
-    with codecs.open(out_fp, 'w', encoding='utf-8') as out:
-        out.write("uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n")
-        # need to print id, parent id, and name
-        for root_id in root_nodes:
-            stack = [root_id]
-            while stack:
-                curr_id = stack.pop()
-                if curr_id in has_syn_dict:
-                    syn_id_order.append(curr_id)
-                name = id_to_name[curr_id]
-                par_id = id_to_par[curr_id]
-                spar_id = str(par_id)
-                rank = id_to_rank.get(curr_id, '')
-                children = id_to_children.get(curr_id)
-                if children:
-                    num_internals_written += 1
-                    stack.extend(children)
-                else:
-                    num_tips_written += 1
-                out.write('{}\n'.format('\t|\t'.join([str(curr_id), spar_id, name, rank, ''])))
-    details_log['num_tips_written'] = num_tips_written
-    details_log['num_internals_written'] = num_internals_written
-    return syn_id_order
-
-
-def write_ott_synonyms_tsv(out_fp,
-                           id_to_name_name_type_list,
-                           id_order,
-                           details_log):
-    num_syn_written = 0
-    with codecs.open(out_fp, 'w', encoding='utf-8') as out:
-        out.write("uid\t|\tname\t|\ttype\t|\t\n")
-        for nd_id in id_order:
-            syn_list = id_to_name_name_type_list[nd_id]
-            for name, name_type in syn_list:
-                num_syn_written += 1
-                out.write('{}\n'.format('\t|\t'.join([str(nd_id), name, name_type, ''])))
-    details_log['num_synonyms_written'] = num_syn_written
-    details_log['num_ids_with_synonyms_written'] = len(id_order)
-
-
-def write_ott_forwards(out_fp, forwarded_dict):
-    with codecs.open(out_fp, 'w', encoding='utf-8') as out:
-        for key, value in forwarded_dict.items():
-            out.write('{}\t{}\n'.format(key, value))
-
-
-def write_ncbi_details_json(fp, details_log):
-    write_as_json(details_log, fp, indent=2)
-
 
 def normalize_ncbi(source, destination, res_wrapper):
     url = res_wrapper.url
-
+    itd = InterimTaxonomyData()
     nodes_fp = os.path.join(source, "nodes.dmp")
     names_fp = os.path.join(source, "names.dmp")
     merged_fp = os.path.join(source, "merged.dmp")
-    about_obj = {"prefix": "ncbi",
+    itd.about = {"prefix": "ncbi",
                  "prefixDefinition": "http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=",
                  "description": "NCBI Taxonomy",
                  "source": {"URL": url,
                             "date": file_mod_time_to_isotime(nodes_fp)
                             }
                  }
-    details_log = {}
-    forwarded = parse_ncbi_merged(merged_fp, details_log)
-    id_to_par, id_to_children, id_to_rank, root_nodes = parse_ncbi_nodes_file(nodes_fp,
-                                                                              details_log)
+    parse_ncbi_merged(merged_fp, itd)
+    parse_ncbi_nodes_file(nodes_fp, itd)
     # Make sure there is only 1 root, and that its parent is an empty string
-    assert len(root_nodes) == 1
-    root_id = root_nodes[0]
-    assert id_to_par[root_id] is None
-    id_to_par[root_id] = ""
-    id_to_name, name_to_ids, synonyms, repeated_names = parse_ncbi_names_file(names_fp,
-                                                                              details_log)
+    assert len(itd.root_nodes) == 1
+    root_id = list(itd.root_nodes)[0]
+    assert itd.to_par[root_id] is None
+    itd.to_par[root_id] = ""
+    parse_ncbi_names_file(names_fp, itd)
     # Change the root's name from root to life
-    assert id_to_name[root_id] == "root"
-    id_to_name[root_id] = "life"
+    assert itd.to_name[root_id] == "root"
+    itd.to_name[root_id] = "life"
     # Clean up adjacent taxa with the same name
     # TODO: do we really want to suppress any? Seems dangerous... MTH Apr, 2017
-    deal_with_adj_taxa_with_same_names(id_to_par,
-                                       id_to_children,
-                                       id_to_rank,
-                                       id_to_name,
-                                       name_to_ids,
-                                       synonyms,
-                                       repeated_names,
-                                       details_log)
+    deal_with_adj_taxa_with_same_names(itd)
     # Decorate the names of environmental samples
-    deal_with_ncbi_env_samples_names(id_to_par, id_to_name, name_to_ids, details_log)
-    # Write out in OTT form
-    assure_dir_exists(destination)
-    syn_order = write_ott_taxonomy_tsv(os.path.join(destination, 'taxonomy.tsv'),
-                                       root_nodes,
-                                       id_to_par,
-                                       id_to_children,
-                                       id_to_rank,
-                                       id_to_name,
-                                       synonyms,
-                                       details_log)
-    write_ott_synonyms_tsv(os.path.join(destination, 'synonyms.tsv'),
-                           synonyms,
-                           syn_order,
-                           details_log)
-    write_ncbi_details_json(os.path.join(destination, 'details.json'),
-                            details_log)
-    write_ott_forwards(os.path.join(destination, 'forwards.tsv'), forwarded)
-
-    about_fp = os.path.join(destination, 'about.json')
-    write_as_json(about_obj, about_fp, indent=2)
+    deal_with_ncbi_env_samples_names(itd)
+    itd.write_to_dir(destination)
 
 ###################################################################################################

@@ -66,7 +66,7 @@ def copy_taxonomy_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
             os.symlink(ufp, dfp)
 
 _schema_to_norm_fn ={"ott": copy_taxonomy_by_linking,
-                     "ncbi": normalize_ncbi,
+                     "ncbi taxonomy": normalize_ncbi,
                      "http://rs.tdwg.org/dwc/": normalize_darwin_core_taxonomy,
                      }
 
