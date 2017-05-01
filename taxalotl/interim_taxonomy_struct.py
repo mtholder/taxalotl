@@ -136,3 +136,19 @@ class InterimTaxonomyData(object):
         self.finalize()
         write_ncbi_details_json(os.path.join(destination, 'details.json'),
                                 self.details_log)
+    def del_ids(self, id_list):
+        to_name = self.to_name
+        to_par = self.to_par
+        to_children = self.to_children
+        for taxon_id in id_list:
+            if taxon_id in to_name:
+                del to_name[id]
+            pid = to_par.get(taxon_id)
+            if pid:
+                pc = to_children.get(pc)
+                try:
+                    pc.remove(taxon_id)
+                except:
+                    pass
+
+

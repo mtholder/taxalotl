@@ -12,9 +12,8 @@ import os
 import time
 
 from peyotl import (assure_dir_exists,
-                    get_logger,
-                    write_as_json)
-
+                    get_logger)
+from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
 _LOG = get_logger(__name__)
 
 def normalize_darwin_core(source, destination, res_wrapper):
@@ -83,7 +82,7 @@ def write_gbif_projection_file(source, destination):
                     _LOG.info("{} {} => {}".format(i, scientific.encode('utf-8'), canenc))
                 i += 1
 
-def read_gbif_projection(proj_filepath):
+def read_gbif_projection(proj_filepath, itd):
     col_taxonID = 0
     col_parentNameUsageID = 1
     col_acceptedNameUsageID = 2
@@ -98,15 +97,12 @@ def read_gbif_projection(proj_filepath):
     to_ignore.append(0)  # kingdom incertae sedis
     flushed_because_source = set()
     to_remove = set()
-    synonyms = {}
-    to_par = {}  # key is the child id and the value is the parent
-    to_children = {}  # key is the parent and value is the list of children
-    to_rank = {}  # key is the node id and the value is the rank
-    to_name = {}
+    to_par = itd.to_par
+    to_children = itd.to_children
+    to_rank = itd.to_rank
     paleos = set()
     ranks_to_ignore = frozenset(["form", "variety", "subspecies", "infraspecificname"])
     to_ignore = set()
-    root_nodes = set()
     count = 0
     n_syn = 0
     with codecs.open(proj_filepath, 'r', encoding='utf-8') as inp:
@@ -135,7 +131,7 @@ def read_gbif_projection(proj_filepath):
                     to_remove.add(taxon_id)
             elif is_synonym:
                 synon_of = int(syn_target_id_string)
-                synonyms.setdefault(synon_of, []).append((name, tstatus))
+                itd.register_synonym(synon_of, name, tstatus)
                 n_syn += 1
                 continue
             elif ("Paleobiology Database" in source) or (
@@ -152,7 +148,7 @@ def read_gbif_projection(proj_filepath):
             parent_id_string = fields[col_parentNameUsageID].strip()
 
             # Past all the filters, time to store
-            to_name[taxon_id] = name
+            itd.register_id_and_name(taxon_id, name)
             to_rank[taxon_id] = rank
 
             if parent_id_string:
@@ -162,11 +158,72 @@ def read_gbif_projection(proj_filepath):
             else:
                 assert rank == 'kingdom'
                 to_par[taxon_id] = None
-                root_nodes.add(taxon_id)
+                itd.root_nodes.add(taxon_id)
 
             count += 1
             if count % 100000 == 0:
-                _LOG.info("lines={} #syn={} #roots={}".format(count, len(synonyms), len(root_nodes)))
+                _LOG.info("lines={} #syn={} #roots={}".format(count,
+                                                              len(itd.synonyms),
+                                                              len(itd.root_nodes)))
+    ril = list(flushed_because_source)
+    ril.sort()
+    itd.details_log["ids_suppressed_based_on_source"] = ril
+    itd.details_log["num_paleodb_ids"] = len(paleos)
+    ril = list(ranks_to_ignore)
+    ril.sort()
+    itd.details_log["ranks_ignored"] = ril
+    ril = list(not_doubtful.keys())
+    ril.sort()
+    itd.details_log["ids_read_as_doubtful_but_retained"] = ril
+    itd.details_log["removed_sources"] = ["Interim Register of Marine",
+                                          "IRMNG Homonym",
+                                          "International Plant Names Index",
+                                          "d9a4eedb-e985-4456-ad46-3df8472e00e8"]
+    return to_remove, to_ignore, paleos
+
+
+def remove_if_tips(itd, to_remove):
+    count = 0
+    to_children = itd.to_children
+    to_name = itd.to_name
+    to_par = itd.to_par
+    to_del = [i for i in to_remove if not to_children.get(i)]
+    count = len(to_del)
+    itd.del_ids(to_del)
+    _LOG.info("tips removed (IRMNG and IPNI or status): {}".format(count))
+    itd.details_log["tips_removed_because_of_source_or_status"] = count
+
+def find_orphaned(itd):
+    orphaned = set()
+    to_name = itd.to_name
+    id_list = to_name.keys()
+    to_par = itd.to_par
+    for taxon_id in id_list:
+        pid = to_par.get(taxon_id)
+        if pid and (pid not in to_name):
+            orphaned.add(taxon_id)
+    _LOG.info("orphans to be pruned: {}".format(len(orphaned)))
+    l = list(orphaned)
+    l.sort()
+    itd.details_log["orphans_pruned"] = l
+    return orphaned
+
+def prune_ignored(itd, to_ignore)
+    # Now delete the taxa-to-be-ignored and all of their descendants.
+    _LOG.info('pruning {} taxa'.format(len(to_ignore)))
+    seen = set()
+    stack = list(to_ignore)
+    stack.sort()
+    itd.details_log['ignore_prune_ids'] = list(stack)
+    to_children = itd.to_children
+    while stack:
+        curid = stack.pop()
+        if curid in seen:
+            continue
+        seen.add(curid)
+        for cid in to_children.get(curid, []):
+            stack.append(cid)
+    itd.del_ids(seen)
 
 def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
@@ -174,124 +231,14 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     if not os.path.exists(proj_out):
         proj_in = os.path.join(source, 'taxon.txt')
         write_gbif_projection_file(proj_in, proj_out)
-    x = read_gbif_projection(proj_out)
-    outfile = open(os.path.join(outdir, "taxonomy.tsv"), "w")
-    outfilesy = open(os.path.join(outdir, "synonyms.tsv"), "w")
-
-'''
-def process_gbif(inpath, outdir):
-    
-    infile = open(inpath, "r")
-
-    infile_taxon_count = 0
-    infile_synonym_count = 0
-    count = 0
-    bad_id = 0
-    no_parent = 0
-    parent = {}  # key is taxon id, value is the parent
-    children = {}  # key is taxon id, value is list of children (ids)
-    nm_storage = {}  # key is taxon id, value is the name
-    nrank = {}  # key is taxon id, value is rank
-    synnames = {}  # key is synonym id, value is name
-    syntargets = {}  # key is synonym id, value is taxon id of target
-    syntypes = {}  # key is synonym id, value is synonym type
-    to_remove = []  # list of ids
-    paleos = []  # ids that come from paleodb
-    flushed_because_source = 0
-
-    print('%s taxa, %s synonyms\n' % (infile_taxon_count, infile_synonym_count))
-
-    print('%s bad id; %s no parent id; %s synonyms; %s bad source' %
-          (bad_id, no_parent, len(synnames), flushed_because_source))
-
-    # Parent/child homonyms now get fixed by smasher
-
-    # Flush terminal taxa from IRMNG and IPNI (OTT picks up IRMNG separately)
-    count = 0
-    for id in to_remove:
-        if (not id in children):  # and id in nrank and nrank[id] != "species":
-            if id in nm_storage:
-                del nm_storage[id]
-                # should remove from children[parent[id]] too
-            count += 1
-    print
-    "tips removed (IRMNG and IPNI):", count
-
-    # Put parentless taxa into the ignore list.
-    # This isn't really needed any more; smasher can cope with multiple roots.
-    count = 0
-    for id in nm_storage:
-        if id in parent and parent[id] not in nm_storage:
-            count += 1
-            if parent[id] != 0:
-                to_ignore.append(id)
-                if count % 1000 == 0:
-                    print
-                    "example orphan ", id, nm_storage[id]
-    print
-    "orphans to be pruned: ", count
-
-    # Now delete the taxa-to-be-ignored and all of their descendants.
-    if len(to_ignore) > 0:
-        print
-        'pruning %s taxa' % len(to_ignore)
-        seen = {}
-        stack = to_ignore
-        while len(stack) != 0:
-            curid = stack.pop()
-            if curid in seen:
-                continue
-            seen[curid] = True
-            if curid in children:
-                for id in children[curid]:
-                    stack.append(id)
-        for id in seen:
-            if id in nm_storage:
-                del nm_storage[id]
-
-    """
-    output the id parentid name rank
-    """
-    print
-    "writing %s taxa" % len(nm_storage)
-    outfile.write("uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n")
-
-    count = 0
-    for id in nm_storage:
-        parent_id = ""
-        if id == incertae_sedis_kingdom:
-            print
-            "kingdom incertae sedis should have been deleted by now"
-        elif id in parent:
-            parent_id = str(parent[id])
-        elif nrank[id] == 'kingdom':
-            parent_id = "0"
-        outfile.write("%s\t|\t%s\t|\t%s\t|\t%s\t|\t\n" %
-                      (id, parent_id, nm_storage[id], nrank[id]))
-        count += 1
-        if count % 100000 == 0:
-            print
-            count
-    outfile.write("0\t|\t\t|\tlife\t|\t\t|\t\n")
-    outfile.close()
-
-    print
-    "writing %s synonyms" % len(synnames)
-    outfilesy.write('uid\t|\tname\t|\ttype\t|\t\n')
-    for id in synnames:
-        target = syntargets[id]  # taxon id of target (int)
-        if target in nm_storage:
-            outfilesy.write('%s\t|\t%s\t|\t%s\t|\t\n' %
-                            (target, synnames[id], syntypes[id]))
-    outfilesy.close()
-
-    print
-    'writing %s paleodb ids' % len(paleos)
-    paleofile = open(os.path.join(outdir, 'paleo.tsv'), 'w')
-    for id in paleos:
-        paleofile.write(('%s\n' % id))
-    paleofile.close()
-
-
-
-'''
+    itd = InterimTaxonomyData()
+    to_remove, to_ignore, paleos = read_gbif_projection(proj_out, itd)
+    remove_if_tips(itd, to_remove)
+    o_to_ignore = find_orphaned(itd)
+    to_ignore.update(o_to_ignore)
+    prune_ignored(itd, to_ignore)
+    _LOG.info('writing {} paleodb ids'.format(len(paleos)))
+    with open(os.path.join(destination, 'paleo.tsv'), 'w') as paleofile:
+        for taxon_id in paleos:
+            paleofile.write('{}\n'.format(taxon_id))
+    itd.write_to_dir(destination)
