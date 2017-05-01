@@ -11,6 +11,7 @@ from peyotl import (assure_dir_exists,
                     unzip)
 
 from taxalotl.ncbi import normalize_ncbi
+from taxalotl.darwin_core import normalize_darwin_core
 
 _LOG = get_logger(__name__)
 
@@ -69,6 +70,8 @@ def normalize_archive(unpacked_fp, normalized_fp, schema_str, resource_wrapper):
         copy_taxonomy_by_linking(unpacked_fp, normalized_fp, resource_wrapper)
     elif schema == "ncbi taxonomy":
         normalize_ncbi(unpacked_fp, normalized_fp, resource_wrapper)
+    elif schema == "http://rs.tdwg.org/dwc/":
+        normalize_darwin_core(unpacked_fp, normalized_fp, resource_wrapper)
     else:
         m = "Normalization from {} schema is not currently supported"
         raise NotImplementedError(m.format(schema_str))
@@ -214,7 +217,7 @@ class ResourceWrapper(object):
     def normalize(self):
         normalize_archive(self.unpacked_filepath, self.normalized_filepath, self.schema, self)
 
-    def write_status(self, out, indent=''):
+    def write_status(self, out, indent='', list_all_artifacts=False):
         dfp = self.download_filepath
         if dfp is None:
             lo = self.get_leaf_obj()
@@ -225,20 +228,30 @@ class ResourceWrapper(object):
             template = "{}: {}. {}. This is a class of resource, not a downloadable artifact{}.\n"
             out.write(template.format(self.id, self.resource_type, self.source, suff))
             return
-        out.write('{}:\n{}{}: {}'.format(self.id, indent, self.resource_type, self.source))
+        out.write('{}: {} {} '.format(self.id, self.resource_type, self.source))
         if self.version:
-            out.write(' version {}\n'.format(self.version))
+            out.write('version {}. '.format(self.version))
         else:
-            out.write(' (unversioned)\n')
-        out.write("{}date: {}\n".format(indent, self.date if self.date else 'unknown'))
+            out.write('(unversioned). ')
+        out.write("date={}\n".format(self.date if self.date else 'unknown'))
+
         s = "is at" if self.has_been_downloaded() else "not yet downloaded to"
-        out.write("{}Raw ({} format) {} {}\n".format(indent, self.format, s, dfp))
+        down_str = "{}Raw ({} format) {} {}\n".format(indent, self.format, s, dfp)
         ufp = self.unpacked_filepath
         s = "is at" if self.has_been_unpacked() else "not yet unpacked to"
-        out.write("{}Raw ({} schema) {} {}\n".format(indent, self.schema, s, ufp))
+        unp_str = "{}Raw ({} schema) {} {}\n".format(indent, self.schema, s, ufp)
         nfp = self.normalized_filepath
         s = "is at" if self.has_been_normalized() else "not yet normalized to"
-        out.write("{}OTT formatted form {} {}\n".format(indent, s, nfp))
+        norm_str = "{}OTT formatted form {} {}\n".format(indent, s, nfp)
+        if list_all_artifacts:
+            out.write('{}{}{}'.format(down_str, unp_str, norm_str))
+        else:
+            if self.has_been_normalized():
+                out.write(norm_str)
+            elif self.has_been_unpacked():
+                out.write(unp_str)
+            else:
+                out.write(down_str)
 
 
 # noinspection PyAbstractClass
