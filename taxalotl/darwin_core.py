@@ -74,12 +74,12 @@ def write_gbif_projection_file(source, destination):
                           row[10], # taxonomicStatus
                           row[2], # nameAccordingTo / datasetID
                          ]
-                row_el = [i.strip() for i in row_el]
+                row_el = [x.strip() for x in row_el]
                 row_str = u"\t".join(row_el)
                 outfile.write(row_str)
                 outfile.write("\n")
                 if i % 500000 == 0:
-                    _LOG.info("{} {} => {}".format(i, scientific.encode('utf-8'), canenc))
+                    _LOG.info(u"{} {} => {}".format(i, scientific, canenc))
                 i += 1
 
 def read_gbif_projection(proj_filepath, itd):
@@ -140,7 +140,12 @@ def read_gbif_projection(proj_filepath, itd):
             if tstatus == 'synonym' or (tstatus == 'doubtful' and taxon_id not in not_doubtful):
                 to_remove.add(taxon_id)
                 continue
-            assert tstatus == 'accepted'
+            if tstatus != 'accepted' and taxon_id not in not_doubtful:
+                m = "Unexpected non accepted: {} {} {} {}".format(taxon_id,
+                                                                  name,
+                                                                  tstatus,
+                                                                  source)
+                raise RuntimeError(m)
             rank = fields[col_taxonRank].strip()
             if rank in ranks_to_ignore:
                 to_ignore.add(taxon_id)
@@ -150,10 +155,9 @@ def read_gbif_projection(proj_filepath, itd):
             # Past all the filters, time to store
             itd.register_id_and_name(taxon_id, name)
             to_rank[taxon_id] = rank
-
             if parent_id_string:
                 par_id = int(parent_id_string)
-                to_par[id] = par_id
+                to_par[taxon_id] = par_id
                 to_children.setdefault(par_id, []).append(taxon_id)
             else:
                 assert rank == 'kingdom'
@@ -181,7 +185,6 @@ def read_gbif_projection(proj_filepath, itd):
                                           "d9a4eedb-e985-4456-ad46-3df8472e00e8"]
     return to_remove, to_ignore, paleos
 
-
 def remove_if_tips(itd, to_remove):
     count = 0
     to_children = itd.to_children
@@ -208,7 +211,7 @@ def find_orphaned(itd):
     itd.details_log["orphans_pruned"] = l
     return orphaned
 
-def prune_ignored(itd, to_ignore)
+def prune_ignored(itd, to_ignore):
     # Now delete the taxa-to-be-ignored and all of their descendants.
     _LOG.info('pruning {} taxa'.format(len(to_ignore)))
     seen = set()

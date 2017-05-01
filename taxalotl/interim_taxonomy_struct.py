@@ -5,6 +5,7 @@ from __future__ import print_function
 from peyotl import (add_or_append_to_dict, assure_dir_exists,
                     get_logger,
                     write_as_json)
+import tempfile
 import codecs
 import os
 
@@ -38,19 +39,26 @@ def write_ott_taxonomy_tsv(out_fp,
             stack = [root_id]
             while stack:
                 curr_id = stack.pop()
-                if curr_id in has_syn_dict:
-                    syn_id_order.append(curr_id)
-                name = id_to_name[curr_id]
-                par_id = id_to_par[curr_id]
-                spar_id = str(par_id)
-                rank = id_to_rank.get(curr_id, '')
-                children = id_to_children.get(curr_id)
-                if children:
-                    num_internals_written += 1
-                    stack.extend(children)
-                else:
-                    num_tips_written += 1
-                out.write('{}\n'.format('\t|\t'.join([str(curr_id), spar_id, name, rank, ''])))
+                try:
+                    if curr_id in has_syn_dict:
+                        syn_id_order.append(curr_id)
+                    name = id_to_name[curr_id]
+                    par_id = id_to_par.get(curr_id)
+                    if not par_id:
+                        spar_id = ''
+                    else:
+                        spar_id = str(par_id)
+                    rank = id_to_rank.get(curr_id, '')
+                    children = id_to_children.get(curr_id)
+                    if children:
+                        num_internals_written += 1
+                        stack.extend(children)
+                    else:
+                        num_tips_written += 1
+                    out.write(u'{}\n'.format('\t|\t'.join([str(curr_id), spar_id, name, rank, ''])))
+                except:
+                    _LOG.error("Error writing taxon_id {}".format(curr_id))
+                    raise
     details_log['num_tips_written'] = num_tips_written
     details_log['num_internals_written'] = num_internals_written
     return syn_id_order
@@ -67,7 +75,7 @@ def write_ott_synonyms_tsv(out_fp,
             syn_list = id_to_name_name_type_list[nd_id]
             for name, name_type in syn_list:
                 num_syn_written += 1
-                out.write('{}\n'.format('\t|\t'.join([str(nd_id), name, name_type, ''])))
+                out.write(u'{}\n'.format('\t|\t'.join([str(nd_id), name, name_type, ''])))
     details_log['num_synonyms_written'] = num_syn_written
     details_log['num_ids_with_synonyms_written'] = len(id_order)
 
@@ -122,32 +130,63 @@ class InterimTaxonomyData(object):
 
     def write_to_dir(self, destination):
         # Write out in OTT form
-        assure_dir_exists(destination)
-        syn_order = self.write_ott_taxonomy_tsv(os.path.join(destination, 'taxonomy.tsv'))
-        write_ott_synonyms_tsv(os.path.join(destination, 'synonyms.tsv'),
-                               self.synonyms,
-                               syn_order,
-                               self.details_log)
-        if self.forwards:
-            write_ott_forwards(os.path.join(destination, 'forwards.tsv'), self.forwards)
+        d = tempfile.mkdtemp()
+        fn = ['taxonomy.tsv',
+              'synonyms.tsv',
+              'forwards.tsv',
+              'about.json',
+              'details.json']
+        try:
+            syn_order = self.write_ott_taxonomy_tsv(os.path.join(d, 'taxonomy.tsv'))
+            write_ott_synonyms_tsv(os.path.join(d, 'synonyms.tsv'),
+                                   self.synonyms,
+                                   syn_order,
+                                   self.details_log)
+            if self.forwards:
+                write_ott_forwards(os.path.join(d, 'forwards.tsv'), self.forwards)
 
-        about_fp = os.path.join(destination, 'about.json')
-        write_as_json(self.about, about_fp, indent=2)
-        self.finalize()
-        write_ncbi_details_json(os.path.join(destination, 'details.json'),
-                                self.details_log)
+            about_fp = os.path.join(d, 'about.json')
+            write_as_json(self.about, about_fp, indent=2)
+            self.finalize()
+            write_ncbi_details_json(os.path.join(d, 'details.json'),
+                                    self.details_log)
+        except:
+            for f in fn:
+                tf = os.path.join(d, f)
+                if os.path.exists():
+                    try:
+                        os.remove(tf)
+                    except:
+                        pass
+            try:
+                os.rmdir(d)
+            except:
+                pass
+            raise
+        assure_dir_exists(destination)
+        for f in fn:
+            sfp = os.path.join(d, f)
+            if os.path.exists(sfp):
+                dfp = os.path.join(destination, f)
+                os.rename(sfp, dfp)
+        os.rmdir(d)
+
     def del_ids(self, id_list):
         to_name = self.to_name
         to_par = self.to_par
         to_children = self.to_children
         for taxon_id in id_list:
             if taxon_id in to_name:
-                del to_name[id]
+                del to_name[taxon_id]
+            if taxon_id in to_children:
+                del to_children[taxon_id]
             pid = to_par.get(taxon_id)
             if pid:
-                pc = to_children.get(pc)
+                del to_par[taxon_id]
+                pc = to_children.get(pid)
                 try:
-                    pc.remove(taxon_id)
+                    if pc:
+                        pc.remove(taxon_id)
                 except:
                     pass
 
