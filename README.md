@@ -112,6 +112,11 @@ If you use the base id (`ncbi`) in a command that operates
     on a concrete resource, `taxalotl` will assume that you
     mean the latest version of that resource.
 
+## Extras
+If you `source completion.sh` in your `bash` session and you have
+    the top-level directory on your `PATH` then you'll have some
+    cool tab completion of commands and options.
+
 ## Thanks and stuff
 Thanks to the US NSF
 <a href="https://www.nsf.gov/"><img src="./doc/nsf1.jpg" alt="NSF logo" /></a>

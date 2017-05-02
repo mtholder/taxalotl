@@ -83,13 +83,17 @@ def main(args):
 
 if __name__ == "__main__":
     import argparse
-
     description = "The main CLI for taxalotl"
     p = argparse.ArgumentParser(description=description)
     p.add_argument("--resources-dir", type=str, help="the resources directory (optional)")
     p.add_argument("--config", type=str, help="the taxalotl.conf filepath (optional)")
+    p.add_argument("--show-completions",
+                   action="store_true",
+                   default=False,
+                   help="print the list of options for the next word in the command line")
+
     p.set_defaults(which="all")
-    subp = p.add_subparsers(help="command help")
+    subp = p.add_subparsers( help="command help")
     # STATUS
     status_p = subp.add_parser('status',
                                help="report the status of a resource (or all resources)")
@@ -113,5 +117,51 @@ if __name__ == "__main__":
                                   help="converts to the OTT format (unpacks if necessary)")
     normalize_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
     normalize_p.set_defaults(which="normalize")
-    # call main
-    main(p.parse_args())
+    if "--show-completions" in sys.argv:
+        a = sys.argv[1:]
+        univ = frozenset(['--resources-dir', '--config'])
+        res_dep_cmds = ['status', 'download', 'unpack', 'normalize']
+        all_cmds = res_dep_cmds
+        sel_cmd = None
+        for c in all_cmds:
+            if c in a:
+                sel_cmd = c # perhaps should worry about multiple commands?
+        comp_list = []
+        if sel_cmd is None:
+            comp_list = []
+            for u in univ:
+                found = False
+                for arg in a:
+                    if arg.startswith(u):
+                        found = True
+                        break
+                if not found:
+                    comp_list.append(u)
+            comp_list.extend(all_cmds)
+        else:
+            if sel_cmd in res_dep_cmds:
+                # From Ned Batchelder's answer on http://stackoverflow.com/a/14728477
+                class ArgumentParserError(Exception):
+                    pass
+                class ThrowingArgumentParser(argparse.ArgumentParser):
+                    def error(self, message):
+                        raise ArgumentParserError(message)
+                fake_parser = ThrowingArgumentParser()
+                fake_parser.add_argument("--resources-dir", type=str)
+                fake_parser.add_argument("--config", type=str)
+                fake_parser.add_argument('blah', nargs="*")
+                resdir, config = None, None
+                comp_list = []
+                try:
+                    fa, unk = fake_parser.parse_known_args()
+                    resdir, config = fa.resources_dir, fa.config
+                    taxalotl_config = TaxalotlConfig(filepath=config, resources_dir=resdir)
+                    comp_list = list(taxalotl_config.resources_mgr.resources.keys())
+                except:
+                    raise
+                if sel_cmd == 'status':
+                    if '-i' not in a and '--ids-only' not in a:
+                        comp_list.extend(["-i", "--ids-only"])
+        sys.stdout.write('{}\n'.format(' '.join(comp_list)))
+    else:
+        main(p.parse_args())
