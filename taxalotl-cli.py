@@ -213,7 +213,7 @@ if __name__ == "__main__":
                     if '-i' not in a and '--ids-only' not in a:
                         comp_list.extend(["-i","--ids-only"])
                     if '--by-status' not in a:
-                        comp_list.extend('--by-status')
+                        comp_list.extend(['--by-status'])
         sys.stdout.write('{}\n'.format(' '.join(comp_list)))
     else:
         main(p.parse_args())

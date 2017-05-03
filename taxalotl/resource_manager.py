@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
+import urllib
 import shutil
 import codecs
 import json
@@ -76,7 +77,7 @@ def normalize_archive(unpacked_fp, normalized_fp, schema_str, resource_wrapper):
     schema = schema_str.lower()
     try:
         norm_fn = _schema_to_norm_fn[schema]
-    except IndexError:
+    except KeyError:
         m = "Normalization from {} schema is not currently supported"
         raise NotImplementedError(m.format(schema_str))
     norm_fn(unpacked_fp, normalized_fp, resource_wrapper)
@@ -212,9 +213,14 @@ class ResourceWrapper(object):
         if dfp is None:
             m = "Resource {} appears to be abstract, therefore not downloadable"
             raise RuntimeError(m.format(self.id))
-        _LOG.debug("Starting download from {} to {}".format(self.url, dfp))
-        download_large_file(self.url, dfp)
-        _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
+        if self.url.startswith("ftp://"):
+            _LOG.debug("Starting FTP download from {} to {}".format(self.url, dfp))
+            urllib.urlretrieve(self.url, dfp)
+            _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
+        else:
+            _LOG.debug("Starting download from {} to {}".format(self.url, dfp))
+            download_large_file(self.url, dfp)
+            _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
 
     def unpack(self):
         unpack_archive(self.download_filepath, self.unpacked_filepath, self.format, self)
