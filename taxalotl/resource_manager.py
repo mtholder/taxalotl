@@ -9,7 +9,7 @@ from peyotl import (assure_dir_exists,
                     download_large_file,
                     get_logger, gunzip, gunzip_and_untar,
                     unzip)
-
+from taxalotl.newick import normalize_newick
 from taxalotl.ncbi import normalize_ncbi
 from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 
@@ -65,9 +65,11 @@ def copy_taxonomy_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
             dfp = os.path.join(normalized_dirp, fn)
             os.symlink(ufp, dfp)
 
+
 _schema_to_norm_fn ={"ott": copy_taxonomy_by_linking,
                      "ncbi taxonomy": normalize_ncbi,
                      "http://rs.tdwg.org/dwc/": normalize_darwin_core_taxonomy,
+                     "newick": normalize_newick,
                      }
 
 def normalize_archive(unpacked_fp, normalized_fp, schema_str, resource_wrapper):
