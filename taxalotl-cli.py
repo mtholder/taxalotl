@@ -16,22 +16,65 @@ def download_resources(taxalotl_config, id_list):
         else:
             rw.download()
 
+def _group_by_status(res, id_list):
+    nd_list = []
+    dnu_list = []
+    unn_list = []
+    n_list = []
+    a_list = []
+    for i in id_list:
+        r = res[i]
+        if not r.has_been_downloaded():
+            if r.is_abstract:
+                a_list.append(i)
+            else:
+                nd_list.append(i)
+        elif not r.has_been_unpacked():
+            dnu_list.append(i)
+        elif not r.has_been_normalized():
+            unn_list.append(i)
+        else:
+            n_list.append(i)
+    return [["abstract classes", a_list],
+            ["not downloaded", nd_list],
+            ["downloaded, but not unpacked", dnu_list],
+            ["unpacked, but not normalized", unn_list],
+            ["normalized", n_list],
+           ]
 
-def status_of_resources(taxalotl_config, id_list, ids_only=False):
+def status_of_resources(taxalotl_config,
+                        id_list,
+                        ids_only=False,
+                        by_status=False):
     terminalize = True
+    res = taxalotl_config.resources_mgr.resources
     if not id_list:
         terminalize = False
-        id_list = list(taxalotl_config.resources_mgr.resources.keys())
+        id_list = list(res.keys())
         id_list.sort()
-        if ids_only:
-            out_stream.write("{}\n".format("\n".join(id_list)))
-            return
-    for rid in id_list:
-        if terminalize:
-            rw = taxalotl_config.get_terminalized_res_by_id(rid, 'status')
-        else:
-            rw = taxalotl_config.get_resource_by_id(rid)
-        rw.write_status(out_stream, indent=' '*4)
+    if by_status:
+        t_and_id_list = _group_by_status(res, id_list)
+    else:
+        t_and_id_list = [["", id_list]]
+    if ids_only:
+        for tag, id_list in t_and_id_list:
+            if tag:
+                pref = "{}: ".format(tag)
+                sep = " "
+            else:
+                pref, sep = "", "\n"
+            if id_list:
+                out_stream.write("{}{}\n".format(pref, sep.join(id_list)))
+        return
+    for tag, id_list in t_and_id_list:
+        if tag:
+            out_stream.write("{}:\n".format(tag))
+        for rid in id_list:
+            if terminalize:
+                rw = taxalotl_config.get_terminalized_res_by_id(rid, 'status')
+            else:
+                rw = taxalotl_config.get_resource_by_id(rid)
+            rw.write_status(out_stream, indent=' '*4)
 
 
 def unpack_resources(taxalotl_config, id_list):
@@ -70,7 +113,8 @@ def main(args):
         elif args.which == 'status':
             status_of_resources(taxalotl_config,
                                 args.resources,
-                                ids_only=args.ids_only)
+                                ids_only=args.ids_only,
+                                by_status=args.by_status)
         elif args.which == 'unpack':
             unpack_resources(taxalotl_config, args.resources)
         elif args.which == 'normalize':
@@ -102,6 +146,10 @@ if __name__ == "__main__":
                           action='store_true',
                           default=False,
                           help="just list the IDs")
+    status_p.add_argument("--by-status",
+                          action='store_true',
+                          default=False,
+                          help="group the report by status")
     status_p.set_defaults(which="status")
     # DOWNLOAD
     download_p = subp.add_parser('download', help="download an artifact to your local filesystem")
@@ -117,6 +165,8 @@ if __name__ == "__main__":
                                   help="converts to the OTT format (unpacks if necessary)")
     normalize_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
     normalize_p.set_defaults(which="normalize")
+    # Handle --show-completions differently from the others, because
+    #   argparse does not help us out here... at all
     if "--show-completions" in sys.argv:
         a = sys.argv[1:]
         univ = frozenset(['--resources-dir', '--config'])
@@ -161,7 +211,9 @@ if __name__ == "__main__":
                     raise
                 if sel_cmd == 'status':
                     if '-i' not in a and '--ids-only' not in a:
-                        comp_list.extend(["-i", "--ids-only"])
+                        comp_list.extend(["-i","--ids-only"])
+                    if '--by-status' not in a:
+                        comp_list.extend('--by-status')
         sys.stdout.write('{}\n'.format(' '.join(comp_list)))
     else:
         main(p.parse_args())
