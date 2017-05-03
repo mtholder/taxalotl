@@ -31,6 +31,19 @@ def unpack_archive(archive_fp, unpack_fp, archive_format, wrapper):
         _LOG.debug("unzip from {} to {} ...".format(archive_fp, unpack_fp))
         unzip(archive_fp, unpack_fp)
         _LOG.debug("unzip from {} to {} done.".format(archive_fp, unpack_fp))
+    elif afl == 'gzip':
+        afn = os.path.split(archive_fp)[-1]
+        if archive_fp.endswith(".gz"):
+            fn = afn[:-3]
+        elif archive_fp.endswith(".gzip"):
+            fn = afn[:-5]
+        else:
+            raise RuntimeError("Expecting gzipped archive to endwith .gz or .gzip")
+        assure_dir_exists(unpack_fp)
+        dest = os.path.join(unpack_fp, fn)
+        _LOG.debug("gunzip from {} to {} ...".format(archive_fp, dest))
+        gunzip(archive_fp, dest)
+        _LOG.debug("gunzip from {} to {} done.".format(archive_fp, dest))
     elif afl == 'text':
         assure_dir_exists(unpack_fp)
         try:

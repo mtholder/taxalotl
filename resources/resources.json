@@ -40,8 +40,10 @@
       "id": "silva_115",
       "inherits_from": "silva",
       "date": "2013-09-16",
-      "format":"tar+gzip",
-      "url": "ftp://ftp.arb-silva.de/release_115/Exports/SSURef_NR99_115_tax_silva.fasta.tgz",
+      "format": "text",
+      "schema": "silva taxonomy",
+      "local_filename": "tax_paths.csv",
+      "url": "ftp://ftp.arb-silva.de/release_115/Exports/tax_ranks_ssu_115.csv",
       "copy_status": "canonical",
       "version": "115"
     },
