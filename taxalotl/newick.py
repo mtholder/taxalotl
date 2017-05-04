@@ -4,7 +4,9 @@ from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
 from peyotl.phylo.tree import parse_newick
 from peyotl import get_logger
 import os
+
 _LOG = get_logger(__name__)
+
 
 def normalize_newick(unpacked_fp, normalized_fp, resource_wrapper):
     lfp = os.path.join(unpacked_fp, resource_wrapper.local_filename)
@@ -27,7 +29,7 @@ def normalize_newick(unpacked_fp, normalized_fp, resource_wrapper):
             itd.root_nodes.add(taxon_id)
         else:
             itd.to_par[taxon_id] = par.taxon_id
-        #print(taxon_id, name, nd.parent)
+            # print(taxon_id, name, nd.parent)
     for nd in x.preorder_node_iter():
         children = nd.children
         if children:

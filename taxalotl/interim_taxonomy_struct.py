@@ -153,7 +153,7 @@ class InterimTaxonomyData(object):
         except:
             for f in fn:
                 tf = os.path.join(d, f)
-                if os.path.exists():
+                if os.path.exists(tf):
                     try:
                         os.remove(tf)
                     except:

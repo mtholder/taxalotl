@@ -12,12 +12,12 @@ from peyotl import (assure_dir_exists,
                     unzip)
 from taxalotl.newick import normalize_newick
 from taxalotl.ncbi import normalize_ncbi
+from taxalotl.irmng import normalize_irmng
 from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 
 _LOG = get_logger(__name__)
 
 _ALLOWED_RESOURCE_KEYS = frozenset(["resources", "references", "ott_versions", "next"])
-
 
 
 ######################################################################################
@@ -55,6 +55,8 @@ def unpack_archive(archive_fp, unpack_fp, archive_format, wrapper):
     else:
         m = "Unpacking from {} format is not currently supported"
         raise NotImplementedError(m.format(archive_format))
+
+
 ######################################################################################
 OTT_TAXONOMY_FILENAMES = ("about.json",
                           "alignment_summary.json",
@@ -70,30 +72,51 @@ OTT_TAXONOMY_FILENAMES = ("about.json",
                           "synonyms.tsv",
                           "taxonomy.tsv",
                           "transcript.out",
-                          "version.txt", )
-def copy_taxonomy_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
+                          "version.txt",)
+
+OTT_TAXONOMY_ID_FILES = ('by_qid.csv', )
+
+def copy_file_list_by_linking(unpacked_dirp, normalized_dirp, file_list):
     assure_dir_exists(normalized_dirp)
-    for fn in OTT_TAXONOMY_FILENAMES:
+    for fn in file_list:
         ufp = os.path.join(unpacked_dirp, fn)
         if os.path.exists(ufp):
             dfp = os.path.join(normalized_dirp, fn)
-            os.symlink(ufp, dfp)
+            if os.path.exists(dfp):
+                _LOG.info('File already exists at "{}". Skipping link creation.'.format(dfp))
+            else:
+                os.symlink(ufp, dfp)
 
 
-_schema_to_norm_fn ={"ott": copy_taxonomy_by_linking,
-                     "ncbi taxonomy": normalize_ncbi,
-                     "http://rs.tdwg.org/dwc/": normalize_darwin_core_taxonomy,
-                     "newick": normalize_newick,
-                     }
+def copy_taxonomy_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
+    copy_file_list_by_linking(unpacked_dirp,
+                              normalized_dirp,
+                              OTT_TAXONOMY_FILENAMES)
+
+def copy_id_list_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
+    copy_file_list_by_linking(unpacked_dirp,
+                              normalized_dirp,
+                              OTT_TAXONOMY_ID_FILES)
+
+
+_schema_to_norm_fn = {"ott": copy_taxonomy_by_linking,
+                      "ott id csv": copy_id_list_by_linking,
+                      "ncbi taxonomy": normalize_ncbi,
+                      "http://rs.tdwg.org/dwc/": normalize_darwin_core_taxonomy,
+                      "newick": normalize_newick,
+                      "irmng dwc": normalize_irmng,
+                      }
+
 
 def normalize_archive(unpacked_fp, normalized_fp, schema_str, resource_wrapper):
     schema = schema_str.lower()
     try:
         norm_fn = _schema_to_norm_fn[schema]
     except KeyError:
-        m = "Normalization from {} schema is not currently supported"
+        m = "Normalization from \"{}\" schema is not currently supported"
         raise NotImplementedError(m.format(schema_str))
     norm_fn(unpacked_fp, normalized_fp, resource_wrapper)
+
 
 def read_resource_file(fp):
     try:
@@ -301,6 +324,12 @@ class OTTaxonomyIdListWrapper(ResourceWrapper):
 
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
+
+    def has_been_normalized(self):
+        dfp = self.normalized_filepath
+        return (dfp is not None
+                and os.path.exists(dfp)
+                and os.path.exists(os.path.join(dfp, 'by_qid.csv')))
 
 
 _wrapper_types = [OTTaxonomyWrapper, ExternalTaxonomyWrapper, OTTaxonomyIdListWrapper, ]

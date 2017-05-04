@@ -72,6 +72,7 @@ class TaxalotlConfig(object):
             cws = cfg.getboolean('behavior', 'crash_with_stacktraces')
         self.crash_with_stacktraces = bool(cws)
         assert self.resources_mgr is not None
+
     @property
     def resources_mgr(self):
         if self._resources_mgr is None:

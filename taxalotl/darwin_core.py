@@ -6,18 +6,18 @@
 # and
 #   reference-taxonomy/feed/gbif/process_gbif_taxonomy.py
 from __future__ import print_function
-import re
+
 import codecs
 import os
-import time
+import re
 
 from peyotl import (assure_dir_exists,
                     get_logger)
+
 from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
+
 _LOG = get_logger(__name__)
 
-def normalize_darwin_core(source, destination, res_wrapper):
-    pass
 
 # Cases to deal with:
 #  Foo bar
@@ -38,6 +38,7 @@ _trimmer = re.compile(u"({})({})".format(_canon_re, _auth_re))
 _year_re = re.compile(u".*, [12][0-9][0-9][0-9?]\\)?")
 _has_digit = re.compile(u".*[0-9].*")
 
+
 def canonical_name(name):
     if u' phage ' in name or name.endswith(' phage'):
         return name
@@ -52,7 +53,7 @@ def canonical_name(name):
     # group 3 = authority
     # group 4 = capital letter or prefix
     if _has_digit.match(name):
-        haz = _year_re.match(name) != None
+        haz = _year_re.match(name) is not None
     else:
         haz = True
     return canon if haz else name
@@ -66,14 +67,14 @@ def write_gbif_projection_file(source, destination):
                 row = line.split('\t')
                 scientific = row[6]
                 canenc = canonical_name(scientific)
-                row_el = [row[1], # taxonID
-                          row[3], # parentNameUsageID
-                          row[4], # acceptedNameUsageID
-                          canenc, # canonicalName
-                          row[7], # taxonRank
-                          row[10], # taxonomicStatus
-                          row[2], # nameAccordingTo / datasetID
-                         ]
+                row_el = [row[1],  # taxonID
+                          row[3],  # parentNameUsageID
+                          row[4],  # acceptedNameUsageID
+                          canenc,  # canonicalName
+                          row[7],  # taxonRank
+                          row[10],  # taxonomicStatus
+                          row[2],  # nameAccordingTo / datasetID
+                          ]
                 row_el = [x.strip() for x in row_el]
                 row_str = u"\t".join(row_el)
                 outfile.write(row_str)
@@ -81,6 +82,7 @@ def write_gbif_projection_file(source, destination):
                 if i % 500000 == 0:
                     _LOG.info(u"{} {} => {}".format(i, scientific, canenc))
                 i += 1
+
 
 def read_gbif_projection(proj_filepath, itd):
     col_taxonID = 0
@@ -93,8 +95,6 @@ def read_gbif_projection(proj_filepath, itd):
     not_doubtful = {
         8407745: "Hierococcyx"
     }
-    to_ignore = []  # stack
-    to_ignore.append(0)  # kingdom incertae sedis
     flushed_because_source = set()
     to_remove = set()
     to_par = itd.to_par
@@ -102,7 +102,8 @@ def read_gbif_projection(proj_filepath, itd):
     to_rank = itd.to_rank
     paleos = set()
     ranks_to_ignore = frozenset(["form", "variety", "subspecies", "infraspecificname"])
-    to_ignore = set()
+    # kingdom incertae sedis is 0
+    to_ignore = {0}
     count = 0
     n_syn = 0
     with codecs.open(proj_filepath, 'r', encoding='utf-8') as inp:
@@ -135,7 +136,7 @@ def read_gbif_projection(proj_filepath, itd):
                 n_syn += 1
                 continue
             elif ("Paleobiology Database" in source) or (
-                source == "c33ce2f2-c3cc-43a5-a380-fe4526d63650"):
+                        source == "c33ce2f2-c3cc-43a5-a380-fe4526d63650"):
                 paleos.add(taxon_id)
             if tstatus == 'synonym' or (tstatus == 'doubtful' and taxon_id not in not_doubtful):
                 to_remove.add(taxon_id)
@@ -185,16 +186,15 @@ def read_gbif_projection(proj_filepath, itd):
                                           "d9a4eedb-e985-4456-ad46-3df8472e00e8"]
     return to_remove, to_ignore, paleos
 
+
 def remove_if_tips(itd, to_remove):
-    count = 0
     to_children = itd.to_children
-    to_name = itd.to_name
-    to_par = itd.to_par
     to_del = [i for i in to_remove if not to_children.get(i)]
     count = len(to_del)
     itd.del_ids(to_del)
     _LOG.info("tips removed (IRMNG and IPNI or status): {}".format(count))
     itd.details_log["tips_removed_because_of_source_or_status"] = count
+
 
 def find_orphaned(itd):
     orphaned = set()
@@ -210,6 +210,7 @@ def find_orphaned(itd):
     l.sort()
     itd.details_log["orphans_pruned"] = l
     return orphaned
+
 
 def prune_ignored(itd, to_ignore):
     # Now delete the taxa-to-be-ignored and all of their descendants.
@@ -228,13 +229,15 @@ def prune_ignored(itd, to_ignore):
             stack.append(cid)
     itd.del_ids(seen)
 
+
 def add_fake_root(itd):
     itd.to_children[0] = list(itd.root_nodes)
     itd.to_name[0] = "life"
     itd.to_par[0] = None
     for i in itd.root_nodes:
         itd.to_par[i] = 0
-    itd.root_nodes = set([0])
+    itd.root_nodes = {0}
+
 
 def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
