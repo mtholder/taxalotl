@@ -13,6 +13,7 @@ from peyotl import (assure_dir_exists,
 from taxalotl.newick import normalize_newick
 from taxalotl.ncbi import normalize_ncbi
 from taxalotl.irmng import normalize_irmng
+from taxalotl.silva import normalize_silva_taxonomy
 from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 
 _LOG = get_logger(__name__)
@@ -105,6 +106,7 @@ _schema_to_norm_fn = {"ott": copy_taxonomy_by_linking,
                       "http://rs.tdwg.org/dwc/": normalize_darwin_core_taxonomy,
                       "newick": normalize_newick,
                       "irmng dwc": normalize_irmng,
+                      "silva taxonomy": normalize_silva_taxonomy,
                       }
 
 
