@@ -1,31 +1,18 @@
 {
-  "references": {
-    "QuastEtAl2013": {
-      "authors": [
-       "C. Quast",
-        "E. Pruesse",
-        "P. Yilmaz",
-        "J. Gerken",
-        "T. Schweer",
-        "P. Yarza",
-        "J Peplies",
-        "F. O. Glöckner"],
-      "year": 2013,
-      "title": "The SILVA ribosomal RNA gene database project: improved data processing and web-based tools",
-      "journal": "Nucleic Acids Research",
-      "volume": 41,
-      "issue": "D1",
-      "page_range" : ["D590", "D596"],
-      "url": "http://www.arb-silva.de/"
-    }
+  "silva": {
+    "references": [
+      "QuastEtAl2013"
+    ],
+    "resource_type": "external taxonomy",
+    "source": "SILVA"
   },
-  "resources" : [
-    {
-      "resource_type": "external taxonomy",
-      "source": "SILVA",
-      "schema": "SILVA 16S ribosomal RNA database",
-      "id": "silva",
-      "references": ["QuastEtAl2013"]
-    }
-  ]
+  "silva_115": {
+    "copy_status": "canonical",
+    "date": "2013-09-16",
+    "format": "tar+gzip",
+    "inherits_from": "silva",
+    "schema": "silva fasta",
+    "url": "ftp://ftp.arb-silva.de/release_115/Exports/SSURef_NR99_115_tax_silva.fasta.tgz",
+    "version": "115"
+  }
 }

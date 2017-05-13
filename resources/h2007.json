@@ -1,40 +1,15 @@
 {
-  "references": {
-    "HibbettEtAl2007": {
-      "doi": "http://dx.doi.org/10.1016/j.mycres.2007.03.004",
-      "authors": [
-        "D. S. Hibbett",
-        "M. Binder",
-        "J. F. Bischoff",
-        "M. Blackwell",
-        "et al."
-      ],
-      "title": "A higher-level phylogenetic classification of the <i>Fungi</i>",
-      "journal": "Mycological Research",
-      "volume": 111,
-      "issue": 5,
-      "page_range": [
-        509,
-        547
-      ],
-      "year": 2007,
-      "associated_data_url": [
-        "http://figshare.com/articles/Fungal_Classification_2015/1465038"
-      ]
-    }
-  },
-  "resources" : [
-    {
-      "resource_type": "external taxonomy",
-      "source": "published taxonomy",
-      "date": "2007-05",
-      "format":"text",
-      "schema": "newick",
-      "local_filename": "taxonomy.tre",
-      "url": "https://raw.githubusercontent.com/OpenTreeOfLife/reference-taxonomy/master/feed/h2007/tree.tre",
-      "id": "h2007",
-      "references": "HibbettEtAl2007",
-      "copy_status": "transformed"
-    }
-  ]
+  "h2007": {
+    "copy_status": "transformed",
+    "date": "2007-05",
+    "format": "text",
+    "local_filename": "taxonomy.tre",
+    "references": [
+      "HibbettEtAl2007"
+    ],
+    "resource_type": "external taxonomy",
+    "schema": "newick",
+    "source": "published taxonomy",
+    "url": "https://raw.githubusercontent.com/OpenTreeOfLife/reference-taxonomy/master/feed/h2007/tree.tre"
+  }
 }

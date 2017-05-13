@@ -18,8 +18,6 @@ from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 
 _LOG = get_logger(__name__)
 
-_ALLOWED_RESOURCE_KEYS = frozenset(["resources", "references", "ott_versions", "next"])
-
 
 ######################################################################################
 def unpack_archive(archive_fp, unpack_fp, archive_format, wrapper):
@@ -123,20 +121,7 @@ def normalize_archive(unpacked_fp, normalized_fp, schema_str, resource_wrapper):
 def read_resource_file(fp):
     try:
         with codecs.open(fp, 'rU', encoding='utf-8') as inp:
-            o = json.load(inp)
-        for k in o.keys():
-            if k not in _ALLOWED_RESOURCE_KEYS:
-                raise RuntimeError("Unrecognized key '{}'".format(k))
-        ref = o.get("resources")
-        if ref and isinstance(ref, list):
-            rd = {}
-            for el in ref:
-                key = el["id"]
-                if key in rd:
-                    raise RuntimeError('The id "{}" was repeated'.format(key))
-                rd[key] = el
-            o["resources"] = rd
-        return o
+            return json.load(inp)
     except:
         _LOG.exception("Error reading JSON from \"{}\"".format(fp))
         raise
@@ -418,25 +403,14 @@ class ResourceManager(object):
         if needs_update:
             md = {}
             for fp in inputs:
-                o = read_resource_file(fp)
-                for r in ["references", "resources"]:
-                    mrd = md.get(r, {})
-                    mrk = set(mrd.keys())
-                    ordict = o.get(r, {})
-                    ork = set(ordict.keys())
-                    i = ork.intersection(mrk)
-                    if i:
-                        m = 'IDs repeated in {} and previous resource files: "{}"'
-                        raise RuntimeError(m.format(fp, '" "'.join(list(i))))
-                    mrd.update(ordict)
-                    md[r] = mrd
-                for u in ["ott_versions", "next"]:
-                    if u in o:
-                        if u in md:
-                            m = 'Unique key "{}" repeated in {} and previous resource files'
-                            raise RuntimeError(m.format(u, fp))
-                        else:
-                            md[u] = o[u]
+                mrk = set(md.keys())
+                ordict = read_resource_file(fp)
+                ork = set(ordict.keys())
+                i = ork.intersection(mrk)
+                if i:
+                    m = 'IDs repeated in {} and previous resource files: "{}"'
+                    raise RuntimeError(m.format(fp, '" "'.join(list(i))))
+                md.update(ordict)
             write_resources_file(md, mfp)
 
     def _read_merged(self):

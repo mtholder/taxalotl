@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 from __future__ import print_function
+import subprocess
+import json
 import sys
+import os
 from taxalotl import TaxalotlConfig
-from peyotl import get_logger
+from peyotl import (get_logger,
+                    read_all_otifacts,
+                    filter_otifacts_by_type,
+                    partition_otifacts_by_root_element,
+                    write_as_json)
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -104,6 +111,21 @@ def normalize_resources(taxalotl_config, id_list):
         else:
             rw.normalize()
 
+def pull_otifacts(taxalotl_config):
+    dest_dir = taxalotl_config.resources_dir
+    taxalotl_dir = os.path.split(os.path.abspath(dest_dir))[0]
+    repo_dir = os.path.split(taxalotl_dir)[0]
+    otifacts_dir = os.path.join(repo_dir, 'OTifacts')
+    if not os.path.isdir(otifacts_dir):
+        m = 'Expecting OTifacts to be cloned as sibling of this directory at "{}"'
+        raise RuntimeError(m.format(otifacts_dir))
+    all_res = read_all_otifacts(otifacts_dir)
+    ext_tax = filter_otifacts_by_type(all_res, 'external taxonomy')
+    by_root_id = partition_otifacts_by_root_element(ext_tax)
+    for root_key, res_dict in by_root_id.items():
+        fp = os.path.join(dest_dir, root_key + '.json')
+        write_as_json(res_dict, fp, indent=2, separators=(',', ': '))
+
 
 def main(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
@@ -119,6 +141,9 @@ def main(args):
             unpack_resources(taxalotl_config, args.resources)
         elif args.which == 'normalize':
             normalize_resources(taxalotl_config, args.resources)
+        elif args.which == 'pull-otifacts':
+            pull_otifacts(taxalotl_config)
+
     except Exception as x:
         if taxalotl_config.crash_with_stacktraces:
             raise
@@ -138,6 +163,10 @@ if __name__ == "__main__":
 
     p.set_defaults(which="all")
     subp = p.add_subparsers( help="command help")
+    # PULL OTifacts
+    pull_otifacts_p = subp.add_parser('pull-otifacts',
+                                      help="refresh list of taxonomic artifacts from OTifacts repo")
+    pull_otifacts_p.set_defaults(which="pull-otifacts")
     # STATUS
     status_p = subp.add_parser('status',
                                help="report the status of a resource (or all resources)")
@@ -170,8 +199,9 @@ if __name__ == "__main__":
     if "--show-completions" in sys.argv:
         a = sys.argv[1:]
         univ = frozenset(['--resources-dir', '--config'])
+        res_indep_cmds = ['pull-otifacts',]
         res_dep_cmds = ['status', 'download', 'unpack', 'normalize']
-        all_cmds = res_dep_cmds
+        all_cmds = res_dep_cmds + res_indep_cmds
         sel_cmd = None
         for c in all_cmds:
             if c in a:
