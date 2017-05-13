@@ -18,7 +18,7 @@ from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
 
 _LOG = get_logger(__name__)
 
-
+"""
 import argparse, csv
 
 def _read_ncbi_accession_to_ncbi_taxon_id(fp):
@@ -67,7 +67,7 @@ if __name__ == '__main__':
             i += 1
             if i % 500000 == 0:
                 print gid, ncbi_id, strain, name
-
+"""
 def normalize_silva_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
     itd = InterimTaxonomyData()
