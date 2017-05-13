@@ -7,6 +7,7 @@ from peyotl import (add_or_append_to_dict, assure_dir_exists,
                     write_as_json)
 import tempfile
 import codecs
+import csv
 import os
 
 _LOG = get_logger(__name__)
@@ -88,6 +89,25 @@ def write_ott_forwards(out_fp, forwarded_dict):
 
 def write_ncbi_details_json(fp, details_log):
     write_as_json(details_log, fp, indent=2)
+
+def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
+    ncbi_to_name = {}
+    i = 0
+    fp = os.path.join(tax_dir, 'taxonomy.tsv')
+    with codecs.open(fp, 'r', encoding='utf-8') as inp:
+        reader = csv.reader(nfile, delimiter='\t')
+        header = reader.next()
+        uidx = header.index('uid')
+        namex = header.index('name')
+        for row in reader:
+            id = id_coercion(row[uidx])
+            name = row[namex]
+            if name is not None:
+                ncbi_to_name[id] = name
+                i += 1
+                if i % 200000 == 0:
+                    _LOG.info("{} {} {}".format(i, id, name))
+    return ncbi_to_name
 
 
 class InterimTaxonomyData(object):
