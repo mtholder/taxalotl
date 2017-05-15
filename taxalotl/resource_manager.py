@@ -153,7 +153,7 @@ _known_res_attr = frozenset(['aliases',
 
 
 class ResourceWrapper(object):
-    def __init__(self, obj, parent=None, refs=None, config=None):
+    def __init__(self, obj, parent=None, config=None):
         for k in _known_res_attr:
             self.__dict__[k] = obj.get(k)
         for k in obj.keys():
@@ -170,10 +170,6 @@ class ResourceWrapper(object):
         self.id = obj['id']
         if self.references:
             x = [self.references] if not isinstance(self.references, list) else self.references
-            for r in x:
-                if r not in refs:
-                    _LOG.warn(
-                        "reference '{}' in resource '{}' was not recognized.".format(r, self.id))
         self._config = config
 
     @property
@@ -292,8 +288,8 @@ class ResourceWrapper(object):
 class ExternalTaxonomyWrapper(ResourceWrapper):
     resource_type = 'external taxonomy'
 
-    def __init__(self, obj, parent=None, refs=None):
-        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
+    def __init__(self, obj, parent=None):
+        ResourceWrapper.__init__(self, obj, parent=parent)
         # print("ET obj = {}".format(obj))
 
 
@@ -301,16 +297,16 @@ class ExternalTaxonomyWrapper(ResourceWrapper):
 class OTTaxonomyWrapper(ResourceWrapper):
     resource_type = 'open tree taxonomy'
 
-    def __init__(self, obj, parent=None, refs=None):
-        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
+    def __init__(self, obj, parent=None):
+        ResourceWrapper.__init__(self, obj, parent=parent)
 
 
 # noinspection PyAbstractClass
 class OTTaxonomyIdListWrapper(ResourceWrapper):
     resource_type = 'open tree taxonomy idlist'
 
-    def __init__(self, obj, parent=None, refs=None):
-        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
+    def __init__(self, obj, parent=None):
+        ResourceWrapper.__init__(self, obj, parent=parent)
 
     def has_been_normalized(self):
         dfp = self.normalized_filepath
@@ -322,32 +318,31 @@ class OTTaxonomyIdListWrapper(ResourceWrapper):
 _wrapper_types = [OTTaxonomyWrapper, ExternalTaxonomyWrapper, OTTaxonomyIdListWrapper, ]
 
 
-def get_resource_wrapper(raw, refs, parent=None):
+def get_resource_wrapper(raw, parent=None):
     rt = raw["resource_type"].lower()
     for wt in _wrapper_types:
         if rt == wt.resource_type:
-            return wt(raw, parent=parent, refs=refs)
+            return wt(raw, parent=parent)
     raise RuntimeError("resource_type '{}' not recognized".format(rt))
 
 
-def get_subclass_resource_wrapper(raw, known_dict, refs):
+def get_subclass_resource_wrapper(raw, known_dict):
     par_key = raw["inherits_from"]
     par = known_dict[par_key]
     raw["resource_type"] = par.resource_type
-    return get_resource_wrapper(raw, refs, parent=par)
+    return get_resource_wrapper(raw, parent=par)
 
 
-def _wrap_resources(res, refs):
+def _wrap_resources(res):
     rd = {}
     by_par = {}
     for k, v in res.items():
-        if k != v["id"]:
-            raise RuntimeError("Key and id field do not match ({} != {})".format(k, v["id"]))
+        v["id"] = k
         par = v.get('inherits_from')
         if par:
             by_par.setdefault(par, []).append((k, v))
         else:
-            w = get_resource_wrapper(v, refs)
+            w = get_resource_wrapper(v)
             rd[k] = w
     while by_par:
         curr_key_set = set(rd.keys())
@@ -360,7 +355,7 @@ def _wrap_resources(res, refs):
             rk_v_list = by_par[k]
             del by_par[k]
             for rk, v in rk_v_list:
-                rd[rk] = get_subclass_resource_wrapper(v, rd, refs)
+                rd[rk] = get_subclass_resource_wrapper(v, rd)
     aliases = {}
     for w in rd.values():
         if w.aliases:
@@ -369,7 +364,7 @@ def _wrap_resources(res, refs):
                     raise RuntimeError("Repeated alias for an id: {}".format(a))
                 aliases[a] = w
     rd.update(aliases)
-    return rd, refs
+    return rd
 
 
 class ResourceManager(object):
@@ -378,7 +373,6 @@ class ResourceManager(object):
     def __init__(self, resource_dir, update_merged=True):
         self.resource_dir = resource_dir
         self.resources = None
-        self.references = None
         self._filepath_read = None
         if update_merged:
             self._update_merged()
@@ -415,7 +409,5 @@ class ResourceManager(object):
 
     def _read_merged(self):
         mfp = os.path.join(self.resource_dir, ResourceManager._MERGED_FILENAME)
-        o = read_resource_file(mfp)
-        self.resources, self.references = _wrap_resources(o.get("resources", {}),
-                                                          o.get("references", {}))
+        self.resources = _wrap_resources(read_resource_file(mfp))
         self._filepath_read = mfp
