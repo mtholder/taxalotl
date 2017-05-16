@@ -14,6 +14,13 @@ COL_PARTMAP = {'Archaea': frozenset([33524792]),
                'Eukaryota/Metazoa': frozenset([33521288]),
                'Eukaryota/Metazoa/Annelida': frozenset([33521477]),
                'Eukaryota/Metazoa/Arthropoda': frozenset([33521342]),
+               'Eukaryota/Metazoa/Arthropoda/Malacostraca': frozenset([33521356]),
+               'Eukaryota/Metazoa/Arthropoda/Arachnida': frozenset([33521366]),
+               'Eukaryota/Metazoa/Arthropoda/Insecta': frozenset([33521474]),
+               'Eukaryota/Metazoa/Arthropoda/Insecta/Diptera': frozenset([33521519]),
+               'Eukaryota/Metazoa/Arthropoda/Insecta/Coleoptera': frozenset([33521475]),
+               'Eukaryota/Metazoa/Arthropoda/Insecta/Lepidoptera': frozenset([33521695]),
+               'Eukaryota/Metazoa/Arthropoda/Insecta/Hymenoptera': frozenset([33521644]),
                'Eukaryota/Metazoa/Bryozoa': frozenset([33524015]),
                'Eukaryota/Metazoa/Chordata': frozenset([33521289]),
                'Eukaryota/Metazoa/Cnidaria': frozenset([33522061]),
@@ -69,6 +76,8 @@ class PartitionElement(object):
         return None
 
 def partition_col(parts_dir, wrapper, part_name, part_keys, par_frag):
+    _LOG.info('part_keys = {}'.format(part_keys))
+    _LOG.info('par_frag = {}'.format(par_frag))
     col_taxon_filename = 'taxa.txt'
     path_suffix = os.path.join(wrapper.id, col_taxon_filename)
     remove_input = True
@@ -76,12 +85,13 @@ def partition_col(parts_dir, wrapper, part_name, part_keys, par_frag):
         remove_input = False
         inp_filepath = os.path.join(wrapper.unpacked_filepath, col_taxon_filename)
         misc_par = parts_dir
-    elif part_name == 'Metazoa':
+    else:
         misc_par = os.path.join(parts_dir, par_frag)
         inp_filepath = os.path.join(misc_par, INP_TAXONOMY_DIRNAME, path_suffix)
-    else:
-        raise RuntimeError("CoL Mapping not done for {}".format(part_name))
     col_mapping = [(k, COL_PARTMAP[k]) for k in part_keys if k in COL_PARTMAP]
+    if not col_mapping:
+        _LOG.info("No CoL mapping for {}".format(part_name))
+        return
     partition_el = []
     for tag, roots in col_mapping:
         partition_el.append(PartitionElement(path_pref=parts_dir,
@@ -96,7 +106,8 @@ def partition_col(parts_dir, wrapper, part_name, part_keys, par_frag):
             raise RuntimeError(m.format(part.fragment, o))
     _partition_col_by_root_id(inp_filepath, partition_el)
     if remove_input:
-        os.unlink(inp_filepath)
+        _LOG.info("leaving cruft at {}".format(inp_filepath))
+        #os.unlink(inp_filepath)
 
 def _partition_col_by_root_id(complete_fp, partition_el_list):
     garbage_bin = None
