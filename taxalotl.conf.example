@@ -5,9 +5,10 @@ base = /home/user/scratch
 raw = %(base)s/raw
 # normalized is the parent of OTT-formatted versions of resources
 normalized = %(base)s/normalized
-# normalized is the parent of artifacts associated with cleaning/editing of the resources
+# processed is the parent of artifacts associated with cleaning/editing of the resources
 processed = %(base)s/processed
-
+# partitioned is the parent directories that break the resources up by large taxon
+partitioned = %(base)s/partitioned
 
 
 [behavior]

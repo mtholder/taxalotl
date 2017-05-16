@@ -15,7 +15,7 @@ from taxalotl.ncbi import normalize_ncbi
 from taxalotl.irmng import normalize_irmng
 from taxalotl.silva import normalize_silva_taxonomy
 from taxalotl.darwin_core import normalize_darwin_core_taxonomy
-
+from taxalotl.col import partition_col
 _LOG = get_logger(__name__)
 
 
@@ -133,6 +133,7 @@ def write_resources_file(obj, fp):
 
 
 _known_res_attr = frozenset(['aliases',
+                             'base_id', # base ID in inherits from graph
                              'copy_status',
                              'date',
                              'format',
@@ -215,6 +216,12 @@ class ResourceWrapper(object):
         return os.path.join(self.config.normalized_dir, self.id)
 
     @property
+    def partitioned_filepath(self):
+        if self.is_abstract:
+            return None
+        return self.config.partitioned_dir
+
+    @property
     def is_abstract(self):
         return self.format is None or self.url is None or self.schema is None
 
@@ -251,6 +258,9 @@ class ResourceWrapper(object):
 
     def normalize(self):
         normalize_archive(self.unpacked_filepath, self.normalized_filepath, self.schema, self)
+
+    def partition(self):
+        raise NotImplementedError('Partition not implemented for base ResourceWrapper')
 
     def write_status(self, out, indent='', list_all_artifacts=False):
         dfp = self.download_filepath
@@ -289,6 +299,7 @@ class ResourceWrapper(object):
                 out.write(down_str)
 
 
+_rt_to_partition = {'col': partition_col}
 # noinspection PyAbstractClass
 class ExternalTaxonomyWrapper(ResourceWrapper):
     resource_type = 'external taxonomy'
@@ -296,7 +307,10 @@ class ExternalTaxonomyWrapper(ResourceWrapper):
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
         # print("ET obj = {}".format(obj))
-
+    def partition(self):
+        pd = self.partitioned_filepath
+        fn = _rt_to_partition[self.base_id]
+        return fn(pd, self)
 
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(ResourceWrapper):
@@ -335,6 +349,7 @@ def get_subclass_resource_wrapper(raw, known_dict, refs):
     par_key = raw["inherits_from"]
     par = known_dict[par_key]
     raw["resource_type"] = par.resource_type
+    raw["base_id"] = par.base_id
     return get_resource_wrapper(raw, refs, parent=par)
 
 
@@ -347,6 +362,7 @@ def wrap_otifact_resources(res, refs=None):
         if par:
             by_par.setdefault(par, []).append((k, v))
         else:
+            v["base_id"] = k
             w = get_resource_wrapper(v, refs)
             rd[k] = w
     while by_par:

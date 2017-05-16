@@ -111,6 +111,15 @@ def normalize_resources(taxalotl_config, id_list):
         else:
             rw.normalize()
 
+def partition_resources(taxalotl_config, id_list):
+    for rid in id_list:
+        rw = taxalotl_config.get_terminalized_res_by_id(rid, 'partition')
+        if not rw.has_been_unpacked():
+            m = "{} will be unpacked first..."
+            _LOG.info(m.format(rw.id))
+            unpack_resources(taxalotl_config, [rw.id])
+        rw.partition()
+
 def pull_otifacts(taxalotl_config):
     dest_dir = taxalotl_config.resources_dir
     taxalotl_dir = os.path.split(os.path.abspath(dest_dir))[0]
@@ -143,7 +152,10 @@ def main(args):
             normalize_resources(taxalotl_config, args.resources)
         elif args.which == 'pull-otifacts':
             pull_otifacts(taxalotl_config)
-
+        elif args.which == 'partition':
+            partition_resources(taxalotl_config, args.resources)
+        else:
+            raise NotImplementedError('"{}" action not implemented yet'.format(args.which))
     except Exception as x:
         if taxalotl_config.crash_with_stacktraces:
             raise
@@ -194,13 +206,19 @@ if __name__ == "__main__":
                                   help="converts to the OTT format (unpacks if necessary)")
     normalize_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
     normalize_p.set_defaults(which="normalize")
+    # PARTITION
+    partition_p = subp.add_parser('partition',
+                                  help="Breaks the resource taxon")
+    partition_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
+    partition_p.set_defaults(which="partition")
+
     # Handle --show-completions differently from the others, because
     #   argparse does not help us out here... at all
     if "--show-completions" in sys.argv:
         a = sys.argv[1:]
         univ = frozenset(['--resources-dir', '--config'])
         res_indep_cmds = ['pull-otifacts',]
-        res_dep_cmds = ['status', 'download', 'unpack', 'normalize']
+        res_dep_cmds = ['status', 'download', 'unpack', 'normalize', 'partition']
         all_cmds = res_dep_cmds + res_indep_cmds
         sel_cmd = None
         for c in all_cmds:

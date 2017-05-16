@@ -22,7 +22,8 @@ class TaxalotlConfig(object):
                  raw_downloads_dir=None,
                  processed_dir=None,
                  normalized_dir=None,
-                 resources_dir=None):
+                 resources_dir=None,
+                 partitioned_dir=None):
         def_resources = ''
         if filepath is None:
             if os.path.exists("taxalotl.conf"):
@@ -62,9 +63,13 @@ class TaxalotlConfig(object):
         normd = normalized_dir
         if normd is None:
             normd = _none_for_missing_config_get(cfg, 'paths', 'normalized')
+        partsd = partitioned_dir
+        if partsd is None:
+            partsd = _none_for_missing_config_get(cfg, 'paths', 'partitioned')
         self.raw_downloads_dir = rdd
         self.processed_dir = pd
         self.normalized_dir = normd
+        self.partitioned_dir = partsd
         self.resources_dir = resd
         self._resources_mgr = None
         cws = _none_for_missing_config_get(cfg, 'behavior', 'crash_with_stacktraces')
