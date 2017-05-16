@@ -5,6 +5,7 @@ import json
 import sys
 import os
 from taxalotl import TaxalotlConfig
+from taxalotl.partitions import PART_NAMES, PART_FRAG_BY_NAME, PARTS_BY_NAME
 from peyotl import (get_logger,
                     read_all_otifacts,
                     filter_otifacts_by_type,
@@ -111,14 +112,15 @@ def normalize_resources(taxalotl_config, id_list):
         else:
             rw.normalize()
 
-def partition_resources(taxalotl_config, id_list):
+def partition_resources(taxalotl_config, id_list, level):
     for rid in id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid, 'partition')
         if not rw.has_been_unpacked():
             m = "{} will be unpacked first..."
             _LOG.info(m.format(rw.id))
             unpack_resources(taxalotl_config, [rw.id])
-        rw.partition()
+
+        rw.partition(level, PARTS_BY_NAME[level], PART_FRAG_BY_NAME[level])
 
 def pull_otifacts(taxalotl_config):
     dest_dir = taxalotl_config.resources_dir
@@ -153,7 +155,9 @@ def main(args):
         elif args.which == 'pull-otifacts':
             pull_otifacts(taxalotl_config)
         elif args.which == 'partition':
-            partition_resources(taxalotl_config, args.resources)
+            if args.level not in PARTS_BY_NAME:
+                raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
+            partition_resources(taxalotl_config, args.resources, args.level)
         else:
             raise NotImplementedError('"{}" action not implemented yet'.format(args.which))
     except Exception as x:
@@ -210,6 +214,10 @@ if __name__ == "__main__":
     partition_p = subp.add_parser('partition',
                                   help="Breaks the resource taxon")
     partition_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
+    partition_p.add_argument("--level",
+                          default='Life',
+                          help="The level of the taxonomy to partition")
+
     partition_p.set_defaults(which="partition")
 
     # Handle --show-completions differently from the others, because
@@ -257,11 +265,18 @@ if __name__ == "__main__":
                     comp_list = list(taxalotl_config.resources_mgr.resources.keys())
                 except:
                     raise
+
                 if sel_cmd == 'status':
                     if '-i' not in a and '--ids-only' not in a:
                         comp_list.extend(["-i","--ids-only"])
                     if '--by-status' not in a:
                         comp_list.extend(['--by-status'])
+                elif sel_cmd == 'partition':
+                    #sys.stderr.write(str(a))
+                    if '--level' == a[-1] or (len(a) > 1 and '--level' == a[-2]):
+                        comp_list = list(PART_NAMES)
+                    elif '--level' not in a:
+                        comp_list.extend(['--level'])
         sys.stdout.write('{}\n'.format(' '.join(comp_list)))
     else:
         main(p.parse_args())

@@ -307,10 +307,11 @@ class ExternalTaxonomyWrapper(ResourceWrapper):
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
         # print("ET obj = {}".format(obj))
-    def partition(self):
+    def partition(self, part_name, part_keys, par_frag):
         pd = self.partitioned_filepath
         fn = _rt_to_partition[self.base_id]
-        return fn(pd, self)
+        _LOG.info("fn with {}".format(str((pd, part_name, part_keys, par_frag))))
+        return fn(pd, self, part_name, part_keys, par_frag)
 
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(ResourceWrapper):
