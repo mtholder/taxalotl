@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 # from __future__ import print_function
 
-
+INP_TAXONOMY_DIRNAME = '__inputs__'
+MISC_DIRNAME = '__misc__'
+EUK_MICROBE_DIRNAME = '__other__'
 TOP_PARTS = ('Archaea',
              'Bacteria',
              'Eukaryota/Metazoa',
              'Eukaryota/Fungi',
              'Eukaryota/plants',
              'Eukaryota/Archaeplastida',
-             'Eukaryota/__misc__',
-             'Eukaryota/__other__',
+             'Eukaryota/' + MISC_DIRNAME,
+             'Eukaryota/' + EUK_MICROBE_DIRNAME,
              'Viruses',
              '__misc__',
              )

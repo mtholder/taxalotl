@@ -2,10 +2,8 @@ from __future__ import print_function
 
 import codecs
 import os
-import time
 from peyotl import (add_or_append_to_dict, get_logger, assure_dir_exists)
-from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
-
+from taxalotl.partitions import INP_TAXONOMY_DIRNAME, MISC_DIRNAME
 _LOG = get_logger(__name__)
 
 COL_PARTMAP = {'Archaea': frozenset([33524792]),
@@ -27,7 +25,6 @@ COL_PARTMAP = {'Archaea': frozenset([33524792]),
                'Viruses': frozenset([33521407]),
                }
 
-INP_TAXONOMY_DIRNAME = '__inputs__'
 class PartitionElement(object):
     def __init__(self, path_pref, fragment, path_suffix, roots):
         self.path_pref = path_pref
@@ -37,9 +34,23 @@ class PartitionElement(object):
         self.roots = roots
         self.all_stored = {}
         self.id_order = []
+        pd = os.path.split(self.dest_path)[0]
+        self.roots_file = os.path.join(pd, 'roots.txt')
+
     def add(self, el_id, line):
         self.all_stored[el_id] = line
         self.id_order.append(el_id)
+
+    def write_roots(self, root_ids):
+        if not root_ids:
+            _LOG.info('No root ids need to be written to "{}"'.format(self.roots_file))
+            return
+        _LOG.info('Writing {} root_ids to "{}"'.format(len(root_ids), self.roots_file))
+        pd = os.path.split(self.roots_file)[0]
+        assure_dir_exists(pd)
+        with codecs.open(self.roots_file, 'w', encoding='utf-8') as outp:
+            outp.write('\n'.join([str(i) for i in root_ids]))
+
     def write_lines(self, header):
         if not self.all_stored:
             _LOG.info('No records need to be written to "{}"'.format(self.dest_path))
@@ -60,7 +71,9 @@ class PartitionElement(object):
 def partition_col(parts_dir, wrapper, part_name, part_keys, par_frag):
     col_taxon_filename = 'taxa.txt'
     path_suffix = os.path.join(wrapper.id, col_taxon_filename)
+    remove_input = True
     if part_name == 'Life':
+        remove_input = False
         inp_filepath = os.path.join(wrapper.unpacked_filepath, col_taxon_filename)
         misc_par = parts_dir
     elif part_name == 'Metazoa':
@@ -75,13 +88,15 @@ def partition_col(parts_dir, wrapper, part_name, part_keys, par_frag):
                                              fragment=tag,
                                              path_suffix=path_suffix,
                                              roots=roots))
-    partition_el.append(PartitionElement(misc_par, 'misc', path_suffix, None))
+    partition_el.append(PartitionElement(misc_par, MISC_DIRNAME, path_suffix, None))
     for part in partition_el:
         o = part.existing_output
         if o:
             m = 'Output for {} already exists at "{}"'
             raise RuntimeError(m.format(part.fragment, o))
     _partition_col_by_root_id(inp_filepath, partition_el)
+    if remove_input:
+        os.unlink(inp_filepath)
 
 def _partition_col_by_root_id(complete_fp, partition_el_list):
     garbage_bin = None
@@ -102,8 +117,8 @@ def _partition_col_by_root_id(complete_fp, partition_el_list):
         iinp = iter(inp)
         header = iinp.next()
         prev_line = None
-        vt = unicode('\x0b') # Do some lines have vertical tabs? Of course they do....
-        istwo = unicode('\x1e')
+        # vt = unicode('\x0b') # Do some lines have vertical tabs? Of course they do....
+        # istwo = unicode('\x1e')
         for n, line in enumerate(iinp):
             if not line.endswith('\n'):
                 if prev_line:
@@ -131,8 +146,8 @@ def _partition_col_by_root_id(complete_fp, partition_el_list):
                         id_to_el[col_id] = match_el
                         match_el.add(col_id, line)
                     else:
-                        assert par_id
-                        par_id = int(par_id)
+                        if par_id:
+                            par_id = int(par_id)
                         match_el = id_to_el.get(par_id)
                         if match_el is not None:
                             id_to_el[col_id] = match_el
@@ -166,3 +181,5 @@ def _partition_col_by_root_id(complete_fp, partition_el_list):
             match_el.add(col_id, line)
     for part in partition_el_list:
         part.write_lines(header)
+        pr = [r for r in roots_set if id_to_el.get(r) is part]
+        part.write_roots(pr)
