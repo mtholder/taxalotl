@@ -5,7 +5,10 @@ import json
 import sys
 import os
 from taxalotl import TaxalotlConfig
-from taxalotl.partitions import PART_NAMES, PART_FRAG_BY_NAME, PARTS_BY_NAME
+from taxalotl.partitions import (PART_NAMES,
+                                 PART_FRAG_BY_NAME,
+                                 PARTS_BY_NAME,
+                                 NONTERMINAL_PART_NAMES)
 from peyotl import (get_logger,
                     read_all_otifacts,
                     filter_otifacts_by_type,
@@ -274,7 +277,7 @@ if __name__ == "__main__":
                 elif sel_cmd == 'partition':
                     #sys.stderr.write(str(a))
                     if '--level' == a[-1] or (len(a) > 1 and '--level' == a[-2]):
-                        comp_list = list(PART_NAMES)
+                        comp_list = list(NONTERMINAL_PART_NAMES)
                     elif '--level' not in a:
                         comp_list.extend(['--level'])
         sys.stdout.write('{}\n'.format(' '.join(comp_list)))

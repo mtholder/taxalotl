@@ -35,6 +35,7 @@ OTT_PARTMAP = {
     'Porifera': frozenset([67819]),
     'Viruses': frozenset([4807313]),
 }
+
 OTT_3_SEPARATION_TAXA = OTT_PARTMAP
 
 def partition_ott(parts_dir, wrapper, part_name, part_keys, par_frag):

@@ -56,14 +56,15 @@ BASE_PARTITIONS_DICT = {"Life": _x}
 del _x
 PARTS_BY_NAME = {}
 PART_FRAG_BY_NAME = {}
-
+NONTERMINAL_PART_NAMES = []
 
 def _fill_parts_indices(d, par_frag):
-    global PARTS_BY_NAME, PART_FRAG_BY_NAME
+    global PARTS_BY_NAME, PART_FRAG_BY_NAME, NONTERMINAL_PART_NAMES
     for k, subd in d.items():
         PARTS_BY_NAME[k] = tuple(subd.keys())
         PART_FRAG_BY_NAME[k] = par_frag
         if subd:
+            NONTERMINAL_PART_NAMES.append(k)
             if par_frag:
                 cf = os.path.join(par_frag, k)
             else:
@@ -75,6 +76,8 @@ _fill_parts_indices(BASE_PARTITIONS_DICT, '')
 PART_NAMES = list(PARTS_BY_NAME.keys())
 PART_NAMES.sort()
 PART_NAMES = tuple(PART_NAMES)
+NONTERMINAL_PART_NAMES.sort()
+NONTERMINAL_PART_NAMES = tuple(NONTERMINAL_PART_NAMES)
 
 
 # Data above here, to be refactored at some point
