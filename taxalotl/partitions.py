@@ -94,9 +94,24 @@ def _write_taxon(header, dict_to_write, id_order, dest_path):
     assure_dir_exists(pd)
     with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
         outp.write(header)
-        for i in id_order:
-            outp.write(dict_to_write[i])
+        if len(id_order) == len(dict_to_write):
+            for i in id_order:
+                outp.write(dict_to_write[i])
+        else:
+            for line in dict_to_write.values():
+                outp.write(line)
 
+def _write_taxon_list(header, record_list, dest_path):
+    if not record_list:
+        _LOG.info('No records need to be written to "{}"'.format(dest_path))
+        return
+    _LOG.info('Writing {} records to "{}"'.format(len(record_list), dest_path))
+    pd = os.path.split(dest_path)[0]
+    assure_dir_exists(pd)
+    with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
+        outp.write(header)
+        for line in record_list:
+            outp.write(line)
 
 class PartitionElement(object):
     def __init__(self, path_pref, fragment, path_suffix, roots):
@@ -156,13 +171,21 @@ class TaxAndSynFileOnlyPartitionElement(PartitionElement):
                                      self.syn_path_suffix)
         self.syn_stored = {}
         self.syn_id_order = []
+        self.id_less_syn = []
 
     def add_synonym(self, el_id, line):
-        self.syn_stored[el_id] = line
-        self.syn_id_order.append(el_id)
+        if el_id:
+            self.syn_stored[el_id] = line
+            self.syn_id_order.append(el_id)
+        else:
+            self.id_less_syn.append(line)
 
     def write_synonyms(self, header):
-        _write_taxon(header, self.syn_stored, self.syn_id_order, self.syn_path)
+        if self.id_less_syn:
+            assert not self.syn_stored
+            _write_taxon_list(header, self.id_less_syn, self.syn_path)
+        else:
+            _write_taxon(header, self.syn_stored, self.syn_id_order, self.syn_path)
 
 
 def create_partition_element(path_pref, fragment, path_suffix, roots, syn_filename):
@@ -243,18 +266,22 @@ def do_partition(res,
         if o:
             m = 'Output for {} already exists at "{}"'
             raise RuntimeError(m.format(part.fragment, o))
-    tup = parse_and_partition_fn(inp_filepath, partition_el)
+    if res.synonyms_filename:
+        syn_file = os.path.join(os.path.split(inp_filepath)[0], res.synonyms_filename)
+    else:
+        syn_file = ''
+    tup = parse_and_partition_fn(inp_filepath, syn_file, partition_el)
     id_by_par, id_to_el, id_to_line, syn_by_id, roots_set, garbage_bin, header, syn_header = tup
 
     finish_partition_from_dict(id_by_par, id_to_el, id_to_line, garbage_bin)
     register_synonyms(syn_by_id, id_to_el, garbage_bin)
     for part in partition_el:
-        part.write_lines(header)
+        part.write_lines(header, syn_header)
         pr = [r for r in roots_set if id_to_el.get(r) is part]
         part.write_roots(pr)
     if remove_input:
-        _LOG.info("leaving cruft at {}".format(inp_filepath))
-        # os.unlink(inp_filepath)
+        _LOG.info("removing unpartitioned taxon file at {}".format(inp_filepath))
+        os.unlink(inp_filepath)
 
 
 def register_synonyms(syn_by_id, id_to_el, garbage_bin):

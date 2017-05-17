@@ -51,7 +51,7 @@ def partition_col(res_wrapper, part_name, part_keys, par_frag):
 
 
 
-def _partition_col_by_root_id(complete_fp, partition_el_list):
+def _partition_col_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
     """Reads the serialized taxonomy of the parent, adds the easy lines to their partition element,
     and returns dicts needed to finish the assignments.
     
@@ -70,12 +70,13 @@ def _partition_col_by_root_id(complete_fp, partition_el_list):
       7. header for synonyms file (or None)
     
     """
+    assert not syn_fp
     roots_set, by_roots, garbage_bin = separate_part_list(partition_el_list)
     id_to_line = {}
     id_by_par = {}
     syn_by_id = {}
     id_to_el = {}
-    with codecs.open(complete_fp, 'rU', encoding='utf-8') as inp:
+    with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         header = iinp.next()
         prev_line = None
@@ -120,6 +121,6 @@ def _partition_col_by_root_id(complete_fp, partition_el_list):
                             id_by_par.setdefault(par_id, []).append(col_id)
                             id_to_line[col_id] = line
             except:
-                _LOG.exception("Exception parsing line {}:\n{}".format(n, line))
+                _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                 raise
     return id_by_par, id_to_el, id_to_line, syn_by_id, roots_set, garbage_bin, header, None
