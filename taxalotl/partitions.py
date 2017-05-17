@@ -1,71 +1,89 @@
 #!/usr/bin/env python
-# from __future__ import print_function
+from __future__ import print_function
+from peyotl import get_logger, assure_dir_exists
+import codecs
+import os
 
+_LOG = get_logger(__name__)
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
 
 ####################################################################################################
 # Some data (to later be refactored
-EUK_MICROBE_DIRNAME = '__other__'
-TOP_PARTS = ('Archaea',
-             'Bacteria',
-             'Eukaryota/Metazoa',
-             'Eukaryota/Fungi',
-             'Eukaryota/plants',
-             'Eukaryota/Archaeplastida',
-             'Eukaryota/' + MISC_DIRNAME,
-             'Eukaryota/' + EUK_MICROBE_DIRNAME,
-             'Viruses',
-             '__misc__',
-             )
-
-_part_list = [('Life', TOP_PARTS, ''),]
-METAZOA_PARTS = ('Annelida',
-                 'Arthropoda',
-                 'Bryozoa',
-                 'Chordata',
-                 'Cnidaria',
-                 'Ctenophora',
-                 'Mollusca',
-                 'Nematoda',
-                 'Platyhelminthes',
-                 'Porifera',
-                 '__misc__',
-                 )
-METAZOA = 'Metazoa'
-METAZOA_FRAG = 'Eukaryota/{}/'.format(METAZOA)
-METAZOA_PARTS  = tuple([METAZOA_FRAG + i for i in METAZOA_PARTS])
-_part_list.append((METAZOA, METAZOA_PARTS, METAZOA_FRAG))
-
-ARTHROPODA = 'Arthropoda'
-ARTHROPODA_PARTS = ('Malacostraca', 'Arachnida', 'Insecta')
-ARTHROPODA_FRAG = METAZOA_FRAG + ARTHROPODA + '/'
-ARTHROPODA_PARTS  = tuple([ARTHROPODA_FRAG + i for i in ARTHROPODA_PARTS])
-_part_list.append((ARTHROPODA, ARTHROPODA_PARTS, ARTHROPODA_FRAG))
-
-INSECTA = 'Insecta'
-INSECTA_PARTS = ('Diptera', 'Coleoptera', 'Lepidoptera', 'Hymenoptera')
-INSECTA_FRAG = ARTHROPODA_FRAG + INSECTA + '/'
-INSECTA_PARTS  = tuple([INSECTA_FRAG + i for i in INSECTA_PARTS])
-_part_list.append((INSECTA, INSECTA_PARTS, INSECTA_FRAG))
-
-# Data above here, to be refactored at some point
-####################################################################################################
-# Code below
-from peyotl import get_logger
-_LOG = get_logger(__name__)
+_x = {
+    'Archaea': {},
+    'Bacteria': {},
+    'Eukaryota': {
+        'Archaeplastida': {
+            'Glaucophyta': {},
+            'Rhodophyta': {},
+            'Chloroplastida': {},
+            MISC_DIRNAME: {},
+        },
+        'Fungi': {},
+        'Haptophyta': {},
+        'Metazoa': {
+            'Annelida': {},
+            'Arthropoda': {
+                'Arachnida': {},
+                'Malacostraca': {},
+                'Insecta': {
+                    'Diptera': {},
+                    'Coleoptera': {},
+                    'Lepidoptera': {},
+                    'Hymenoptera': {},
+                    MISC_DIRNAME: {},
+                },
+                MISC_DIRNAME: {},
+            },
+            'Bryozoa': {},
+            'Chordata': {},
+            'Cnidaria': {},
+            'Ctenophora': {},
+            'Mollusca': {},
+            'Nematoda': {},
+            'Platyhelminthes': {},
+            'Porifera': {},
+            MISC_DIRNAME: {},
+        },
+        'SAR': {},
+        MISC_DIRNAME: {}
+    },
+    'Viruses': {},
+    MISC_DIRNAME: {},
+}
+BASE_PARTITIONS_DICT = {"Life": _x}
+del _x
 PARTS_BY_NAME = {}
 PART_FRAG_BY_NAME = {}
-for key, parts, frag in _part_list:
-    PARTS_BY_NAME[key] = parts
-    PART_FRAG_BY_NAME[key] = frag
+
+
+def _fill_parts_indices(d, par_frag):
+    global PARTS_BY_NAME, PART_FRAG_BY_NAME
+    for k, subd in d.items():
+        PARTS_BY_NAME[k] = tuple(subd.keys())
+        PART_FRAG_BY_NAME[k] = par_frag
+        if subd:
+            if par_frag:
+                cf = os.path.join(par_frag, k)
+            else:
+                cf = k
+            _fill_parts_indices(subd, cf)
+
+
+_fill_parts_indices(BASE_PARTITIONS_DICT, '')
 PART_NAMES = list(PARTS_BY_NAME.keys())
 PART_NAMES.sort()
 PART_NAMES = tuple(PART_NAMES)
 
 
-def _write_taxon(header, dict_to_write, id_order, dest_path)
-    if not set_to_write:
+# Data above here, to be refactored at some point
+####################################################################################################
+# Code below
+
+
+def _write_taxon(header, dict_to_write, id_order, dest_path):
+    if not dict_to_write:
         _LOG.info('No records need to be written to "{}"'.format(dest_path))
         return
     _LOG.info('Writing {} records to "{}"'.format(len(id_order), dest_path))
@@ -113,30 +131,41 @@ class PartitionElement(object):
             return self.dest_path
         return None
 
-class TaxonFileOnlyPartitionElement(PartitionElement):
-    def __init__(self, path_pref, fragment, path_suffix, roots):
-        PartitionElement.__init__(self, path_pref, fragment, path_suffix, roots)
-    def add_synonym(self, el_id, line):
-        self.add(el_id, line)
     def write_synonyms(self, header):
         pass
 
-class TaxAndSynFileOnlyPartitionElement(PartitionElement):
+
+class TaxonFileOnlyPartitionElement(PartitionElement):
     def __init__(self, path_pref, fragment, path_suffix, roots):
+        PartitionElement.__init__(self, path_pref, fragment, path_suffix, roots)
+
+    def add_synonym(self, el_id, line):
+        self.add(el_id, line)
+
+
+class TaxAndSynFileOnlyPartitionElement(PartitionElement):
+    def __init__(self, path_pref, fragment, path_suffix, roots, syn_filename):
         PartitionElement.__init__(self, path_pref, fragment, path_suffix, roots)
         fn = 'taxonomy.tsv'
         assert path_suffix.endswith(fn)
-        self.syn_path_suffix = path_suffix[:-len(fn)] + 'synonyms.tsv'
-        self.syn_path = os.path.join(path_pref, fragment, INP_TAXONOMY_DIRNAME, self.syn_path_suffix)
+        self.syn_path_suffix = path_suffix[:-len(fn)] + syn_filename
+        self.syn_path = os.path.join(path_pref, fragment, INP_TAXONOMY_DIRNAME,
+                                     self.syn_path_suffix)
         self.syn_stored = {}
         self.syn_id_order = []
 
     def add_synonym(self, el_id, line):
         self.syn_stored[el_id] = line
         self.syn_id_order.append(el_id)
+
     def write_synonyms(self, header):
         _write_taxon(header, self.syn_stored, self.syn_id_order, self.syn_path)
 
+
+def create_partition_element(path_pref, fragment, path_suffix, roots, syn_filename):
+    if not syn_filename:
+        return TaxonFileOnlyPartitionElement(path_pref, fragment, path_suffix, roots)
+    return TaxAndSynFileOnlyPartitionElement(path_pref, fragment, path_suffix, roots, syn_filename)
 
 
 def separate_part_list(partition_el_list):
@@ -158,40 +187,54 @@ def separate_part_list(partition_el_list):
     return roots_set, by_roots, garbage_bin
 
 
-def do_partition(parts_dir,
-                 res_wrapper,
+def do_partition(res,
                  part_name,
                  part_keys,
                  par_frag,
-                 pe_class,
-                 taxon_filename,
                  master_map,
                  parse_and_partition_fn
                  ):
+    """Partition a parent taxon into descendants and garbagebin (__misc__) dir
+    
+    :param res: a wrapper around the resource. Used for id, part_source_filepath, 
+    :param part_name: 
+    :param part_keys: 
+    :param par_frag: 
+    :param master_map: 
+    :param parse_and_partition_fn: 
+    :return: 
+    """
+    _LOG.info('part_name = {}'.format(part_keys))
     _LOG.info('part_keys = {}'.format(part_keys))
-    _LOG.info('par_frag = {}'.format(par_frag))
-    path_suffix = os.path.join(res_wrapper.id, taxon_filename)
+    _LOG.info('par_frag = {}'.format(repr(par_frag)))
+    par_dir = os.path.join(res.partitioned_filepath, par_frag)
+    par_dir = os.path.join(par_dir, part_name)
+    _LOG.info('par_dir = {}'.format(repr(par_dir)))
+    taxon_filename = res.taxon_filename
+    _LOG.info('taxon_filename = {}'.format(taxon_filename))
+    path_suffix = os.path.join(res.id, taxon_filename)
     remove_input = True
     if part_name == 'Life':
         remove_input = False
-        inp_filepath = os.path.join(res_wrapper.unpacked_filepath, taxon_filename)
-        misc_par = parts_dir
+        inp_filepath = os.path.join(res.partition_source_filepath, taxon_filename)
     else:
-        misc_par = os.path.join(parts_dir, par_frag)
-        inp_filepath = os.path.join(misc_par, INP_TAXONOMY_DIRNAME, path_suffix)
-
+        inp_filepath = os.path.join(par_dir, INP_TAXONOMY_DIRNAME, path_suffix)
 
     mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
     if not mapping:
-        _LOG.info("No {} mapping for {}".format(res_wrapper.id, part_name))
+        _LOG.info("No {} mapping for {}".format(res.id, part_name))
         return
+    _LOG.info(' = {}'.format(res.partitioned_filepath))
     partition_el = []
     for tag, roots in mapping:
-        partition_el.append(pe_class(path_pref=parts_dir,
-                                    fragment=tag,
-                                    path_suffix=path_suffix,
-                                    roots=roots))
-    partition_el.append(pe_class(misc_par, MISC_DIRNAME, path_suffix, None))
+        pe = create_partition_element(path_pref=par_dir,
+                                      fragment=tag,
+                                      path_suffix=path_suffix,
+                                      roots=roots,
+                                      syn_filename=res.synonyms_filename)
+        partition_el.append(pe)
+    pe = create_partition_element(par_dir, MISC_DIRNAME, path_suffix, None, res.synonyms_filename)
+    partition_el.append(pe)
     for part in partition_el:
         o = part.existing_output
         if o:

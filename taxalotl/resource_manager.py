@@ -157,6 +157,9 @@ _known_res_attr = frozenset(['aliases',
 
 
 class ResourceWrapper(object):
+    taxon_filename = 'taxonomy.tsv'
+    synonyms_filename = 'synonyms.tsv'
+
     def __init__(self, obj, parent=None, refs=None, config=None):
         for k in _known_res_attr:
             self.__dict__[k] = obj.get(k)
@@ -223,6 +226,10 @@ class ResourceWrapper(object):
         if self.is_abstract:
             return None
         return self.config.partitioned_dir
+
+    @property
+    def partition_source_filepath(self):
+        return self.normalized_filepath
 
     @property
     def is_abstract(self):
@@ -306,24 +313,30 @@ _rt_to_partition = {'col': partition_col}
 # noinspection PyAbstractClass
 class ExternalTaxonomyWrapper(ResourceWrapper):
     resource_type = 'external taxonomy'
-
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
         # print("ET obj = {}".format(obj))
     def partition(self, part_name, part_keys, par_frag):
-        pd = self.partitioned_filepath
         fn = _rt_to_partition[self.base_id]
-        return fn(pd, self, part_name, part_keys, par_frag)
+        return fn(self, part_name, part_keys, par_frag)
+
+
+class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
+    taxon_filename = 'taxa.txt'
+    synonyms_filename = None
+    @property
+    def partition_source_filepath(self):
+        return self.unpacked_filepath
+
 
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(ResourceWrapper):
     resource_type = 'open tree taxonomy'
-
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
     def partition(self, part_name, part_keys, par_frag):
-        pd = self.partitioned_filepath
-        return partition_ott(pd, self, part_name, part_keys, par_frag)
+        return partition_ott(self, part_name, part_keys, par_frag)
+
 
 
 # noinspection PyAbstractClass
@@ -340,7 +353,9 @@ class OTTaxonomyIdListWrapper(ResourceWrapper):
                 and os.path.exists(os.path.join(dfp, 'by_qid.csv')))
 
 
-_wrapper_types = [OTTaxonomyWrapper, ExternalTaxonomyWrapper, OTTaxonomyIdListWrapper, ]
+_wrapper_types = [OTTaxonomyWrapper,
+                  ExternalTaxonomyWrapper,
+                  OTTaxonomyIdListWrapper, ]
 
 
 def get_resource_wrapper(raw, refs, parent=None):
@@ -391,6 +406,10 @@ def wrap_otifact_resources(res, refs=None):
                     raise RuntimeError("Repeated alias for an id: {}".format(a))
                 aliases[a] = w
     rd.update(aliases)
+    res_list = rd.values()
+    for res in res_list:
+        if res.base_id == 'col':
+            res.__class__ = CoLExternalTaxonomyWrapper
     return rd
 
 
