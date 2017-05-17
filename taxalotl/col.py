@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import codecs
-import os
 
 from peyotl import (get_logger)
 
@@ -48,7 +47,6 @@ def partition_col(res_wrapper, part_name, part_keys, par_frag):
                  master_map=COL_PARTMAP,
                  parse_and_partition_fn=_partition_col_by_root_id
                  )
-
 
 
 def _partition_col_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):

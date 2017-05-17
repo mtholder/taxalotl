@@ -57,18 +57,21 @@ del _x
 PARTS_BY_NAME = {}
 PART_FRAG_BY_NAME = {}
 NONTERMINAL_PART_NAMES = []
+PART_NAME_TO_DIRFRAG = {}
+
 
 def _fill_parts_indices(d, par_frag):
     global PARTS_BY_NAME, PART_FRAG_BY_NAME, NONTERMINAL_PART_NAMES
     for k, subd in d.items():
         PARTS_BY_NAME[k] = tuple(subd.keys())
         PART_FRAG_BY_NAME[k] = par_frag
+        if par_frag:
+            cf = os.path.join(par_frag, k)
+        else:
+            cf = k
+        PART_NAME_TO_DIRFRAG[k] = cf
         if subd:
             NONTERMINAL_PART_NAMES.append(k)
-            if par_frag:
-                cf = os.path.join(par_frag, k)
-            else:
-                cf = k
             _fill_parts_indices(subd, cf)
 
 
@@ -76,6 +79,7 @@ _fill_parts_indices(BASE_PARTITIONS_DICT, '')
 PART_NAMES = list(PARTS_BY_NAME.keys())
 PART_NAMES.sort()
 PART_NAMES = tuple(PART_NAMES)
+PREORDER_PART_LIST = tuple(NONTERMINAL_PART_NAMES)
 NONTERMINAL_PART_NAMES.sort()
 NONTERMINAL_PART_NAMES = tuple(NONTERMINAL_PART_NAMES)
 
@@ -101,6 +105,7 @@ def _write_taxon(header, dict_to_write, id_order, dest_path):
             for line in dict_to_write.values():
                 outp.write(line)
 
+
 def _write_taxon_list(header, record_list, dest_path):
     if not record_list:
         _LOG.info('No records need to be written to "{}"'.format(dest_path))
@@ -112,6 +117,7 @@ def _write_taxon_list(header, record_list, dest_path):
         outp.write(header)
         for line in record_list:
             outp.write(line)
+
 
 class PartitionElement(object):
     def __init__(self, path_pref, fragment, path_suffix, roots):
@@ -213,6 +219,24 @@ def separate_part_list(partition_el_list):
     return roots_set, by_roots, garbage_bin
 
 
+def get_relative_dir_for_partition(parts_key):
+    return PART_NAME_TO_DIRFRAG[parts_key]
+
+
+def get_part_inp_taxdir(parts_dir, part_key, taxonomy_id):
+    df = get_relative_dir_for_partition(part_key)
+    return os.path.join(parts_dir, df, INP_TAXONOMY_DIRNAME, taxonomy_id)
+
+
+def get_root_ids_for_subset(tax_dir):
+    rf = os.path.join(tax_dir, 'roots.txt')
+    idset = set()
+    if os.path.exists(rf):
+        content = [int(i.strip()) for i in open(rf, 'r') if i.strip()]
+        idset.update(content)
+    return idset
+
+
 def do_partition(res,
                  part_name,
                  part_keys,
@@ -230,14 +254,14 @@ def do_partition(res,
     :param parse_and_partition_fn: 
     :return: 
     """
-    _LOG.info('part_name = {}'.format(part_keys))
-    _LOG.info('part_keys = {}'.format(part_keys))
-    _LOG.info('par_frag = {}'.format(repr(par_frag)))
+    # _LOG.info('part_name = {}'.format(part_keys))
+    # _LOG.info('part_keys = {}'.format(part_keys))
+    # _LOG.info('par_frag = {}'.format(repr(par_frag)))
     par_dir = os.path.join(res.partitioned_filepath, par_frag)
     par_dir = os.path.join(par_dir, part_name)
-    _LOG.info('par_dir = {}'.format(repr(par_dir)))
+    # _LOG.info('par_dir = {}'.format(repr(par_dir)))
     taxon_filename = res.taxon_filename
-    _LOG.info('taxon_filename = {}'.format(taxon_filename))
+    # _LOG.info('taxon_filename = {}'.format(taxon_filename))
     path_suffix = os.path.join(res.id, taxon_filename)
     remove_input = True
     if part_name == 'Life':
@@ -250,7 +274,6 @@ def do_partition(res,
     if not mapping:
         _LOG.info("No {} mapping for {}".format(res.id, part_name))
         return
-    _LOG.info(' = {}'.format(res.partitioned_filepath))
     partition_el = []
     for tag, roots in mapping:
         pe = create_partition_element(path_pref=par_dir,
@@ -265,7 +288,8 @@ def do_partition(res,
         o = part.existing_output
         if o:
             m = 'Output for {} already exists at "{}"'
-            raise RuntimeError(m.format(part.fragment, o))
+            _LOG.info(m.format(part.fragment, o))
+            return
     if res.synonyms_filename:
         syn_file = os.path.join(os.path.split(inp_filepath)[0], res.synonyms_filename)
     else:

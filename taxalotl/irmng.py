@@ -6,13 +6,13 @@
 # and
 #   reference-taxonomy/feed/gbif/process_gbif_taxonomy.py
 from __future__ import print_function
-import re
-import codecs
-import os
-import csv
 
-from peyotl import (assure_dir_exists,
-                    get_logger)
+import csv
+import os
+import re
+
+from peyotl import (get_logger)
+
 from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
 
 _LOG = get_logger(__name__)
@@ -35,6 +35,7 @@ def _find_irmng_input_files(source):
         if poss_i[1] == prof_file:
             return os.path.join(source, poss_i[1]), os.path.join(source, prof_file)
     raise RuntimeError("Expecting 2 files to match IRMNG_DWC.*\.csv found: {}".format(poss_i))
+
 
 def read_irmng_file(irmng_file_name):
     # 0 "TAXONID","SCIENTIFICNAME","SCIENTIFICNAMEAUTHORSHIP","GENUS",
@@ -119,9 +120,6 @@ def read_irmng_file(irmng_file_name):
     return itd
 
 
-
-
-
 def fix_irmng(itd):
     # Get rid of all synonym of a synonym
     synonyms = itd.synonyms
@@ -169,7 +167,7 @@ def fix_irmng(itd):
                                                 'www.nearctica.com/nomina/beetle/colteneb.htm',
                                                 'Ruhberg et al., 1988',
                                                 'later usage',
-                                               ])
+                                                ])
     grandfathered = frozenset([10180190, 11899420, 11704707, 10527330, 11399158, 10527966, 11444963,
                                11078615, 10522666, 10692084, 10525002, 10520170, 11444785, 11167068,
                                10531957, 11024850, 11078603, 11458858, 11081142, 11390044, 10793056,
@@ -186,10 +184,10 @@ def fix_irmng(itd):
     for taxon_id in to_par.keys():
         tsta_nst_keep_extinct = to_tsta_nstat_keep_exinct[taxon_id]
         if tsta_nst_keep_extinct[2]:
-            continue# already seen
+            continue  # already seen
         if (taxon_id in grandfathered
-                or (tsta_nst_keep_extinct[0] in taxon_statuses_to_keep
-                    and tsta_nst_keep_extinct[1] in nomenclatural_statuses_to_keep)):
+            or (tsta_nst_keep_extinct[0] in taxon_statuses_to_keep
+                and tsta_nst_keep_extinct[1] in nomenclatural_statuses_to_keep)):
             scan_id = taxon_id
             while not tsta_nst_keep_extinct[2]:
                 if scan_id in grandfathered:
@@ -243,12 +241,14 @@ def fix_irmng(itd):
                     taxon.extinctp = False
     """
 
+
 def normalize_irmng(source, destination, res_wrapper):
     i_file, prof_file = _find_irmng_input_files(source)
     itd = read_irmng_file(i_file)
     fix_irmng(itd)
-    #extinctness_report()
-    #write_irmng()
+    # extinctness_report()
+    # write_irmng()
+
 
 """
     

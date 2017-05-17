@@ -7,10 +7,6 @@
 #   reference-taxonomy/feed/gbif/process_gbif_taxonomy.py
 from __future__ import print_function
 
-import codecs
-import os
-import re
-
 from peyotl import (assure_dir_exists,
                     get_logger)
 
@@ -68,7 +64,10 @@ if __name__ == '__main__':
             if i % 500000 == 0:
                 print gid, ncbi_id, strain, name
 """
+
+
 def normalize_silva_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
     itd = InterimTaxonomyData()
+    import sys
     sys.exit('hi from normalize silva')

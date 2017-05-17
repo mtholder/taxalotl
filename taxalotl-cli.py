@@ -8,7 +8,8 @@ from taxalotl import TaxalotlConfig
 from taxalotl.partitions import (PART_NAMES,
                                  PART_FRAG_BY_NAME,
                                  PARTS_BY_NAME,
-                                 NONTERMINAL_PART_NAMES)
+                                 NONTERMINAL_PART_NAMES,
+                                 PREORDER_PART_LIST)
 from peyotl import (get_logger,
                     read_all_otifacts,
                     filter_otifacts_by_type,
@@ -115,14 +116,15 @@ def normalize_resources(taxalotl_config, id_list):
         else:
             rw.normalize()
 
-def partition_resources(taxalotl_config, id_list, level):
+def partition_resources(taxalotl_config, id_list, level_list):
     for rid in id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid, 'partition')
         if not rw.has_been_unpacked():
             m = "{} will be unpacked first..."
             _LOG.info(m.format(rw.id))
             unpack_resources(taxalotl_config, [rw.id])
-        rw.partition(level, PARTS_BY_NAME[level], PART_FRAG_BY_NAME[level])
+        for level in level_list:
+            rw.partition(level, PARTS_BY_NAME[level], PART_FRAG_BY_NAME[level])
 
 def pull_otifacts(taxalotl_config):
     dest_dir = taxalotl_config.resources_dir
@@ -140,6 +142,14 @@ def pull_otifacts(taxalotl_config):
             fp = os.path.join(dest_dir, root_key + '.json')
             write_as_json(res_dict, fp, indent=2, separators=(',', ': '))
 
+def diagnose_new_separators(taxalotl_config):
+    partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
+    rw = taxalotl_config.get_terminalized_res_by_id("ott", 'partition')
+    nsd = rw.diagnose_new_separators(current_partition_key='Glaucophyta')
+    if not nsd:
+        return
+    for k, sd in nsd.items():
+        _LOG.info('New separators {} => {}'.format(k, sd))
 
 def main(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
@@ -157,10 +167,12 @@ def main(args):
             normalize_resources(taxalotl_config, args.resources)
         elif args.which == 'pull-otifacts':
             pull_otifacts(taxalotl_config)
+        elif args.which == 'diagnose-new-separators':
+            diagnose_new_separators(taxalotl_config)
         elif args.which == 'partition':
             if args.level not in PARTS_BY_NAME:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
-            partition_resources(taxalotl_config, args.resources, args.level)
+            partition_resources(taxalotl_config, args.resources, [args.level])
         else:
             raise NotImplementedError('"{}" action not implemented yet'.format(args.which))
     except Exception as x:
@@ -222,13 +234,18 @@ if __name__ == "__main__":
                           help="The level of the taxonomy to partition")
 
     partition_p.set_defaults(which="partition")
+    # PARTITION
+    diag_sep_p = subp.add_parser('diagnose-new-separators',
+                                  help="Uses the last OTT build to find taxa IDs that " \
+                                       "feature are common to the relevant inputs")
+    diag_sep_p.set_defaults(which="diagnose-new-separators")
 
     # Handle --show-completions differently from the others, because
     #   argparse does not help us out here... at all
     if "--show-completions" in sys.argv:
         a = sys.argv[1:]
         univ = frozenset(['--resources-dir', '--config'])
-        res_indep_cmds = ['pull-otifacts',]
+        res_indep_cmds = ['pull-otifacts', 'diagnose-new-separators']
         res_dep_cmds = ['status', 'download', 'unpack', 'normalize', 'partition']
         all_cmds = res_dep_cmds + res_indep_cmds
         sel_cmd = None

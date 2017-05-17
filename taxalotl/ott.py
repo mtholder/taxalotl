@@ -2,7 +2,12 @@ from __future__ import print_function
 
 import codecs
 from peyotl import get_logger
-from taxalotl.partitions import do_partition, separate_part_list, TaxAndSynFileOnlyPartitionElement
+from taxalotl.partitions import (do_partition,
+                                 separate_part_list,
+                                 get_root_ids_for_subset,
+                                 get_relative_dir_for_partition)
+from taxalotl.interim_taxonomy_struct import read_taxonomy_to_get_id_to_fields
+
 _LOG = get_logger(__name__)
 
 OTT_PARTMAP = {
@@ -37,11 +42,11 @@ OTT_PARTMAP = {
     'Viruses': frozenset([4807313]),
 }
 
-
 # Unused separation taxa: cellular organisms	93302
 
 
 OTT_3_SEPARATION_TAXA = OTT_PARTMAP
+
 
 def partition_ott(res_wrapper, part_name, part_keys, par_frag):
     do_partition(res_wrapper,
@@ -50,6 +55,7 @@ def partition_ott(res_wrapper, part_name, part_keys, par_frag):
                  par_frag,
                  master_map=OTT_PARTMAP,
                  parse_and_partition_fn=_partition_ott_by_root_id)
+
 
 def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
     roots_set, by_roots, garbage_bin = separate_part_list(partition_el_list)
@@ -103,3 +109,71 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                 raise
     return id_by_par, id_to_el, id_to_line, syn_by_id, roots_set, garbage_bin, header, syn_header
 
+
+def ott_diagnose_new_separators(res, current_partition_key):
+    tax_dir = res.get_taxdir_for_part(current_partition_key)
+    rids = get_root_ids_for_subset(tax_dir)
+    _LOG.info('tax_dir = {}'.format(tax_dir))
+    id_to_obj = read_taxonomy_to_get_id_to_fields(tax_dir)
+    _LOG.info('{} taxa read'.format(len(id_to_obj)))
+    par_set = set()
+    src_prefix_set = set()
+    for v in id_to_obj.values():
+        par_set.add(v.par_id)
+        src_prefix_set.update(v.src_dict.keys())
+    max_num_srcs = len(src_prefix_set)
+    _LOG.info("Relevant sources appear to be: {}".format(src_prefix_set))
+    nst = []
+    if len(rids) > 1:
+        rids = set()
+    for i, obj in id_to_obj.items():
+        if i in rids:
+            continue  # no point in partitioning at the root taxon
+        if i not in par_set:
+            continue  # no point in partitioning leaves...
+        if len(obj.src_dict) == max_num_srcs:
+            nst.append((i, obj))
+    if not nst:
+        _LOG.debug('No new separators found for "{}"'.format(current_partition_key))
+        return None
+    par_to_child = {}
+    to_par = {}
+    for ott_id, obj in nst:
+        par = obj.par_id
+        to_par[ott_id] = par
+        par_to_child.setdefault(par, [None, []])[1].append(ott_id)
+        this_el = par_to_child.setdefault(ott_id, [None, []])
+        assert this_el[0] is None
+        this_el[0] = obj
+    roots = set(par_to_child.keys()) - set(to_par.keys())
+    rel_dir_for_part = get_relative_dir_for_partition(current_partition_key)
+    return {rel_dir_for_part: NestedNewSeparator(roots, par_to_child)}
+
+
+class NewSeparator(object):
+    def __init__(self, ott_taxon_obj):
+        self.taxon = ott_taxon_obj
+        self.sub_separtors = {}
+
+
+class NestedNewSeparator(object):
+    def __init__(self, roots, par_to_child):
+        ret_dict = {}
+        for r in roots:
+            curr_el = par_to_child[r]
+            _add_nst_subtree_el_to_dict(ret_dict, curr_el, par_to_child)
+        assert ret_dict
+        self.separtors = ret_dict
+
+
+def _add_nst_subtree_el_to_dict(rd, nst_el, par_to_child):
+    sep_taxon, children = nst_el
+    if sep_taxon is not None:
+        nst = NewSeparator(sep_taxon)
+        nd = nst.sub_separtors
+        rd[sep_taxon.name_that_is_unique] = nst
+    else:
+        nd = rd
+    for c in children:
+        next_el = par_to_child[c]
+        _add_nst_subtree_el_to_dict(nd, next_el, par_to_child)

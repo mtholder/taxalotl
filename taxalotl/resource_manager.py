@@ -16,7 +16,9 @@ from taxalotl.irmng import normalize_irmng
 from taxalotl.silva import normalize_silva_taxonomy
 from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 from taxalotl.col import partition_col
-from taxalotl.ott import partition_ott
+from taxalotl.ott import partition_ott, ott_diagnose_new_separators
+from taxalotl.partitions import get_part_inp_taxdir
+
 _LOG = get_logger(__name__)
 
 
@@ -74,7 +76,8 @@ OTT_TAXONOMY_FILENAMES = ("about.json",
                           "transcript.out",
                           "version.txt",)
 
-OTT_TAXONOMY_ID_FILES = ('by_qid.csv', )
+OTT_TAXONOMY_ID_FILES = ('by_qid.csv',)
+
 
 def copy_file_list_by_linking(unpacked_dirp, normalized_dirp, file_list):
     assure_dir_exists(normalized_dirp)
@@ -92,6 +95,7 @@ def copy_taxonomy_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
     copy_file_list_by_linking(unpacked_dirp,
                               normalized_dirp,
                               OTT_TAXONOMY_FILENAMES)
+
 
 def copy_id_list_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
     copy_file_list_by_linking(unpacked_dirp,
@@ -134,7 +138,7 @@ def write_resources_file(obj, fp):
 
 
 _known_res_attr = frozenset(['aliases',
-                             'base_id', # base ID in inherits from graph
+                             'base_id',  # base ID in inherits from graph
                              'copy_status',
                              'date',
                              'doc_url',
@@ -249,6 +253,9 @@ class ResourceWrapper(object):
                 and os.path.exists(dfp)
                 and os.path.exists(os.path.join(dfp, 'taxonomy.tsv')))
 
+    def get_taxdir_for_part(self, part_key):
+        return get_part_inp_taxdir(self.partitioned_filepath, part_key, self.id)
+
     def download(self):
         dfp = self.download_filepath
         if dfp is None:
@@ -310,12 +317,16 @@ class ResourceWrapper(object):
 
 
 _rt_to_partition = {'col': partition_col}
+
+
 # noinspection PyAbstractClass
 class ExternalTaxonomyWrapper(ResourceWrapper):
     resource_type = 'external taxonomy'
+
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
         # print("ET obj = {}".format(obj))
+
     def partition(self, part_name, part_keys, par_frag):
         fn = _rt_to_partition[self.base_id]
         return fn(self, part_name, part_keys, par_frag)
@@ -324,6 +335,7 @@ class ExternalTaxonomyWrapper(ResourceWrapper):
 class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
     taxon_filename = 'taxa.txt'
     synonyms_filename = None
+
     @property
     def partition_source_filepath(self):
         return self.unpacked_filepath
@@ -332,11 +344,15 @@ class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(ResourceWrapper):
     resource_type = 'open tree taxonomy'
+
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
+
     def partition(self, part_name, part_keys, par_frag):
         return partition_ott(self, part_name, part_keys, par_frag)
 
+    def diagnose_new_separators(self, current_partition_key):
+        return ott_diagnose_new_separators(self, current_partition_key)
 
 
 # noinspection PyAbstractClass

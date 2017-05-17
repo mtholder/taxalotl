@@ -90,24 +90,72 @@ def write_ott_forwards(out_fp, forwarded_dict):
 def write_ncbi_details_json(fp, details_log):
     write_as_json(details_log, fp, indent=2)
 
+
 def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
     ncbi_to_name = {}
     i = 0
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
     with codecs.open(fp, 'r', encoding='utf-8') as inp:
-        reader = csv.reader(nfile, delimiter='\t')
+        reader = csv.reader(inp, delimiter='\t')
         header = reader.next()
         uidx = header.index('uid')
         namex = header.index('name')
         for row in reader:
-            id = id_coercion(row[uidx])
+            uid = id_coercion(row[uidx])
             name = row[namex]
             if name is not None:
-                ncbi_to_name[id] = name
+                ncbi_to_name[uid] = name
                 i += 1
                 if i % 200000 == 0:
-                    _LOG.info("{} {} {}".format(i, id, name))
+                    _LOG.info("{} {} {}".format(i, uid, name))
     return ncbi_to_name
+
+
+class OTTTaxon(object):
+    def __init__(self, interim_taxonomy_format_line, line_num):
+        self.line_num = line_num
+        line = interim_taxonomy_format_line
+        try:
+            ls = line.split('\t|\t')
+            assert len(ls) == 8 and ls[-1] == '\n'
+        except:
+            _LOG.exception("Error reading line {}:\n{}".format(line_num, line))
+            raise
+        self.id = int(ls[0])
+        if ls[1]:
+            self.par_id = int(ls[1])
+        else:
+            self.par_id = None
+        self.name, self.rank, self.uniqname = ls[2], ls[3], ls[5]
+        self.flags = set(ls[6].split(','))
+        sel = ls[4].split(',')
+        d = {}
+        for el in sel:
+            src, sid = el.split(':')
+            d.setdefault(src, set()).add(sid)
+        self.src_dict = d
+
+    @property
+    def name_that_is_unique(self):
+        return self.uniqname if self.uniqname else self.name
+
+
+def read_taxonomy_to_get_id_to_fields(tax_dir):
+    fp = os.path.join(tax_dir, 'taxonomy.tsv')
+    fields = ['uid', 'parent_uid', 'name', 'rank', 'sourceinfo', 'uniqname', 'flags', '\n']
+    expected_header = '\t|\t'.join(fields)
+
+    with codecs.open(fp, 'r', encoding='utf-8') as inp:
+        iinp = iter(inp)
+        header = iinp.next()
+        assert header == expected_header
+        id_to_obj = {}
+        for n, line in enumerate(iinp):
+            obj = OTTTaxon(line, line_num=1 + n)
+            oid = obj.id
+            assert oid not in id_to_obj
+            id_to_obj[oid] = obj
+        return id_to_obj
 
 
 class InterimTaxonomyData(object):
@@ -209,5 +257,3 @@ class InterimTaxonomyData(object):
                         pc.remove(taxon_id)
                 except:
                     pass
-
-
