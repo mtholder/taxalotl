@@ -16,6 +16,7 @@ from taxalotl.irmng import normalize_irmng
 from taxalotl.silva import normalize_silva_taxonomy
 from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 from taxalotl.col import partition_col
+from taxalotl.ott import partition_ott
 _LOG = get_logger(__name__)
 
 
@@ -136,6 +137,7 @@ _known_res_attr = frozenset(['aliases',
                              'base_id', # base ID in inherits from graph
                              'copy_status',
                              'date',
+                             'doc_url',
                              'format',
                              'id',
                              'inherits_from',
@@ -148,6 +150,7 @@ _known_res_attr = frozenset(['aliases',
                              'resource_type',
                              'schema',
                              'source',
+                             'stats',
                              'url',
                              'version'
                              ])
@@ -259,7 +262,7 @@ class ResourceWrapper(object):
     def normalize(self):
         normalize_archive(self.unpacked_filepath, self.normalized_filepath, self.schema, self)
 
-    def partition(self):
+    def partition(self, part_name, part_keys, par_frag):
         raise NotImplementedError('Partition not implemented for base ResourceWrapper')
 
     def write_status(self, out, indent='', list_all_artifacts=False):
@@ -310,7 +313,6 @@ class ExternalTaxonomyWrapper(ResourceWrapper):
     def partition(self, part_name, part_keys, par_frag):
         pd = self.partitioned_filepath
         fn = _rt_to_partition[self.base_id]
-        _LOG.info("fn with {}".format(str((pd, part_name, part_keys, par_frag))))
         return fn(pd, self, part_name, part_keys, par_frag)
 
 # noinspection PyAbstractClass
@@ -319,6 +321,9 @@ class OTTaxonomyWrapper(ResourceWrapper):
 
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
+    def partition(self, part_name, part_keys, par_frag):
+        pd = self.partitioned_filepath
+        return partition_ott(pd, self, part_name, part_keys, par_frag)
 
 
 # noinspection PyAbstractClass

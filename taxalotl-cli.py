@@ -119,7 +119,6 @@ def partition_resources(taxalotl_config, id_list, level):
             m = "{} will be unpacked first..."
             _LOG.info(m.format(rw.id))
             unpack_resources(taxalotl_config, [rw.id])
-
         rw.partition(level, PARTS_BY_NAME[level], PART_FRAG_BY_NAME[level])
 
 def pull_otifacts(taxalotl_config):
