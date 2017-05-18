@@ -4,6 +4,7 @@ import codecs
 from peyotl import get_logger, is_str_type
 from taxalotl.partitions import (do_partition,
                                  separate_part_list,
+                                 fill_empty_anc_of_mapping,
                                  get_root_ids_for_subset,
                                  get_relative_dir_for_partition,
                                  get_part_inp_taxdir,
@@ -120,7 +121,7 @@ def ott_fetch_root_taxon_for_partition(res, parts_key, root_id):
     if not tax_dir:
         _LOG.info('No taxon file found for {}'.format(parts_key))
         return None
-    _LOG.info('{} root should be in {}'.format(parts_key, tax_dir))
+    #_LOG.info('{} root should be in {}'.format(parts_key, tax_dir))
     taxon_obj = read_taxonomy_to_get_single_taxon(tax_dir, root_id)
     if not tax_dir:
         _LOG.info('Root taxon for {} with ID {} not found in {}'.format(parts_key, root_id, tax_dir))
@@ -129,8 +130,8 @@ def ott_fetch_root_taxon_for_partition(res, parts_key, root_id):
 
 
 def ott_build_paritition_maps(res):
-    srcs = {i[0]:i[1] for i in res.inputs if i[0] and is_str_type(i[1])}
-    ret = {}
+    # srcs = {i[0]:i[1] for i in res.inputs if i[0] and is_str_type(i[1])}
+    src_pre_to_map = {}
     all_part_keys = set()
     for part_key in PREORDER_PART_LIST:
         if part_key != 'Life':
@@ -143,11 +144,25 @@ def ott_build_paritition_maps(res):
         rids = get_root_ids_for_subset(tax_dir)
         if not rids:
             continue
-        _LOG.info('pk = {} root = {}'.format(pk, rids))
         assert len(rids) == 1
         root_id = rids.pop()
         taxon = ott_fetch_root_taxon_for_partition(res, pk, root_id)
-
+        _LOG.info('root for {} has sources: {}'.format(pk, taxon.src_dict))
+        for src_pre, src_ids in taxon.src_dict.items():
+            src_pre_to_map.setdefault(src_pre, {})[pk] = src_ids
+    import copy
+    filled = {}
+    for src_pre, mapping in src_pre_to_map.items():
+        pm = copy.deepcopy(mapping)
+        fill_empty_anc_of_mapping(mapping)
+        filled[src_pre] = {k: list(v) for k, v in mapping.items()}
+        for k, v in mapping.items():
+            pv = pm.get(k)
+            if pv is None:
+                _LOG.info("{}: {} -> (None -> {})".format(src_pre, k, v))
+            else:
+                assert v == pv
+    return filled
 
 def ott_diagnose_new_separators(res, current_partition_key):
     tax_dir = res.get_taxdir_for_part(current_partition_key)

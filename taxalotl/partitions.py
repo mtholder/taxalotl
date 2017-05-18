@@ -2,11 +2,13 @@
 from __future__ import print_function
 from peyotl import get_logger, assure_dir_exists
 import codecs
+import copy
 import os
 
 _LOG = get_logger(__name__)
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
+GEN_MAPPING_FILENAME = '__mapping__.json'
 
 ####################################################################################################
 # Some data (to later be refactored
@@ -60,6 +62,7 @@ NONTERMINAL_PART_NAMES = []
 PART_NAME_TO_DIRFRAG = {}
 
 
+
 def _fill_parts_indices(d, par_frag):
     global PARTS_BY_NAME, PART_FRAG_BY_NAME, NONTERMINAL_PART_NAMES
     for k, subd in d.items():
@@ -82,6 +85,29 @@ PART_NAMES = tuple(PART_NAMES)
 PREORDER_PART_LIST = tuple(NONTERMINAL_PART_NAMES)
 NONTERMINAL_PART_NAMES.sort()
 NONTERMINAL_PART_NAMES = tuple(NONTERMINAL_PART_NAMES)
+
+
+def _rec_populate(d_to_fill, key_to_filled_set):
+    #_LOG.info('key_to_filled_set = {}'.format(key_to_filled_set))
+    if MISC_DIRNAME in d_to_fill:
+        del d_to_fill[MISC_DIRNAME]
+    for key, subd in d_to_fill.items():
+        filled_set = key_to_filled_set.get(key)
+        if subd:
+            _rec_populate(subd, key_to_filled_set)
+            if not filled_set:
+                cu = set()
+                for v in subd.keys():
+                    fsv = key_to_filled_set.get(v)
+                    if fsv:
+                        cu.update(fsv)
+                if cu:
+                    key_to_filled_set[key] = cu
+
+def fill_empty_anc_of_mapping(mapping):
+    #_LOG.info('mapping = {}'.format(mapping))
+    s = copy.deepcopy(BASE_PARTITIONS_DICT)
+    _rec_populate(s, mapping)
 
 
 # Data above here, to be refactored at some point

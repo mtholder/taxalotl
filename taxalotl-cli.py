@@ -5,7 +5,8 @@ import json
 import sys
 import os
 from taxalotl import TaxalotlConfig
-from taxalotl.partitions import (PART_NAMES,
+from taxalotl.partitions import (GEN_MAPPING_FILENAME,
+                                 PART_NAMES,
                                  PART_FRAG_BY_NAME,
                                  PARTS_BY_NAME,
                                  NONTERMINAL_PART_NAMES,
@@ -157,8 +158,11 @@ def build_partition_maps(taxalotl_config):
     nsd = rw.build_paritition_maps()
     if not nsd:
         return
-    for k, sd in nsd.items():
-        _LOG.info('new partition maps {} => {}'.format(k, sd))
+    pd = rw.partitioned_filepath
+    mfp = os.path.join(pd, GEN_MAPPING_FILENAME)
+    write_as_json(nsd, mfp, indent=2)
+    _LOG.info("Partitions maps written to {}".format(mfp))
+
 
 def main(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
