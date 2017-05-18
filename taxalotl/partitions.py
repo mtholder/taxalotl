@@ -68,7 +68,10 @@ def get_auto_gen_part_mapper(res):
         m = 'Mapping file not found at "{}"\nRun the build-partitions-maps command.'
         raise RuntimeError(m.format(fp))
     master_mapping = read_as_json(fp)
-    poss_ids = [res.id] + getattr(res, 'aliases', []) + [res.base_id]
+    a_list = getattr(res, 'aliases', [])
+    if a_list is None:
+        a_list = []
+    poss_ids = [res.id] + a_list + [res.base_id]
     for k in poss_ids:
         if k in master_mapping:
             return master_mapping[k]

@@ -85,12 +85,21 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
         with codecs.open(syn_fp, 'rU', encoding='utf-8') as inp:
             iinp = iter(inp)
             syn_header = iinp.next()
+            shs = syn_header.split('\t|\t')
+            if shs[0] == 'uid':
+                uid_ind = 0
+            elif shs[1] == 'uid':
+                uid_ind = 1
+            else:
+                raise ValueError("Expected one of the first 2 columns of an OTT formatted "
+                                 "synonyms file to be 'uid'. Problem reading: {}".format(syn_fp))
+
             for n, line in enumerate(iinp):
                 ls = line.split('\t|\t')
                 if n % 1000 == 0:
                     _LOG.info(' read synonym {}'.format(n))
                 try:
-                    accept_id = int(ls[1])
+                    accept_id = int(ls[uid_ind])
                     syn_by_id.setdefault(accept_id, []).append((None, line))
                 except:
                     _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
