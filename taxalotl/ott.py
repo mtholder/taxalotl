@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import codecs
 from peyotl import get_logger, is_str_type
 from taxalotl.partitions import (do_partition,
                                  separate_part_list,
@@ -8,12 +7,15 @@ from taxalotl.partitions import (do_partition,
                                  get_root_ids_for_subset,
                                  get_relative_dir_for_partition,
                                  get_part_inp_taxdir,
+                                 get_auto_gen_part_mapper,
                                  MISC_DIRNAME,
                                  PREORDER_PART_LIST,
                                  PARTS_BY_NAME)
 from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
                                               read_taxonomy_to_get_id_to_fields,
                                              )
+import codecs
+import os
 
 _LOG = get_logger(__name__)
 
@@ -54,6 +56,15 @@ OTT_PARTMAP = {
 
 OTT_3_SEPARATION_TAXA = OTT_PARTMAP
 
+def partition_from_auto_maps(res_wrapper, part_name, part_keys, par_frag):
+    auto_map = get_auto_gen_part_mapper(res_wrapper)
+    do_partition(res_wrapper,
+                 part_name,
+                 part_keys,
+                 par_frag,
+                 master_map=auto_map,
+                 parse_and_partition_fn=_partition_ott_by_root_id)
+
 
 def partition_ott(res_wrapper, part_name, part_keys, par_frag):
     do_partition(res_wrapper,
@@ -70,19 +81,22 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
     id_by_par = {}
     syn_by_id = {}
     id_to_el = {}
-    with codecs.open(syn_fp, 'rU', encoding='utf-8') as inp:
-        iinp = iter(inp)
-        syn_header = iinp.next()
-        for n, line in enumerate(iinp):
-            ls = line.split('\t|\t')
-            if n % 1000 == 0:
-                _LOG.info(' read synonym {}'.format(n))
-            try:
-                accept_id = int(ls[1])
-                syn_by_id.setdefault(accept_id, []).append((None, line))
-            except:
-                _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
-                raise
+    if os.path.exists(syn_fp):
+        with codecs.open(syn_fp, 'rU', encoding='utf-8') as inp:
+            iinp = iter(inp)
+            syn_header = iinp.next()
+            for n, line in enumerate(iinp):
+                ls = line.split('\t|\t')
+                if n % 1000 == 0:
+                    _LOG.info(' read synonym {}'.format(n))
+                try:
+                    accept_id = int(ls[1])
+                    syn_by_id.setdefault(accept_id, []).append((None, line))
+                except:
+                    _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
+                    raise
+    else:
+        syn_header = ''
     with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         header = iinp.next()

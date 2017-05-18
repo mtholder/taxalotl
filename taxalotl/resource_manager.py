@@ -16,7 +16,7 @@ from taxalotl.irmng import normalize_irmng
 from taxalotl.silva import normalize_silva_taxonomy
 from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 from taxalotl.col import partition_col
-from taxalotl.ott import (partition_ott,
+from taxalotl.ott import (partition_ott, partition_from_auto_maps,
                           ott_diagnose_new_separators,
                           ott_build_paritition_maps)
 from taxalotl.partitions import get_part_inp_taxdir, get_par_and_par_misc_taxdir
@@ -343,7 +343,7 @@ class ExternalTaxonomyWrapper(ResourceWrapper):
         # print("ET obj = {}".format(obj))
 
     def partition(self, part_name, part_keys, par_frag):
-        fn = _rt_to_partition[self.base_id]
+        fn = _rt_to_partition.get(self.base_id, partition_from_auto_maps)
         return fn(self, part_name, part_keys, par_frag)
 
 

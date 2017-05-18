@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from peyotl import get_logger, assure_dir_exists
+from peyotl import get_logger, assure_dir_exists, read_as_json
 import codecs
 import copy
 import os
@@ -61,6 +61,19 @@ PART_FRAG_BY_NAME = {}
 NONTERMINAL_PART_NAMES = []
 PART_NAME_TO_DIRFRAG = {}
 
+
+def get_auto_gen_part_mapper(res):
+    fp = os.path.join(res.partitioned_filepath, GEN_MAPPING_FILENAME)
+    if not os.path.isfile(fp):
+        m = 'Mapping file not found at "{}"\nRun the build-partitions-maps command.'
+        raise RuntimeError(m.format(fp))
+    master_mapping = read_as_json(fp)
+    poss_ids = [res.id] + getattr(res, 'aliases', []) + [res.base_id]
+    for k in poss_ids:
+        if k in master_mapping:
+            return master_mapping[k]
+    m = 'No entry for ids {} found in "{}".'
+    raise RuntimeError(m.format(', '.join(poss_ids), fp))
 
 
 def _fill_parts_indices(d, par_frag):

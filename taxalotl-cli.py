@@ -238,7 +238,7 @@ if __name__ == "__main__":
     # NORMALIZE
     normalize_p = subp.add_parser('normalize',
                                   help="converts to the OTT format (unpacks if necessary)")
-    normalize_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
+    normalize_p.add_argument('resources', nargs="+", help="IDs of the resources to normalize")
     normalize_p.set_defaults(which="normalize")
     # PARTITION
     partition_p = subp.add_parser('partition',
@@ -249,29 +249,34 @@ if __name__ == "__main__":
                           help="The level of the taxonomy to partition")
 
     partition_p.set_defaults(which="partition")
-    # PARTITION
+    # DIAGNOSE-NEW-SEPARATORS
     diag_sep_p = subp.add_parser('diagnose-new-separators',
                                   help="Uses the last OTT build to find taxa IDs that " \
                                        "feature are common to the relevant inputs")
     diag_sep_p.set_defaults(which="diagnose-new-separators")
-    # PARTITION
+    # BUILD-PARTITION-MAPS
     build_partition_maps_p = subp.add_parser('build-partition-maps',
                                  help="Uses the last OTT build to find the ID mappings needed to" \
                                       "partition the inputs taxonomies.")
     build_partition_maps_p.set_defaults(which="build-partition-maps")
-
+    # CLEAN
+    clean_p = subp.add_parser('clean', help="remove the results of an action for a resource.")
+    clean_p.add_argument('action', help="command to clean up for")
+    clean_p.add_argument('resources', nargs="+", help="IDs of the resources to clean")
+    clean_p.set_defaults(which='clean')
     # Handle --show-completions differently from the others, because
     #   argparse does not help us out here... at all
     if "--show-completions" in sys.argv:
         a = sys.argv[1:]
         univ = frozenset(['--resources-dir', '--config'])
         res_indep_cmds = ['pull-otifacts', 'diagnose-new-separators', 'build-partition-maps']
-        res_dep_cmds = ['status', 'download', 'unpack', 'normalize', 'partition']
+        res_dep_cmds = ['clean', 'status', 'download', 'unpack', 'normalize', 'partition']
         all_cmds = res_dep_cmds + res_indep_cmds
         sel_cmd = None
         for c in all_cmds:
             if c in a:
                 sel_cmd = c # perhaps should worry about multiple commands?
+                break
         comp_list = []
         if sel_cmd is None:
             comp_list = []
@@ -317,6 +322,11 @@ if __name__ == "__main__":
                         comp_list = list(NONTERMINAL_PART_NAMES)
                     elif '--level' not in a:
                         comp_list.extend(['--level'])
+                elif sel_cmd == 'clean':
+                    all_cmds.remove('clean')
+                    all_cmds.remove('status')
+                    comp_list.extend(all_cmds)
+
         sys.stdout.write('{}\n'.format(' '.join(comp_list)))
     else:
         main(p.parse_args())
