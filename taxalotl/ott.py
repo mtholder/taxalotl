@@ -108,6 +108,7 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                 uid, par_id = ls[0], ls[1]
                 uid = int(uid)
                 if uid in roots_set:
+                    _LOG.info("{} not in {}".format(uid, roots_set))
                     match_l = [i[1] for i in by_roots if uid in i[0]]
                     assert len(match_l) == 1
                     match_el = match_l[0]
@@ -116,6 +117,7 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                     if garbage_bin is not None:
                         garbage_bin.add(uid, line)
                 else:
+                    _LOG.info("{} not in {}".format(uid, roots_set))
                     if par_id:
                         par_id = int(par_id)
                     match_el = id_to_el.get(par_id)

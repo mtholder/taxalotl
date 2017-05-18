@@ -164,9 +164,20 @@ def build_partition_maps(taxalotl_config):
     _LOG.info("Partitions maps written to {}".format(mfp))
 
 def clean_resources(taxalotl_config, action, id_list):
+    if not id_list:
+        if action == 'build-partition-maps':
+            rw = taxalotl_config.get_terminalized_res_by_id("ott", None)
+            fp = os.path.join(rw.partitioned_filepath, GEN_MAPPING_FILENAME)
+            if os.path.exists(fp):
+                _LOG.info('Removing "{}"...'.format(fp))
+                os.unlink(fp)
+            else:
+                _LOG.info('Mapping file "{}" does not exist. Skipping clean step'.format(fp))
+        else:
+            raise NotImplementedError("clean of {} not yet implemented".format(action))
     for rid in id_list:
+        rw = taxalotl_config.get_terminalized_res_by_id(rid, 'clean')
         if action == 'partition':
-            rw = taxalotl_config.get_terminalized_res_by_id(rid, 'unpack')
             if rw.has_been_partitioned():
                 _LOG.info("Cleaning partition artifact for {}...".format(rid))
                 rw.remove_partition_artifacts()
@@ -275,7 +286,7 @@ if __name__ == "__main__":
     # CLEAN
     clean_p = subp.add_parser('clean', help="remove the results of an action for a resource.")
     clean_p.add_argument('action', help="command to clean up for")
-    clean_p.add_argument('resources', nargs="+", help="IDs of the resources to clean")
+    clean_p.add_argument('resources', nargs="*", help="IDs of the resources to clean")
     clean_p.set_defaults(which='clean')
     # Handle --show-completions differently from the others, because
     #   argparse does not help us out here... at all
