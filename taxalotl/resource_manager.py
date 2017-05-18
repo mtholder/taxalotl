@@ -16,7 +16,9 @@ from taxalotl.irmng import normalize_irmng
 from taxalotl.silva import normalize_silva_taxonomy
 from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 from taxalotl.col import partition_col
-from taxalotl.ott import partition_ott, ott_diagnose_new_separators
+from taxalotl.ott import (partition_ott,
+                          ott_diagnose_new_separators,
+                          ott_build_paritition_maps)
 from taxalotl.partitions import get_part_inp_taxdir
 
 _LOG = get_logger(__name__)
@@ -353,6 +355,9 @@ class OTTaxonomyWrapper(ResourceWrapper):
 
     def diagnose_new_separators(self, current_partition_key):
         return ott_diagnose_new_separators(self, current_partition_key)
+
+    def build_paritition_maps(self):
+        return ott_build_paritition_maps(self)
 
 
 # noinspection PyAbstractClass

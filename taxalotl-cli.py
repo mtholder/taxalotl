@@ -151,6 +151,15 @@ def diagnose_new_separators(taxalotl_config):
     for k, sd in nsd.items():
         _LOG.info('New separators {} => {}'.format(k, sd))
 
+def build_partition_maps(taxalotl_config):
+    partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
+    rw = taxalotl_config.get_terminalized_res_by_id("ott", 'partition')
+    nsd = rw.build_paritition_maps()
+    if not nsd:
+        return
+    for k, sd in nsd.items():
+        _LOG.info('new partition maps {} => {}'.format(k, sd))
+
 def main(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
     try:
@@ -169,6 +178,8 @@ def main(args):
             pull_otifacts(taxalotl_config)
         elif args.which == 'diagnose-new-separators':
             diagnose_new_separators(taxalotl_config)
+        elif args.which == 'build-partition-maps':
+            build_partition_maps(taxalotl_config)
         elif args.which == 'partition':
             if args.level not in PARTS_BY_NAME:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
@@ -239,13 +250,18 @@ if __name__ == "__main__":
                                   help="Uses the last OTT build to find taxa IDs that " \
                                        "feature are common to the relevant inputs")
     diag_sep_p.set_defaults(which="diagnose-new-separators")
+    # PARTITION
+    build_partition_maps_p = subp.add_parser('build-partition-maps',
+                                 help="Uses the last OTT build to find the ID mappings needed to" \
+                                      "partition the inputs taxonomies.")
+    build_partition_maps_p.set_defaults(which="build-partition-maps")
 
     # Handle --show-completions differently from the others, because
     #   argparse does not help us out here... at all
     if "--show-completions" in sys.argv:
         a = sys.argv[1:]
         univ = frozenset(['--resources-dir', '--config'])
-        res_indep_cmds = ['pull-otifacts', 'diagnose-new-separators']
+        res_indep_cmds = ['pull-otifacts', 'diagnose-new-separators', 'build-partition-maps']
         res_dep_cmds = ['status', 'download', 'unpack', 'normalize', 'partition']
         all_cmds = res_dep_cmds + res_indep_cmds
         sel_cmd = None
