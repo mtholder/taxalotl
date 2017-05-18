@@ -163,11 +163,24 @@ def build_partition_maps(taxalotl_config):
     write_as_json(nsd, mfp, indent=2)
     _LOG.info("Partitions maps written to {}".format(mfp))
 
+def clean_resources(taxalotl_config, action, id_list):
+    for rid in id_list:
+        if action == 'partition':
+            rw = taxalotl_config.get_terminalized_res_by_id(rid, 'unpack')
+            if rw.has_been_partitioned():
+                _LOG.info("Cleaning partition artifact for {}...".format(rid))
+                rw.remove_partition_artifacts()
+            else:
+                _LOG.info("{} had not been partitioned. Skipping clean step...".format(rid))
+        else:
+            raise NotImplementedError("clean of {} not yet implemented".format(action))
 
 def main(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
     try:
-        if args.which == 'download':
+        if args.which == 'clean':
+            clean_resources(taxalotl_config, args.action, args.resources)
+        elif args.which == 'download':
             download_resources(taxalotl_config, args.resources)
         elif args.which == 'status':
             status_of_resources(taxalotl_config,
@@ -273,10 +286,12 @@ if __name__ == "__main__":
         res_dep_cmds = ['clean', 'status', 'download', 'unpack', 'normalize', 'partition']
         all_cmds = res_dep_cmds + res_indep_cmds
         sel_cmd = None
+        num_cmds = 0
         for c in all_cmds:
             if c in a:
-                sel_cmd = c # perhaps should worry about multiple commands?
-                break
+                if sel_cmd is None:
+                    sel_cmd = c
+                num_cmds += 1
         comp_list = []
         if sel_cmd is None:
             comp_list = []
@@ -322,7 +337,7 @@ if __name__ == "__main__":
                         comp_list = list(NONTERMINAL_PART_NAMES)
                     elif '--level' not in a:
                         comp_list.extend(['--level'])
-                elif sel_cmd == 'clean':
+                elif sel_cmd == 'clean' and num_cmds == 1:
                     all_cmds.remove('clean')
                     all_cmds.remove('status')
                     comp_list.extend(all_cmds)

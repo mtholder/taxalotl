@@ -18,8 +18,11 @@ from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 from taxalotl.col import partition_col
 from taxalotl.ott import (partition_ott, partition_from_auto_maps,
                           ott_diagnose_new_separators,
-                          ott_build_paritition_maps)
-from taxalotl.partitions import get_part_inp_taxdir, get_par_and_par_misc_taxdir
+                          ott_build_paritition_maps
+                          )
+from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
+                                 get_part_inp_taxdir,
+                                 get_par_and_par_misc_taxdir)
 
 _LOG = get_logger(__name__)
 
@@ -254,7 +257,26 @@ class ResourceWrapper(object):
         return (dfp is not None
                 and os.path.exists(dfp)
                 and os.path.exists(os.path.join(dfp, 'taxonomy.tsv')))
-
+    def has_been_partitioned(self):
+        part_dir_list = find_partition_dirs_for_taxonomy(self.partitioned_filepath, self.id)
+        return bool(part_dir_list)
+    def remove_partition_artifacts(self):
+        part_dir_list = find_partition_dirs_for_taxonomy(self.partitioned_filepath, self.id)
+        f_to_remove = [self.taxon_filename, 'roots.txt', 'about.json', 'details.json']
+        if self.synonyms_filename:
+            f_to_remove.append(self.synonyms_filename)
+        for dir in part_dir_list:
+            _LOG.info('Removing contents of "{}"'.format(dir))
+            for f in f_to_remove:
+                fp = os.path.join(dir, f)
+                if os.path.exists(fp):
+                    os.unlink(fp)
+        try:
+            os.rmdir(dir)
+        except:
+            _LOG.warn('Could not remove "{}" that directory may not be empty'.format(dir))
+        else:
+            _LOG.info('Removed "{}"'.format(dir))
     def get_taxdir_for_part(self, part_key):
         return get_part_inp_taxdir(self.partitioned_filepath, part_key, self.id)
 

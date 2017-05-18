@@ -238,6 +238,10 @@ def create_partition_element(path_pref, fragment, path_suffix, roots, syn_filena
         return TaxonFileOnlyPartitionElement(path_pref, fragment, path_suffix, roots)
     return TaxAndSynFileOnlyPartitionElement(path_pref, fragment, path_suffix, roots, syn_filename)
 
+def find_partition_dirs_for_taxonomy(path_pref, res_id):
+    suffix = os.sep + os.path.join('', INP_TAXONOMY_DIRNAME, res_id)
+    return [i for i, sd, fl in os.walk(path_pref) if i.endswith(suffix)]
+
 
 def separate_part_list(partition_el_list):
     """Given a list of partition elements breaks the list baset on el.root for each el into:
