@@ -157,6 +157,22 @@ def read_taxonomy_to_get_id_to_fields(tax_dir):
             id_to_obj[oid] = obj
         return id_to_obj
 
+def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
+    sri = str(root_id)
+    fp = os.path.join(tax_dir, 'taxonomy.tsv')
+    fields = ['uid', 'parent_uid', 'name', 'rank', 'sourceinfo', 'uniqname', 'flags', '\n']
+    expected_header = '\t|\t'.join(fields)
+    with codecs.open(fp, 'r', encoding='utf-8') as inp:
+        iinp = iter(inp)
+        header = iinp.next()
+        assert header == expected_header
+        for n, line in enumerate(iinp):
+            if not line.startswith(sri):
+                continue
+            obj = OTTTaxon(line, line_num=1 + n)
+            if root_id == obj.id:
+                return obj
+
 
 class InterimTaxonomyData(object):
     def __init__(self):

@@ -19,7 +19,7 @@ from taxalotl.col import partition_col
 from taxalotl.ott import (partition_ott,
                           ott_diagnose_new_separators,
                           ott_build_paritition_maps)
-from taxalotl.partitions import get_part_inp_taxdir
+from taxalotl.partitions import get_part_inp_taxdir, get_par_and_par_misc_taxdir
 
 _LOG = get_logger(__name__)
 
@@ -257,6 +257,19 @@ class ResourceWrapper(object):
 
     def get_taxdir_for_part(self, part_key):
         return get_part_inp_taxdir(self.partitioned_filepath, part_key, self.id)
+
+    def get_taxdir_for_root_of_part(self, part_key):
+        term_dir = self.get_taxdir_for_part(part_key)
+        taxon_file = os.path.join(term_dir, self.taxon_filename)
+        if os.path.exists(taxon_file):
+            return term_dir
+        par_key, misc_dir = get_par_and_par_misc_taxdir(self.partitioned_filepath,
+                                                        part_key,
+                                                        self.id)
+        taxon_file = os.path.join(misc_dir, self.taxon_filename)
+        if os.path.exists(taxon_file):
+            return misc_dir
+        return None
 
     def download(self):
         dfp = self.download_filepath

@@ -6,10 +6,13 @@ from taxalotl.partitions import (do_partition,
                                  separate_part_list,
                                  get_root_ids_for_subset,
                                  get_relative_dir_for_partition,
+                                 get_part_inp_taxdir,
                                  MISC_DIRNAME,
                                  PREORDER_PART_LIST,
                                  PARTS_BY_NAME)
-from taxalotl.interim_taxonomy_struct import read_taxonomy_to_get_id_to_fields
+from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
+                                              read_taxonomy_to_get_id_to_fields,
+                                             )
 
 _LOG = get_logger(__name__)
 
@@ -112,6 +115,19 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                 raise
     return id_by_par, id_to_el, id_to_line, syn_by_id, roots_set, garbage_bin, header, syn_header
 
+def ott_fetch_root_taxon_for_partition(res, parts_key, root_id):
+    tax_dir = res.get_taxdir_for_root_of_part(parts_key)
+    if not tax_dir:
+        _LOG.info('No taxon file found for {}'.format(parts_key))
+        return None
+    _LOG.info('{} root should be in {}'.format(parts_key, tax_dir))
+    taxon_obj = read_taxonomy_to_get_single_taxon(tax_dir, root_id)
+    if not tax_dir:
+        _LOG.info('Root taxon for {} with ID {} not found in {}'.format(parts_key, root_id, tax_dir))
+        return None
+    return taxon_obj
+
+
 def ott_build_paritition_maps(res):
     srcs = {i[0]:i[1] for i in res.inputs if i[0] and is_str_type(i[1])}
     ret = {}
@@ -128,6 +144,9 @@ def ott_build_paritition_maps(res):
         if not rids:
             continue
         _LOG.info('pk = {} root = {}'.format(pk, rids))
+        assert len(rids) == 1
+        root_id = rids.pop()
+        taxon = ott_fetch_root_taxon_for_partition(res, pk, root_id)
 
 
 def ott_diagnose_new_separators(res, current_partition_key):
