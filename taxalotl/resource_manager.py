@@ -257,26 +257,37 @@ class ResourceWrapper(object):
         return (dfp is not None
                 and os.path.exists(dfp)
                 and os.path.exists(os.path.join(dfp, 'taxonomy.tsv')))
+
     def has_been_partitioned(self):
         part_dir_list = find_partition_dirs_for_taxonomy(self.partitioned_filepath, self.id)
         return bool(part_dir_list)
+
+    def remove_normalize_artifacts(self):
+        self._remove_taxonomy_dir(self.normalized_filepath)
+
     def remove_partition_artifacts(self):
         part_dir_list = find_partition_dirs_for_taxonomy(self.partitioned_filepath, self.id)
+        for d in part_dir_list:
+            self._remove_taxonomy_dir(d)
+
+    def _remove_taxonomy_dir(self, directory):
+        if not os.path.isdir(directory):
+            return
         f_to_remove = [self.taxon_filename, 'roots.txt', 'about.json', 'details.json']
         if self.synonyms_filename:
             f_to_remove.append(self.synonyms_filename)
-        for dir in part_dir_list:
-            _LOG.info('Removing contents of "{}"'.format(dir))
-            for f in f_to_remove:
-                fp = os.path.join(dir, f)
-                if os.path.exists(fp):
-                    os.unlink(fp)
+        _LOG.info('Removing contents of "{}"'.format(directory))
+        for f in f_to_remove:
+            fp = os.path.join(directory, f)
+            if os.path.exists(fp):
+                os.unlink(fp)
         try:
-            os.rmdir(dir)
+            os.rmdir(directory)
         except:
-            _LOG.warn('Could not remove "{}" that directory may not be empty'.format(dir))
+            _LOG.warn('Could not remove "{}" that directory may not be empty'.format(directory))
         else:
-            _LOG.info('Removed "{}"'.format(dir))
+            _LOG.info('Removed "{}"'.format(directory))
+
     def get_taxdir_for_part(self, part_key):
         return get_part_inp_taxdir(self.partitioned_filepath, part_key, self.id)
 
