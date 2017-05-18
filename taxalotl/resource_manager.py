@@ -23,7 +23,8 @@ from taxalotl.ott import (partition_ott, partition_from_auto_maps,
 from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_part_inp_taxdir,
                                  get_par_and_par_misc_taxdir)
-
+from taxalotl.interim_taxonomy_struct import (INP_OTT_SYNONYMS_HEADER,
+                                              INP_OTT_TAXONOMY_HEADER)
 _LOG = get_logger(__name__)
 
 
@@ -108,7 +109,27 @@ def copy_id_list_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
                               OTT_TAXONOMY_ID_FILES)
 
 
+def copy_and_add_ott_headers(unpacked_dirp, normalized_dirp, resource_wrapper):
+    motf = list(OTT_TAXONOMY_FILENAMES)
+    special = [('taxonomy.tsv', INP_OTT_TAXONOMY_HEADER),
+               ('synonyms.tsv', INP_OTT_SYNONYMS_HEADER)]
+    for fn, header in special:
+        motf.remove(fn)
+    copy_file_list_by_linking(unpacked_dirp, normalized_dirp, motf)
+    for fn, header in special:
+        tf = os.path.join(unpacked_dirp, fn)
+        if os.path.isfile(tf):
+            content = codecs.open(tf, 'r', encoding='utf-8').read()
+            outfp = os.path.join(normalized_dirp, fn)
+            with codecs.open(outfp, 'w', encoding='utf-8') as out:
+                out.write(header)
+                out.write(content)
+
+
+
+
 _schema_to_norm_fn = {"ott": copy_taxonomy_by_linking,
+                      "headerless ott": copy_and_add_ott_headers,
                       "ott id csv": copy_id_list_by_linking,
                       "ncbi taxonomy": normalize_ncbi,
                       "http://rs.tdwg.org/dwc/": normalize_darwin_core_taxonomy,

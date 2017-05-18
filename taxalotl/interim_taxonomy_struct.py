@@ -12,7 +12,8 @@ import os
 
 _LOG = get_logger(__name__)
 
-
+INP_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n"
+INP_OTT_SYNONYMS_HEADER = "uid\t|\tname\t|\ttype\t|\t\n"
 def write_ott_taxonomy_tsv(out_fp,
                            root_nodes,
                            id_to_par,
@@ -34,7 +35,7 @@ def write_ott_taxonomy_tsv(out_fp,
     rn = list(root_nodes)
     rn.sort()
     with codecs.open(out_fp, 'w', encoding='utf-8') as out:
-        out.write("uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n")
+        out.write(INP_OTT_TAXONOMY_HEADER)
         # need to print id, parent id, and name
         for root_id in rn:
             stack = [root_id]
@@ -71,7 +72,7 @@ def write_ott_synonyms_tsv(out_fp,
                            details_log):
     num_syn_written = 0
     with codecs.open(out_fp, 'w', encoding='utf-8') as out:
-        out.write("uid\t|\tname\t|\ttype\t|\t\n")
+        out.write(INP_OTT_SYNONYMS_HEADER)
         for nd_id in id_order:
             syn_list = id_to_name_name_type_list[nd_id]
             for name, name_type in syn_list:
