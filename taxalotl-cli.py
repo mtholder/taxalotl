@@ -126,6 +126,8 @@ def normalize_resources(taxalotl_config, id_list):
 
 
 def partition_resources(taxalotl_config, id_list, level_list):
+    if level_list == [None]:
+        level_list = PREORDER_PART_LIST
     for rid in id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid, 'partition')
         if not rw.has_been_unpacked():
@@ -231,7 +233,7 @@ def main_post_parse(args):
         elif args.which == 'build-partition-maps':
             build_partition_maps(taxalotl_config)
         elif args.which == 'partition':
-            if args.level not in PARTS_BY_NAME:
+            if args.level is not None and args.level not in PARTS_BY_NAME:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
             partition_resources(taxalotl_config, args.resources, [args.level])
         else:
@@ -292,7 +294,7 @@ def main():
                                   help="Breaks the resource taxon")
     partition_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
     partition_p.add_argument("--level",
-                             default='Life',
+                             default=None,
                              help="The level of the taxonomy to partition")
 
     partition_p.set_defaults(which="partition")
