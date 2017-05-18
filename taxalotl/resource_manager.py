@@ -374,10 +374,16 @@ class ResourceWrapper(object):
         nfp = self.normalized_filepath
         s = "is at" if self.has_been_normalized() else "not yet normalized to"
         norm_str = "{}OTT formatted form {} {}\n".format(indent, s, nfp)
-        if list_all_artifacts:
-            out.write('{}{}{}'.format(down_str, unp_str, norm_str))
+        if self.has_been_partitioned():
+            part_str = "{}Has been partitioned at {}\n".format(indent, self.partitioned_filepath)
         else:
-            if self.has_been_normalized():
+            part_str = "{}Has not been partitioned yet.\n".format(indent)
+        if list_all_artifacts:
+            out.write('{}{}{}{}'.format(down_str, unp_str, norm_str, part_str))
+        else:
+            if self.has_been_partitioned():
+                out.write(part_str)
+            elif self.has_been_normalized():
                 out.write(norm_str)
             elif self.has_been_unpacked():
                 out.write(unp_str)
