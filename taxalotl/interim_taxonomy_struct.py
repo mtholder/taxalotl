@@ -132,6 +132,10 @@ class OTTTaxon(object):
         d = {}
         for el in sel:
             src, sid = el.split(':')
+            try:
+                sid = int(sid)
+            except:
+                pass
             d.setdefault(src, set()).add(sid)
         self.src_dict = d
 
