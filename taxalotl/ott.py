@@ -99,7 +99,11 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                 if n % 1000 == 0:
                     _LOG.info(' read synonym {}'.format(n))
                 try:
-                    accept_id = int(ls[uid_ind])
+                    accept_id = ls[uid_ind]
+                    try:
+                        accept_id = int(accept_id)
+                    except:
+                        pass
                     syn_by_id.setdefault(accept_id, []).append((None, line))
                 except:
                     _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
@@ -115,7 +119,10 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                 _LOG.info(' read taxon {}'.format(n))
             try:
                 uid, par_id = ls[0], ls[1]
-                uid = int(uid)
+                try:
+                    uid = int(uid)
+                except:
+                    pass
                 if uid in roots_set:
                     #_LOG.info("{} not in {}".format(uid, roots_set))
                     match_l = [i[1] for i in by_roots if uid in i[0]]
@@ -128,7 +135,10 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                 else:
                     #_LOG.info("{} not in {}".format(uid, roots_set))
                     if par_id:
-                        par_id = int(par_id)
+                        try:
+                            par_id = int(par_id)
+                        except:
+                            pass
                     match_el = id_to_el.get(par_id)
                     if match_el is not None:
                         id_to_el[uid] = match_el
