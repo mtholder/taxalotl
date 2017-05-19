@@ -125,6 +125,21 @@ def copy_and_add_ott_headers(unpacked_dirp, normalized_dirp, resource_wrapper):
                 out.write(header)
                 out.write(content)
 
+def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
+    motf = list(OTT_TAXONOMY_FILENAMES)
+    special = [('taxonomy.tsv', INP_OTT_TAXONOMY_HEADER)]
+    for fn, header in special:
+        motf.remove(fn)
+    copy_file_list_by_linking(unpacked_dirp, normalized_dirp, motf)
+    for fn, header in special:
+        tf = os.path.join(unpacked_dirp, fn)
+        if os.path.isfile(tf):
+            outfp = os.path.join(normalized_dirp, fn)
+            with codecs.open(tf, 'r', encoding='utf-8') as inp:
+                with codecs.open(outfp, 'w', encoding='utf-8') as out:
+                    for line in inp:
+                        ls = line.split('\t')
+                        out.write('\t|\t'.join(ls))
 
 
 
@@ -136,6 +151,7 @@ _schema_to_norm_fn = {"ott": copy_taxonomy_by_linking,
                       "newick": normalize_newick,
                       "irmng dwc": normalize_irmng,
                       "silva taxonomy": normalize_silva_taxonomy,
+                      "tab-separated ott": normalize_tab_sep_ott,
                       }
 
 
