@@ -41,24 +41,27 @@ def _group_by_status(res, id_list):
     unn_list = []
     n_list = []
     a_list = []
+    p_list = []
     for i in id_list:
         r = res[i]
-        if not r.has_been_downloaded():
-            if r.is_abstract:
-                a_list.append(i)
-            else:
-                nd_list.append(i)
-        elif not r.has_been_unpacked():
-            dnu_list.append(i)
-        elif not r.has_been_normalized():
-            unn_list.append(i)
-        else:
+        if r.is_abstract:
+            a_list.append(i)
+        elif r.has_been_partitioned():
+            p_list.append(i)
+        elif r.has_been_normalized():
             n_list.append(i)
+        elif r.has_been_unpacked():
+            unn_list.append(i)
+        elif r.has_been_downloaded():
+            dnu_list.append(i)
+        else:
+            nd_list.append(i)
     return [["abstract classes", a_list],
             ["not downloaded", nd_list],
             ["downloaded, but not unpacked", dnu_list],
             ["unpacked, but not normalized", unn_list],
             ["normalized", n_list],
+            ["parititioned", p_list],
             ]
 
 
