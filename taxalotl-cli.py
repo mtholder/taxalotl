@@ -68,13 +68,21 @@ def _group_by_status(res, id_list):
 def status_of_resources(taxalotl_config,
                         id_list,
                         ids_only=False,
-                        by_status=False):
+                        by_status=False,
+                        terminal_only=False):
     terminalize = True
     res = taxalotl_config.resources_mgr.resources
     if not id_list:
         terminalize = False
         id_list = list(res.keys())
         id_list.sort()
+    if terminal_only:
+        x = []
+        for i in id_list:
+            ri = taxalotl_config.get_terminalized_res_by_id(i, 'status')
+            if ri.id == i:
+                x.append(i)
+        id_list = x
     if by_status:
         t_and_id_list = _group_by_status(res, id_list)
     else:
@@ -224,7 +232,8 @@ def main_post_parse(args):
             status_of_resources(taxalotl_config,
                                 args.resources,
                                 ids_only=args.ids_only,
-                                by_status=args.by_status)
+                                by_status=args.by_status,
+                                terminal_only=args.terminal)
         elif args.which == 'unpack':
             unpack_resources(taxalotl_config, args.resources)
         elif args.which == 'normalize':
@@ -277,6 +286,10 @@ def main():
                           action='store_true',
                           default=False,
                           help="group the report by status")
+    status_p.add_argument("--terminal",
+                          action='store_true',
+                          default=False,
+                          help="Only report on the most recent, terminalized resource of each type.")
     status_p.set_defaults(which="status")
     # DOWNLOAD
     download_p = subp.add_parser('download', help="download an artifact to your local filesystem")
@@ -368,8 +381,9 @@ def main():
                 if sel_cmd == 'status':
                     if '-i' not in a and '--ids-only' not in a:
                         comp_list.extend(["-i", "--ids-only"])
-                    if '--by-status' not in a:
-                        comp_list.extend(['--by-status'])
+                    for x in ['--by-status', '--terminal']:
+                        if x not in a:
+                            comp_list.extend([x])
                 elif sel_cmd == 'partition':
                     # sys.stderr.write(str(a))
                     if '--level' == a[-1] or (len(a) > 1 and '--level' == a[-2]):
