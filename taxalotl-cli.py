@@ -79,7 +79,7 @@ def status_of_resources(taxalotl_config,
     if terminal_only:
         x = []
         for i in id_list:
-            ri = taxalotl_config.get_terminalized_res_by_id(i, 'status')
+            ri = taxalotl_config.get_terminalized_res_by_id(i, '')
             if ri.id == i:
                 x.append(i)
         id_list = x
@@ -102,7 +102,7 @@ def status_of_resources(taxalotl_config,
             out_stream.write("{}:\n".format(tag))
         for rid in id_list:
             if terminalize:
-                rw = taxalotl_config.get_terminalized_res_by_id(rid, 'status')
+                rw = taxalotl_config.get_terminalized_res_by_id(rid, '')
             else:
                 rw = taxalotl_config.get_resource_by_id(rid)
             rw.write_status(out_stream, indent=' ' * 4)

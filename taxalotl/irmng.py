@@ -6,7 +6,7 @@
 # and
 #   reference-taxonomy/feed/gbif/process_gbif_taxonomy.py
 from __future__ import print_function
-
+import codecs
 import csv
 import os
 import re
@@ -61,7 +61,8 @@ def read_irmng_file(irmng_file_name):
         if header[5] != 'FAMILY':
             m = 'IRMNG csv failed header check: header[5] == {} != not "FAMILY"'.format(header[5])
             raise RuntimeError(m)
-        for row in csvreader:
+        for raw_row in csvreader:
+            row = [unicode(i, 'utf-8') for i in raw_row]
             taxon_id = int(row[0])
             long_name = row[1]
             auth = row[2]
@@ -76,7 +77,7 @@ def read_irmng_file(irmng_file_name):
             genus = row[3]
             if rank == 'species':
                 epithet = row[4]
-                name = '{} {}'.format(genus, epithet)
+                name = u'{} {}'.format(genus, epithet)
             elif rank == 'genus':
                 name = genus
             elif rank == 'family':
@@ -208,7 +209,9 @@ def fix_irmng(itd):
                 while valid_id in syn_id_to_valid:
                     _LOG.info('valid_id in syn_id_to_valid = {}'.format(valid_id))
                     valid_id = syn_id_to_valid[valid_id]
-                tsta_nst_keep_extinct = to_tsta_nstat_keep_exinct[valid_id]
+                tsta_nst_keep_extinct = to_tsta_nstat_keep_exinct.get(valid_id)
+                if tsta_nst_keep_extinct is None:
+                    break
 
     # Now we delete the "loser synonyms"
     for syn_id in loser_synonyms:
@@ -219,35 +222,52 @@ def fix_irmng(itd):
 
     _LOG.info("Keeping {} taxa".format(keep_count))
     _LOG.info("{} missing parents".format(len(missing_pars)))
-    """
-    # Read the file that has the extinct annotations
 
+def read_extinct_info(profile_file_name, itd):
+    not_extinct = frozenset(['1531',  # Sarcopterygii
+                           '10565',  # Saurischia
+                           '118547',  # Aviculariidae
+                           '1402700',  # Trophomera
+                           # '11919',    # Didelphimorphia
+                           # '1021564',  # Cruciplacolithus
+                           # '1530',     # Actinopterygii
+
+                           # '1170022',  # Tipuloidea
+                           # '1340611',  # Retaria
+                           # '1124871',  # Labyrinthulomycetes [Labyrinthomorpha??]
+                           # '102024',   # Ophiurinidae - problem is Ophiurina
+                           # '1064058',  # Rhynchonelloidea genus/superfamily
+                           # '1114655',  # Tetrasphaera - different from GBIF
+                   ])
+    to_par = itd.to_par
+    d = {}
     with open(profile_file_name, 'rb') as csvfile:
         csvreader = csv.reader(csvfile)
         header = csvreader.next()
         if header[1] != 'ISEXTINCT':
-            print >> sys.stderr, "** Expected to find ISEXTINCT in header row but didn't:", header[
-                1]
+            raise ValueError('ISEXTINCT in header row but found "{}"'.format(header[1]))
         for row in csvreader:
-            taxonid = row[0]
-            taxon = taxa.get(taxonid)
-            if taxon == None: continue
-            taxon.extinctp = (row[1] == 'TRUE')
+            taxonid = int(row[0])
+            if taxonid not in to_par:
+                continue
+            is_extinct = (row[1] == 'TRUE')
             if taxonid in not_extinct:
-                if not taxon.extinctp:
-                    print >> sys.stderr, 'Already not extinct: %s(%s)' % (taxonid, taxon.name)
+                if not is_extinct:
+                    _LOG.info('protected IRMNG ID {} not extinct:'.format(taxonid))
                 else:
-                    print >> sys.stderr, 'Fixing extinctness of %s(%s)' % (taxonid, taxon.name)
-                    taxon.extinctp = False
-    """
+                    _LOG.info('Fixing extinctness of IRMNG ID {}:'.format(taxonid))
+                    is_extinct = False
+            if is_extinct:
+                d[taxonid] = True
+    itd.extinct_known = d
 
 
 def normalize_irmng(source, destination, res_wrapper):
     i_file, prof_file = _find_irmng_input_files(source)
     itd = read_irmng_file(i_file)
     fix_irmng(itd)
-    # extinctness_report()
-    # write_irmng()
+    read_extinct_info(prof_file, itd)
+    itd.write_to_dir(destination)
 
 
 """
@@ -259,23 +279,6 @@ def normalize_irmng(source, destination, res_wrapper):
 #      tax/irmng/synonyms.tsv
 
 import csv, sys
-
-
-not_extinct = ['1531',  # Sarcopterygii
-               '10565',  # Saurischia
-               '118547',  # Aviculariidae
-               '1402700',  # Trophomera
-               # '11919',    # Didelphimorphia
-               # '1021564',  # Cruciplacolithus
-               # '1530',     # Actinopterygii
-
-               # '1170022',  # Tipuloidea
-               # '1340611',  # Retaria
-               # '1124871',  # Labyrinthulomycetes [Labyrinthomorpha??]
-               # '102024',   # Ophiurinidae - problem is Ophiurina
-               # '1064058',  # Rhynchonelloidea genus/superfamily
-               # '1114655',  # Tetrasphaera - different from GBIF
-               ]
 
 
 

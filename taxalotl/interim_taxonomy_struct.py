@@ -13,6 +13,7 @@ import os
 _LOG = get_logger(__name__)
 
 INP_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n"
+INP_FLAGGED_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\t|\t\n"
 INP_OTT_SYNONYMS_HEADER = "uid\t|\tname\t|\ttype\t|\t\n"
 def write_ott_taxonomy_tsv(out_fp,
                            root_nodes,
@@ -21,7 +22,8 @@ def write_ott_taxonomy_tsv(out_fp,
                            id_to_rank,
                            id_to_name,
                            has_syn_dict,
-                           details_log):
+                           details_log,
+                           extinct_known=None):
     """If has_syn_dict is provided, then a list of the IDs that occur in that dict
     is returned in the order that the IDs were written to taxonomy file. This 
     allows for the synonyms.tsv file to be written in a similar order, which makes browsing it
@@ -34,8 +36,9 @@ def write_ott_taxonomy_tsv(out_fp,
     num_internals_written = 0
     rn = list(root_nodes)
     rn.sort()
+    header = INP_OTT_TAXONOMY_HEADER if extinct_known is None else INP_FLAGGED_OTT_TAXONOMY_HEADER
     with codecs.open(out_fp, 'w', encoding='utf-8') as out:
-        out.write(INP_OTT_TAXONOMY_HEADER)
+        out.write(header)
         # need to print id, parent id, and name
         for root_id in rn:
             stack = [root_id]
@@ -57,7 +60,16 @@ def write_ott_taxonomy_tsv(out_fp,
                         stack.extend(children)
                     else:
                         num_tips_written += 1
-                    out.write(u'{}\n'.format('\t|\t'.join([str(curr_id), spar_id, name, rank, ''])))
+                    fields = [str(curr_id), spar_id, name, rank, '']
+                    if extinct_known is not None:
+                        ev = extinct_known.get(curr_id)
+                        if ev:
+                            fields[-1] = 'extinct'
+                        fields.append('')
+                    try:
+                        out.write(u'{}\n'.format(u'\t|\t'.join(fields)))
+                    except:
+                        _LOG.exception("error serializing {}".format(repr(fields)))
                 except:
                     _LOG.error("Error writing taxon_id {}".format(curr_id))
                     raise
@@ -192,6 +204,7 @@ class InterimTaxonomyData(object):
         self.name_to_ids = {}  # name to
         self.synonyms = {}
         self.repeated_names = set()
+        self.extinct_known = None
 
     def finalize(self):
         self.details_log['num_forwards'] = len(self.forwards)
@@ -215,7 +228,8 @@ class InterimTaxonomyData(object):
                                       self.to_rank,
                                       self.to_name,
                                       self.synonyms,
-                                      self.details_log)
+                                      self.details_log,
+                                      self.extinct_known)
 
     def write_to_dir(self, destination):
         # Write out in OTT form
