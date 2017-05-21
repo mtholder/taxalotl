@@ -189,6 +189,8 @@ _known_res_attr = frozenset(['aliases',
                              'inherits_from',
                              'inputs',
                              'latest_download_url',
+                             'license_url',
+                             'license_or_tou_info',
                              'local_filename',
                              'maintainer',
                              'preceded_by',
@@ -422,6 +424,8 @@ class ExternalTaxonomyWrapper(ResourceWrapper):
         fn = _rt_to_partition.get(self.base_id, partition_from_auto_maps)
         return fn(self, part_name, part_keys, par_frag)
 
+class SilvaIdListWrapper(ExternalTaxonomyWrapper):
+    resource_type = 'id list'
 
 class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
     taxon_filename = 'taxa.txt'
@@ -465,7 +469,8 @@ class OTTaxonomyIdListWrapper(ResourceWrapper):
 
 _wrapper_types = [OTTaxonomyWrapper,
                   ExternalTaxonomyWrapper,
-                  OTTaxonomyIdListWrapper, ]
+                  OTTaxonomyIdListWrapper,
+                  SilvaIdListWrapper]
 
 
 def get_resource_wrapper(raw, refs, parent=None):

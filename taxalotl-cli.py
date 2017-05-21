@@ -158,7 +158,7 @@ def pull_otifacts(taxalotl_config):
         m = 'Expecting OTifacts to be cloned as sibling of this directory at "{}"'
         raise RuntimeError(m.format(otifacts_dir))
     all_res = read_all_otifacts(otifacts_dir)
-    for res_type in ['external taxonomy', 'open tree taxonomy']:
+    for res_type in ['external taxonomy', 'open tree taxonomy', 'id list']:
         ext_tax = filter_otifacts_by_type(all_res, res_type)
         by_root_id = partition_otifacts_by_root_element(ext_tax)
         for root_key, res_dict in by_root_id.items():
