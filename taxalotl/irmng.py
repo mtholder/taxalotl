@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ###################################################################################################
-# Much of following code is from by JAR and from:
-#   reference-taxonomy/feed/gbif/project_2016.py
-# and
-#   reference-taxonomy/feed/gbif/process_gbif_taxonomy.py
+# Much of following code is from by JAR
 from __future__ import print_function
 import codecs
 import csv
@@ -46,13 +43,12 @@ def read_irmng_file(irmng_file_name):
     itd = InterimTaxonomyData()
 
     rows = 0
-    unallocated = set()
     to_par = itd.to_par
     to_children = itd.to_children
     to_rank = itd.to_rank
     synonyms = itd.synonyms
     itd.extra_blob = {}
-    to_tsta_nstat_keep_exinct = itd.extra_blob
+    to_tsta_nstat_keep = itd.extra_blob
     itd.syn_id_to_valid = {}
     syn_id_to_valid = itd.syn_id_to_valid
     with open(irmng_file_name, 'rb') as csvfile:
@@ -72,7 +68,7 @@ def read_irmng_file(irmng_file_name):
             syn_target_id = int(row[12]) if row[12] else None
             parent = row[-4]
             diff_target = syn_target_id is not None and syn_target_id != taxon_id
-            synonymp = tstatus == 'synonym' and diff_target
+            synonymp = tstatus == 'synonym' or diff_target
             # Calculate taxon name
             genus = row[3]
             if rank == 'species':
@@ -89,35 +85,38 @@ def read_irmng_file(irmng_file_name):
                 name = long_name
             if synonymp:
                 if diff_target:
-                    itd.register_synonym(syn_target_id, name, tstatus, syn_id=taxon_id)
+                    synstat = nstatus if nstatus else tstatus
+                    itd.register_synonym(syn_target_id, name, synstat, syn_id=taxon_id)
+                    assert taxon_id != syn_target_id
                     syn_id_to_valid[taxon_id] = syn_target_id
-                    continue
+                else:
+                    _LOG.info(u"Dropping synonym without target: {} '{}'".format(taxon_id, name))
+                continue
             # Kludge to get rid of redundancies e.g. Megastoma
             if tstatus == '':
+                aa_found = False
                 for value in row:
                     if 'awaiting allocation' in value:
-                        tstatus = 'lose'
-                        unallocated.add(taxon_id)
+                        aa_found = True
                         break
+                if aa_found:
+                    _LOG.info(u"Dropping awaiting allocation taxon: {} '{}'".format(taxon_id, name))
+                    continue
             if parent == '':
                 itd.root_nodes.add(taxon_id)
                 parent = None
             else:
                 parent = int(parent)
-
             to_par[taxon_id] = parent
             itd.register_id_and_name(taxon_id, name)
             if parent:
                 to_children.setdefault(parent, []).append(taxon_id)
             to_rank[taxon_id] = rank
-            to_tsta_nstat_keep_exinct[taxon_id] = [tstatus, nstatus, False, False]
+            to_tsta_nstat_keep[taxon_id] = [tstatus, nstatus, False]
             rows += 1
             if rows % 250000 == 0:
                 _LOG.info("{} rows {} {}".format(rows, taxon_id, name))
     _LOG.info("Processed: {} taxa, {} synonyms".format(len(to_par), len(synonyms)))
-    to_tsta_nstat_keep_exinct[101163]
-
-    _LOG.info("Flushing: {} unallocated".format(len(unallocated)))
     return itd
 
 
@@ -125,10 +124,32 @@ def fix_irmng(itd):
     # Get rid of all synonym of a synonym
     synonyms = itd.synonyms
     syn_id_to_valid = itd.syn_id_to_valid
+    to_check = set(syn_id_to_valid.keys())
     loser_synonyms = set()
-    for syn_id, valid_id in syn_id_to_valid.items():
-        if valid_id in syn_id_to_valid:
-            loser_synonyms.add(syn_id)
+    syn_check_round = 0
+    taboo = set()
+    while len(to_check) > len(taboo):
+        to_remap = {}
+        _LOG.info('syn_check_round = {}'.format(syn_check_round))
+        syn_check_round += 1
+        for syn_id in to_check:
+            if syn_id in taboo:
+                continue
+            valid_id = syn_id_to_valid[syn_id]
+            if valid_id in syn_id_to_valid:
+                new_valid = syn_id_to_valid[valid_id]
+                assert new_valid != valid_id
+                to_remap[syn_id] = new_valid
+        for k, v in to_remap.items():
+            old_v = syn_id_to_valid[k]
+            if v == k:
+                _LOG.info("Synonymy ring: Arbitrarily leaving {} -> {} mapping.".format(v, old_v))
+                taboo.add(k)
+            else:
+                itd.fix_synonym(v, old_v, k)
+                syn_id_to_valid[k] = v
+        to_check = set(to_remap.keys())
+        loser_synonyms.update(to_check)
     ril = list(loser_synonyms)
     ril.sort()
     itd.details_log["indirect synonyms"] = ril
@@ -138,16 +159,19 @@ def fix_irmng(itd):
     to_par = itd.to_par
     del_syn_par = set()
     par_fixes = {}
+    id_to_children = itd.to_children
     for taxon_id, par_id in to_par.items():
-        if par_id in syn_id_to_valid:
-            anc_id = par_id
-            while anc_id in syn_id_to_valid and anc_id not in del_syn_par:
-                assert anc_id not in to_par
-                del_syn_par.add(anc_id)
-                anc_id = syn_id_to_valid[anc_id]
-            par_fixes[taxon_id] = anc_id
+        valid_par = syn_id_to_valid.get(par_id)
+        if valid_par is not None:
+            clist = id_to_children.get(par_id)
+            del_syn_par.add(par_id)
+            if clist is not None:
+                for c_id in clist:
+                    par_fixes[c_id] = valid_par
+                del id_to_children[par_id]
     for taxon_id, par_id in par_fixes.items():
         to_par[taxon_id] = par_id
+        id_to_children.setdefault(par_id, []).append(taxon_id)
     ril = list(del_syn_par)
     ril.sort()
     itd.details_log["Parental synonyms"] = ril
@@ -177,48 +201,63 @@ def fix_irmng(itd):
                                10532250, 10537012, 1178867, 10532020, 1407317, 10957072])
     taxon_statuses_to_keep = frozenset(['accepted', 'valid', ''])
     # Decide which taxa to keep
-    to_tsta_nstat_keep_exinct = itd.extra_blob
-    to_tsta_nstat_keep_exinct[101163]
+    to_tsta_nstat_keep = itd.extra_blob
     keep_count = 0
     actual_grandfatherd = set()
     missing_pars = set()
+    roots = itd.root_nodes
     for taxon_id in to_par.keys():
-        tsta_nst_keep_extinct = to_tsta_nstat_keep_exinct[taxon_id]
-        if tsta_nst_keep_extinct[2]:
+        tsta_nst_keep = to_tsta_nstat_keep[taxon_id]
+        if tsta_nst_keep[2]:
             continue  # already seen
         if (taxon_id in grandfathered
-            or (tsta_nst_keep_extinct[0] in taxon_statuses_to_keep
-                and tsta_nst_keep_extinct[1] in nomenclatural_statuses_to_keep)):
+            or (tsta_nst_keep[0] in taxon_statuses_to_keep
+                and tsta_nst_keep[1] in nomenclatural_statuses_to_keep)):
             scan_id = taxon_id
-            while not tsta_nst_keep_extinct[2]:
+            while not tsta_nst_keep[2]:
                 if scan_id in grandfathered:
-                    _LOG.info('Grandfathering {}', scan_id)
+                    _LOG.info(u'Grandfathering {}'.format(scan_id))
                     actual_grandfatherd.add(scan_id)
-                tsta_nst_keep_extinct[2] = True
+                tsta_nst_keep[2] = True
                 keep_count += 1
                 if scan_id not in to_par:
                     missing_pars.add(scan_id)
-                    _LOG.info("Missing parents for {}".format(scan_id))
+                    _LOG.info(u"Missing parents for {}".format(scan_id))
                     break
                 psi = scan_id
                 scan_id = to_par[scan_id]
                 if not scan_id:
-                    _LOG.info("None parent for {}".format(psi))
+                    _LOG.info(u"No parent for {}".format(psi))
+                    roots.add(psi)
                     break
                 valid_id = scan_id
-                while valid_id in syn_id_to_valid:
-                    _LOG.info('valid_id in syn_id_to_valid = {}'.format(valid_id))
-                    valid_id = syn_id_to_valid[valid_id]
-                tsta_nst_keep_extinct = to_tsta_nstat_keep_exinct.get(valid_id)
-                if tsta_nst_keep_extinct is None:
+                if valid_id in syn_id_to_valid:
+                    m = u'anc in syn_id_to_valid: syn_id_to_valid[{}] = {} anc of {}'
+                    raise ValueError(m.format(valid_id, syn_id_to_valid[valid_id], taxon_id))
+                tsta_nst_keep = to_tsta_nstat_keep.get(valid_id)
+                if tsta_nst_keep is None:
+                    m = u'anc ({}) of taxon {} not in to_tsta_nstat_keep'
+                    _LOG.info(m.format(valid_id, taxon_id))
+                    roots.add(psi)
                     break
 
-    # Now we delete the "loser synonyms"
-    for syn_id in loser_synonyms:
-        v = syn_id_to_valid[syn_id]
-        del syn_id_to_valid[syn_id]
-        if v in synonyms:
-            del synonyms[v]
+    ids_reg = to_par.keys()
+    for irmng_id in ids_reg:
+        if not to_tsta_nstat_keep[irmng_id][2]:
+            _LOG.debug('keep=false for {}. Removing...'.format(irmng_id))
+            par_id = to_par[irmng_id]
+            if par_id:
+                pc = id_to_children.get(par_id)
+                if pc and to_tsta_nstat_keep[irmng_id][2]:
+                    pc.remove(irmng_id)
+            del to_par[irmng_id]
+            clist = id_to_children.get(irmng_id)
+            if clist:
+                del id_to_children[irmng_id]
+                for child in clist:
+                    if to_tsta_nstat_keep[child][2]:
+                        roots.add(child)
+                        to_par[child] = None
 
     _LOG.info("Keeping {} taxa".format(keep_count))
     _LOG.info("{} missing parents".format(len(missing_pars)))

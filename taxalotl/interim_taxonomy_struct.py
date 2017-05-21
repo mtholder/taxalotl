@@ -87,7 +87,7 @@ def write_ott_synonyms_tsv(out_fp,
         out.write(INP_OTT_SYNONYMS_HEADER)
         for nd_id in id_order:
             syn_list = id_to_name_name_type_list[nd_id]
-            for name, name_type in syn_list:
+            for name, name_type, syn_id in syn_list:
                 num_syn_written += 1
                 out.write(u'{}\n'.format('\t|\t'.join([str(nd_id), name, name_type, ''])))
     details_log['num_synonyms_written'] = num_syn_written
@@ -218,7 +218,21 @@ class InterimTaxonomyData(object):
             self.repeated_names.add(name)
 
     def register_synonym(self, valid_id, syn_name, name_type, syn_id=None):
-        self.synonyms.setdefault(valid_id, []).append((syn_name, name_type))
+        assert valid_id != syn_id
+        self.synonyms.setdefault(valid_id, []).append((syn_name, name_type, syn_id))
+
+    def fix_synonym(self, valid_id, old_valid, syn_id):
+        assert valid_id != old_valid
+        ol = self.synonyms.get(old_valid, [])
+        matching = []
+        for el in ol:
+            if el[2] == syn_id:
+                matching.append(el)
+        nl = self.synonyms.setdefault(valid_id, [])
+        for el in matching:
+            ol.remove(el)
+            nl.append(el)
+
 
     def write_ott_taxonomy_tsv(self, fp):
         return write_ott_taxonomy_tsv(fp,
