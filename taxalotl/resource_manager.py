@@ -48,7 +48,10 @@ def unpack_archive(archive_fp, unpack_fp, archive_format, wrapper):
         else:
             raise RuntimeError("Expecting gzipped archive to endwith .gz or .gzip")
         assure_dir_exists(unpack_fp)
-        dest = os.path.join(unpack_fp, fn)
+        if wrapper.local_filename:
+            dest = os.path.join(unpack_fp, wrapper.local_filename)
+        else:
+            dest = os.path.join(unpack_fp, fn)
         _LOG.debug("gunzip from {} to {} ...".format(archive_fp, dest))
         gunzip(archive_fp, dest)
         _LOG.debug("gunzip from {} to {} done.".format(archive_fp, dest))
@@ -150,7 +153,7 @@ _schema_to_norm_fn = {"ott": copy_taxonomy_by_linking,
                       "http://rs.tdwg.org/dwc/": normalize_darwin_core_taxonomy,
                       "newick": normalize_newick,
                       "irmng dwc": normalize_irmng,
-                      "silva taxonomy": normalize_silva_taxonomy,
+                      "silva taxmap": normalize_silva_taxonomy,
                       "tab-separated ott": normalize_tab_sep_ott,
                       }
 

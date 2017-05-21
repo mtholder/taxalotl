@@ -1,73 +1,38 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ###################################################################################################
-# Much of following code is from by JAR and from:
-#   reference-taxonomy/feed/gbif/project_2016.py
-# and
-#   reference-taxonomy/feed/gbif/process_gbif_taxonomy.py
+# Previous silva handling code that served as a basis for this code was written by JAR and
+#   Jessica Grant as a part of the reference_taxonomy and OToL efforts.
 from __future__ import print_function
 
 from peyotl import (assure_dir_exists,
                     get_logger)
-
+import codecs
+import os
 from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
-
+from taxalotl.commands import unpack_resources
 _LOG = get_logger(__name__)
 
-"""
-import argparse, csv
-
-def _read_ncbi_accession_to_ncbi_taxon_id(fp):
-    att_dict = {}
-    i = 0
-    with codecs.open(fp, 'r', encoding='utf-8') as ato_file:
-        for line in ato_file:
+def parse_silva_ids(fn):
+    id_map = {}
+    with codecs.open(fn, 'r', encoding='utf-8') as inp:
+        for line in inp:
             ls = line.strip()
-            if not ls:
-                continue
-            fields = line.split('\t')
-            taxon_id_str = fields[1]
-            if taxon_id_str != '*':
-                acc = fields[0].strip()
-                if len(fields) > 2 and fields[2]:
-                    strain = fields[2].strip()
-                else:
-                    strain = None
-                att_dict[acc] = (int(taxon_id_str), strain)
-                i += 1
-                if i % 100000 == 0:
-                    _LOG.info('{} {} {}'.format(acc, taxon_id_str, strain))
-    return att_dict
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='NCBI ids and names')
-    parser.add_argument('ncbi', help='taxonomy.tsv for NCBI taxonomy in open tree format')
-    parser.add_argument('mappings', help='genbank accession id to NCBI taxon mapping')
-    parser.add_argument('out', help='where to write the output file')
-    args = parser.parse_args()
-    a2t_filepath = args.mappings
-    accession_to_taxon = _read_ncbi_accession_to_ncbi_taxon_id(a2t_filepath)
-
-    print 'reading', args.ncbi
-    ncbi_to_name = get_ncbi_to_name(args.ncbi)
-
-    print 'writing', args.out
-    with open(args.out, 'w') as outfile:
-        i = 0
-        writer = csv.writer(outfile, delimiter='\t')
-        for gid in accession_to_taxon:
-            (ncbi_id, strain) = accession_to_taxon[gid]
-            name = ncbi_to_name.get(ncbi_id)
-            row = writer.writerow((gid, ncbi_id, strain, name))
-            i += 1
-            if i % 500000 == 0:
-                print gid, ncbi_id, strain, name
-"""
-
+            lsslash = ls.split('/')
+            if ls in id_map:
+                _LOG.warn("repeated ID: {} in {}".format(ls, fn))
+            id_map[ls] = lsslash
+    return id_map
 
 def normalize_silva_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
     itd = InterimTaxonomyData()
-    import sys
-    sys.exit('hi from normalize silva')
+    id_list_id = res_wrapper.id_list
+    taxalotl_config = res_wrapper.config
+    id_list_res = taxalotl_config.get_terminalized_res_by_id(id_list_id, 'normalize silva')
+    if not id_list_res.has_been_unpacked():
+        unpack_resources(taxalotl_config, [id_list_id])
+    expect_id_fp = os.path.join(id_list_res.unpacked_filepath, id_list_res.local_filename)
+    if not os.path.isfile(expect_id_fp):
+        raise ValueError("Silva ID file not found at: {}". format(expect_id_fp))
+    preferred_ids = parse_silva_ids(expect_id_fp)
