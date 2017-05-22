@@ -14,9 +14,10 @@ import os
 from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
 from taxalotl.partitions import do_partition, GEN_MAPPING_FILENAME
 from taxalotl.commands import unpack_resources
-from taxalotl.ott import _partition_ott_by_root_id
+from taxalotl.ott import partition_ott_by_root_id
 
 _LOG = get_logger(__name__)
+
 
 def parse_silva_ids(fn):
     preferred = set()
@@ -26,6 +27,7 @@ def parse_silva_ids(fn):
             if ls:
                 preferred.add(ls)
     return preferred
+
 
 def normalize_silva_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
@@ -38,7 +40,7 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
             unpack_resources(taxalotl_config, [dep_id])
         dep_fp = os.path.join(dep_res.unpacked_filepath, dep_res.local_filename)
         if not os.path.isfile(dep_fp):
-            raise ValueError("Silva ID file not found at: {}". format(dep_fp))
+            raise ValueError("Silva ID file not found at: {}".format(dep_fp))
         if dep_res.schema.lower() == 'id list':
             expect_id_fp = dep_fp
         elif dep_res.schema.lower() == 'silva taxmap':
@@ -51,7 +53,7 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
         raise ValueError('NCBI mapping dependency not found.')
     expect_tax_fp = os.path.join(res_wrapper.unpacked_filepath, res_wrapper.local_filename)
     if not os.path.isfile(expect_tax_fp):
-        raise ValueError("Silva taxon file not found at: {}". format(expect_tax_fp))
+        raise ValueError("Silva taxon file not found at: {}".format(expect_tax_fp))
     acc_to_trim = parse_acc_to_trim_from_ncbi(ncbi_mapping_fp)
     preferred = parse_silva_ids(expect_id_fp)
     itd = InterimTaxonomyData()
@@ -61,12 +63,12 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
     mapping_file = os.path.join(destination, GEN_MAPPING_FILENAME)
     write_as_json(part_name_to_silva_id, mapping_file, indent=2, separators=(',', ': '))
 
-def parse_acc_to_trim_from_ncbi(tax_fp):
 
+def parse_acc_to_trim_from_ncbi(tax_fp):
     trimmed_pref = ('root;cellular organisms;Eukaryota;Opisthokonta;Fungi;',
                     'root;cellular organisms;Eukaryota;Opisthokonta;Metazoa;',
                     'root;cellular organisms;Eukaryota;Viridiplantae;',)
-    EUK = 'root;cellular organisms;Eukaryota;'
+    euk = 'root;cellular organisms;Eukaryota;'
     to_trim = set()
     with codecs.open(tax_fp, 'r', encoding='utf-8') as inp:
         for n, line in enumerate(inp):
@@ -76,12 +78,13 @@ def parse_acc_to_trim_from_ncbi(tax_fp):
             prim_acc, start, stop, path, name = ls.split('\t')
             if n % 10000 == 0:
                 _LOG.info("scanned taxon {} '{}' ...".format(n, name))
-            if path.startswith(EUK):
+            if path.startswith(euk):
                 for pref in trimmed_pref:
                     if path.startswith(pref):
                         to_trim.add(prim_acc)
                         break
     return to_trim
+
 
 def gen_all_namepaths(path, name, prim_acc):
     an = []
@@ -106,13 +109,14 @@ def gen_all_namepaths(path, name, prim_acc):
             prev = el
     return an
 
+
 def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
     fung_pref = 'Eukaryota;Opisthokonta;Nucletmycea;Fungi;'
     animal_pref = 'Eukaryota;Opisthokonta;Holozoa;Metazoa (Animalia);'
-    plant_pref = 'Eukaryota;Archaeplastida;Chloroplastida;Charophyta;Phragmoplastophyta;Streptophyta;'
+    pl_pref = 'Eukaryota;Archaeplastida;Chloroplastida;Charophyta;Phragmoplastophyta;Streptophyta;'
     mito_pref = 'Bacteria;Proteobacteria;Alphaproteobacteria;Rickettsiales;Mitochondria;'
     chloro_pref = 'Bacteria;Cyanobacteria;Chloroplast;'
-    trim_pref = (fung_pref, animal_pref, plant_pref, mito_pref, chloro_pref)
+    trim_pref = (fung_pref, animal_pref, pl_pref, mito_pref, chloro_pref)
 
     namepath_to_id_pair = {}
     with codecs.open(expect_tax_fp, 'r', encoding='utf-8') as inp:
@@ -142,7 +146,7 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
             else:
                 all_names = gen_all_namepaths(path, name, prim_acc)
             for np in all_names:
-                #_LOG.info('np = {}'.format(np))
+                # _LOG.info('np = {}'.format(np))
                 assert not np[0][0].endswith(';')
                 name_path, proposed_id = np
                 stored = namepath_to_id_pair.setdefault(name_path, [None, None])
@@ -151,17 +155,6 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
                         stored[0], stored[1] = proposed_id, proposed_id
                     elif stored[1] is None or proposed_id < stored[1]:
                         stored[1] = proposed_id
-    part_map = {
-        'Archaeplastida': ('Eukaryota', 'Archaeplastida'),
-        'Chloroplastida': ('Eukaryota;Archaeplastida', 'Chloroplastida'),
-        'Glaucophyta': ('Eukaryota;Archaeplastida', 'Glaucophyta'),
-        'Rhodophyta': ('Eukaryota;Archaeplastida', 'Rhodophyceae'),
-        'Archaeplastida': ('Eukaryota', 'Archaeplastida'),
-        'Haptophyta': ('Eukaryota', 'Haptophyta'),
-        'Eukaryota':  ('', 'Eukaryota'),
-        'Archaea': ('', 'Archaea'),
-        'Bacteria': ('', 'Bacteria'),
-    }
     for pid in namepath_to_id_pair.values():
         if pid[0] is None:
             pid[0] = pid[1]
@@ -170,7 +163,6 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
         'Chloroplastida': ('Eukaryota;Archaeplastida', 'Chloroplastida'),
         'Glaucophyta': ('Eukaryota;Archaeplastida', 'Glaucophyta'),
         'Rhodophyta': ('Eukaryota;Archaeplastida', 'Rhodophyceae'),
-        'Archaeplastida': ('Eukaryota', 'Archaeplastida'),
         'Haptophyta': ('Eukaryota', 'Haptophyta'),
         'Eukaryota': ('', 'Eukaryota'),
         'Archaea': ('', 'Archaea'),
@@ -205,13 +197,15 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
             par_silva_id = "0"
         if silva_id in to_par:
             m = '{} remains mapped to ({}, {}) rather than ({}, {})'
-            _LOG.warn(m.format(silva_id, to_par[silva_id], to_name[silva_id], par_silva_id, name_path[1]))
+            _LOG.warn(
+                m.format(silva_id, to_par[silva_id], to_name[silva_id], par_silva_id, name_path[1]))
         else:
             to_par[silva_id] = par_silva_id
             to_children.setdefault(par_silva_id, []).append(silva_id)
             to_name[silva_id] = name_path[1]
     _LOG.info('{} SILVA ids stored'.format(len(to_name)))
     return part_name_to_silva_id
+
 
 def partition_silva(res_wrapper, part_name, part_keys, par_frag):
     silva_map = read_as_json(os.path.join(res_wrapper.normalized_filepath, GEN_MAPPING_FILENAME))
@@ -220,6 +214,4 @@ def partition_silva(res_wrapper, part_name, part_keys, par_frag):
                  part_keys,
                  par_frag,
                  master_map=silva_map,
-                 parse_and_partition_fn=_partition_ott_by_root_id)
-
-
+                 parse_and_partition_fn=partition_ott_by_root_id)

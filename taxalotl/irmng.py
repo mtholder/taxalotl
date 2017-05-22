@@ -3,7 +3,7 @@
 ###################################################################################################
 # Much of following code is from by JAR
 from __future__ import print_function
-import codecs
+
 import csv
 import os
 import re
@@ -262,22 +262,23 @@ def fix_irmng(itd):
     _LOG.info("Keeping {} taxa".format(keep_count))
     _LOG.info("{} missing parents".format(len(missing_pars)))
 
+
 def read_extinct_info(profile_file_name, itd):
     not_extinct = frozenset(['1531',  # Sarcopterygii
-                           '10565',  # Saurischia
-                           '118547',  # Aviculariidae
-                           '1402700',  # Trophomera
-                           # '11919',    # Didelphimorphia
-                           # '1021564',  # Cruciplacolithus
-                           # '1530',     # Actinopterygii
+                             '10565',  # Saurischia
+                             '118547',  # Aviculariidae
+                             '1402700',  # Trophomera
+                             # '11919',    # Didelphimorphia
+                             # '1021564',  # Cruciplacolithus
+                             # '1530',     # Actinopterygii
 
-                           # '1170022',  # Tipuloidea
-                           # '1340611',  # Retaria
-                           # '1124871',  # Labyrinthulomycetes [Labyrinthomorpha??]
-                           # '102024',   # Ophiurinidae - problem is Ophiurina
-                           # '1064058',  # Rhynchonelloidea genus/superfamily
-                           # '1114655',  # Tetrasphaera - different from GBIF
-                   ])
+                             # '1170022',  # Tipuloidea
+                             # '1340611',  # Retaria
+                             # '1124871',  # Labyrinthulomycetes [Labyrinthomorpha??]
+                             # '102024',   # Ophiurinidae - problem is Ophiurina
+                             # '1064058',  # Rhynchonelloidea genus/superfamily
+                             # '1114655',  # Tetrasphaera - different from GBIF
+                             ])
     to_par = itd.to_par
     d = {}
     with open(profile_file_name, 'rb') as csvfile:

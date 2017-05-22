@@ -1,21 +1,22 @@
 from __future__ import print_function
 
-from peyotl import get_logger, is_str_type
+import codecs
+import os
+
+from peyotl import get_logger
+
+from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
+                                              read_taxonomy_to_get_id_to_fields,
+                                              )
 from taxalotl.partitions import (do_partition,
                                  separate_part_list,
                                  fill_empty_anc_of_mapping,
                                  get_root_ids_for_subset,
                                  get_relative_dir_for_partition,
-                                 get_part_inp_taxdir,
                                  get_auto_gen_part_mapper,
                                  MISC_DIRNAME,
                                  PREORDER_PART_LIST,
                                  PARTS_BY_NAME)
-from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
-                                              read_taxonomy_to_get_id_to_fields,
-                                             )
-import codecs
-import os
 
 _LOG = get_logger(__name__)
 
@@ -56,6 +57,7 @@ OTT_PARTMAP = {
 
 OTT_3_SEPARATION_TAXA = OTT_PARTMAP
 
+
 def partition_from_auto_maps(res_wrapper, part_name, part_keys, par_frag):
     auto_map = get_auto_gen_part_mapper(res_wrapper)
     do_partition(res_wrapper,
@@ -63,7 +65,7 @@ def partition_from_auto_maps(res_wrapper, part_name, part_keys, par_frag):
                  part_keys,
                  par_frag,
                  master_map=auto_map,
-                 parse_and_partition_fn=_partition_ott_by_root_id)
+                 parse_and_partition_fn=partition_ott_by_root_id)
 
 
 def partition_ott(res_wrapper, part_name, part_keys, par_frag):
@@ -72,10 +74,10 @@ def partition_ott(res_wrapper, part_name, part_keys, par_frag):
                  part_keys,
                  par_frag,
                  master_map=OTT_PARTMAP,
-                 parse_and_partition_fn=_partition_ott_by_root_id)
+                 parse_and_partition_fn=partition_ott_by_root_id)
 
 
-def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
+def partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
     roots_set, by_roots, garbage_bin = separate_part_list(partition_el_list)
     id_to_line = {}
     id_by_par = {}
@@ -125,7 +127,7 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                     except:
                         pass
                     if uid in roots_set:
-                        #_LOG.info("{} not in {}".format(uid, roots_set))
+                        # _LOG.info("{} not in {}".format(uid, roots_set))
                         match_l = [i[1] for i in by_roots if uid in i[0]]
                         assert len(match_l) == 1
                         match_el = match_l[0]
@@ -134,7 +136,7 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                         if garbage_bin is not None:
                             garbage_bin.add(uid, line)
                     else:
-                        #_LOG.info("{} not in {}".format(uid, roots_set))
+                        # _LOG.info("{} not in {}".format(uid, roots_set))
                         if par_id:
                             try:
                                 par_id = int(par_id)
@@ -154,15 +156,17 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
         header = ''
     return id_by_par, id_to_el, id_to_line, syn_by_id, roots_set, garbage_bin, header, syn_header
 
+
 def ott_fetch_root_taxon_for_partition(res, parts_key, root_id):
     tax_dir = res.get_taxdir_for_root_of_part(parts_key)
     if not tax_dir:
         _LOG.info('No taxon file found for {}'.format(parts_key))
         return None
-    #_LOG.info('{} root should be in {}'.format(parts_key, tax_dir))
+    # _LOG.info('{} root should be in {}'.format(parts_key, tax_dir))
     taxon_obj = read_taxonomy_to_get_single_taxon(tax_dir, root_id)
     if not tax_dir:
-        _LOG.info('Root taxon for {} with ID {} not found in {}'.format(parts_key, root_id, tax_dir))
+        _LOG.info(
+            'Root taxon for {} with ID {} not found in {}'.format(parts_key, root_id, tax_dir))
         return None
     return taxon_obj
 
@@ -203,6 +207,7 @@ def ott_build_paritition_maps(res):
     if 'silva' in filled:
         del filled['silva']
     return filled
+
 
 def ott_diagnose_new_separators(res, current_partition_key):
     tax_dir = res.get_taxdir_for_part(current_partition_key)

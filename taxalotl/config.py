@@ -109,6 +109,7 @@ class TaxalotlConfig(object):
                 _LOG.info(m.format(logging_action_str, wrapper.id, orig_res.id))
             return wrapper
         return orig_res
+
     def get_all_ancs(self, res):
         all_ancs = [res]
         cr = res

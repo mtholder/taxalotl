@@ -1,22 +1,11 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import os
 import sys
 
-from peyotl import (get_logger,
-                    read_all_otifacts,
-                    filter_otifacts_by_type,
-                    partition_otifacts_by_root_element,
-                    write_as_json)
+from peyotl import (get_logger)
 
 from taxalotl import TaxalotlConfig
-from taxalotl.partitions import (GEN_MAPPING_FILENAME,
-                                 PART_NAMES,
-                                 PART_FRAG_BY_NAME,
-                                 PARTS_BY_NAME,
-                                 NONTERMINAL_PART_NAMES,
-                                 PREORDER_PART_LIST)
 from taxalotl.commands import (build_partition_maps,
                                clean_resources,
                                diagnose_new_separators,
@@ -26,7 +15,11 @@ from taxalotl.commands import (build_partition_maps,
                                pull_otifacts,
                                status_of_resources,
                                unpack_resources,
-                              )
+                               )
+from taxalotl.partitions import (PART_NAMES,
+                                 PARTS_BY_NAME,
+                                 NONTERMINAL_PART_NAMES)
+
 _LOG = get_logger(__name__)
 
 res_indep_cmds = ['pull-otifacts', 'diagnose-new-separators', 'build-partition-maps']
@@ -105,7 +98,7 @@ def main():
     status_p.add_argument("--terminal",
                           action='store_true',
                           default=False,
-                          help="Only report on the most recent, terminalized resource of each type.")
+                          help="Report only on the terminalized resource of each type.")
     status_p.set_defaults(which="status")
     # DOWNLOAD
     download_p = subp.add_parser('download', help="download an artifact to your local filesystem")

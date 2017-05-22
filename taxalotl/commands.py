@@ -26,7 +26,7 @@ def download_resources(taxalotl_config, id_list):
         if lic_urls or lic_tou:
             prompt = 'The following license-related URLs were found:\n  '
             prompt += '\n  '.join(lic_urls)
-            prompt += '\n\nThe following license or terms of use information statements were found:\n\n  '
+            prompt += '\n\nThe following license or terms of use information was found:\n\n  '
             prompt += '\n\n  '.join(lic_tou)
         else:
             prompt = 'No stored license info based on the last pull from the OTifacts repository.'

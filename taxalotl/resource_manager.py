@@ -25,6 +25,7 @@ from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_par_and_par_misc_taxdir)
 from taxalotl.interim_taxonomy_struct import (INP_OTT_SYNONYMS_HEADER,
                                               INP_OTT_TAXONOMY_HEADER)
+
 _LOG = get_logger(__name__)
 
 
@@ -128,6 +129,7 @@ def copy_and_add_ott_headers(unpacked_dirp, normalized_dirp, resource_wrapper):
                 out.write(header)
                 out.write(content)
 
+
 def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
     motf = list(OTT_TAXONOMY_FILENAMES)
     special = [('taxonomy.tsv', INP_OTT_TAXONOMY_HEADER)]
@@ -143,7 +145,6 @@ def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
                     for line in inp:
                         ls = line.split('\t')
                         out.write('\t|\t'.join(ls))
-
 
 
 _schema_to_norm_fn = {"ott": copy_taxonomy_by_linking,
@@ -417,7 +418,7 @@ class ResourceWrapper(object):
 
 _rt_to_partition = {'col': partition_col,
                     'silva': partition_silva,
-                   }
+                    }
 
 
 # noinspection PyAbstractClass
@@ -432,8 +433,10 @@ class ExternalTaxonomyWrapper(ResourceWrapper):
         fn = _rt_to_partition.get(self.base_id, partition_from_auto_maps)
         return fn(self, part_name, part_keys, par_frag)
 
+
 class SilvaIdListWrapper(ExternalTaxonomyWrapper):
     resource_type = 'id list'
+
 
 class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
     taxon_filename = 'taxa.txt'

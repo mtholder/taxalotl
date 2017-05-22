@@ -104,7 +104,7 @@ NONTERMINAL_PART_NAMES = tuple(NONTERMINAL_PART_NAMES)
 
 
 def _rec_populate(d_to_fill, key_to_filled_set):
-    #_LOG.info('key_to_filled_set = {}'.format(key_to_filled_set))
+    # _LOG.info('key_to_filled_set = {}'.format(key_to_filled_set))
     if MISC_DIRNAME in d_to_fill:
         del d_to_fill[MISC_DIRNAME]
     for key, subd in d_to_fill.items():
@@ -120,8 +120,9 @@ def _rec_populate(d_to_fill, key_to_filled_set):
                 if cu:
                     key_to_filled_set[key] = cu
 
+
 def fill_empty_anc_of_mapping(mapping):
-    #_LOG.info('mapping = {}'.format(mapping))
+    # _LOG.info('mapping = {}'.format(mapping))
     s = copy.deepcopy(BASE_PARTITIONS_DICT)
     _rec_populate(s, mapping)
 
@@ -241,6 +242,7 @@ def create_partition_element(path_pref, fragment, path_suffix, roots, syn_filena
         return TaxonFileOnlyPartitionElement(path_pref, fragment, path_suffix, roots)
     return TaxAndSynFileOnlyPartitionElement(path_pref, fragment, path_suffix, roots, syn_filename)
 
+
 def find_partition_dirs_for_taxonomy(path_pref, res_id):
     suffix = os.sep + os.path.join('', INP_TAXONOMY_DIRNAME, res_id)
     return [i for i, sd, fl in os.walk(path_pref) if i.endswith(suffix)]
@@ -272,6 +274,7 @@ def get_relative_dir_for_partition(parts_key):
 def get_part_inp_taxdir(parts_dir, part_key, taxonomy_id):
     df = get_relative_dir_for_partition(part_key)
     return os.path.join(parts_dir, df, INP_TAXONOMY_DIRNAME, taxonomy_id)
+
 
 def get_par_and_par_misc_taxdir(parts_dir, part_key, taxonomy_id):
     df = get_relative_dir_for_partition(part_key)

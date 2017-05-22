@@ -15,6 +15,8 @@ _LOG = get_logger(__name__)
 INP_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n"
 INP_FLAGGED_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\t|\t\n"
 INP_OTT_SYNONYMS_HEADER = "uid\t|\tname\t|\ttype\t|\t\n"
+
+
 def write_ott_taxonomy_tsv(out_fp,
                            root_nodes,
                            id_to_par,
@@ -174,6 +176,7 @@ def read_taxonomy_to_get_id_to_fields(tax_dir):
             id_to_obj[oid] = obj
         return id_to_obj
 
+
 def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
     sri = str(root_id)
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
@@ -232,7 +235,6 @@ class InterimTaxonomyData(object):
         for el in matching:
             ol.remove(el)
             nl.append(el)
-
 
     def write_ott_taxonomy_tsv(self, fp):
         return write_ott_taxonomy_tsv(fp,
