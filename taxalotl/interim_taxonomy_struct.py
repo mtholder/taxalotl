@@ -163,7 +163,8 @@ def read_taxonomy_to_get_id_to_fields(tax_dir):
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
     fields = ['uid', 'parent_uid', 'name', 'rank', 'sourceinfo', 'uniqname', 'flags', '\n']
     expected_header = '\t|\t'.join(fields)
-
+    if not os.path.exists(fp):
+        return {}
     with codecs.open(fp, 'r', encoding='utf-8') as inp:
         iinp = iter(inp)
         header = iinp.next()

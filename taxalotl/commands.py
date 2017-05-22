@@ -13,6 +13,7 @@ from peyotl import (get_logger,
 from taxalotl.partitions import (GEN_MAPPING_FILENAME,
                                  PART_FRAG_BY_NAME,
                                  PARTS_BY_NAME,
+                                 PART_NAMES,
                                  PREORDER_PART_LIST)
 
 _LOG = get_logger(__name__)
@@ -178,15 +179,24 @@ def pull_otifacts(taxalotl_config):
             write_as_json(res_dict, fp, indent=2, separators=(',', ': '))
 
 
-def diagnose_new_separators(taxalotl_config):
-    partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
-    rw = taxalotl_config.get_terminalized_res_by_id("ott", 'partition')
-    nsd = rw.diagnose_new_separators(current_partition_key='Glaucophyta')
-    if not nsd:
-        return
-    for k, sd in nsd.items():
-        _LOG.info('New separators {} => {}'.format(k, sd))
+DIAG_PART_FN = '__sep__.json'
 
+def diagnose_new_separators(taxalotl_config):
+    rw = taxalotl_config.get_terminalized_res_by_id("ott", 'diagnose-new-separators')
+    if not rw.has_been_partitioned():
+        partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
+    pd = rw.partitioned_filepath
+    for part_name in PART_NAMES:
+        nsd = rw.diagnose_new_separators(current_partition_key=part_name)
+        if not nsd:
+            _LOG.info("no new separtors in {}.".format(part_name))
+        else:
+            for k, sd in nsd.items():
+                _LOG.info('{} new separators in {}'.format(sd.num_separators(),
+                                                        part_name))
+                fp = os.path.join(pd, k, DIAG_PART_FN)
+                write_as_json(sd.as_dict(), fp, sort_keys=True, indent=2)
+                _LOG.info("new separators written to {}".format(fp))
 
 def build_partition_maps(taxalotl_config):
     partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
