@@ -109,3 +109,31 @@ class TaxalotlConfig(object):
                 _LOG.info(m.format(logging_action_str, wrapper.id, orig_res.id))
             return wrapper
         return orig_res
+    def get_all_ancs(self, res):
+        all_ancs = [res]
+        cr = res
+        par_id = getattr(cr, 'inherits_from', None)
+        while par_id is not None:
+            cr = self.get_resource_by_id(par_id)
+            all_ancs.append(cr)
+            par_id = getattr(cr, 'inherits_from', None)
+        all_ancs.reverse()
+        return all_ancs
+
+    def get_known_license_info(self, res):
+        """Returns lists of the unique elements in license_url and license_or_tou_info"""
+        aa = self.get_all_ancs(res)
+        aa.reverse()
+        urls = []
+        uset = set()
+        terms_of_use = []
+        touset = set()
+        for r in aa:
+            u, t = r.license_url, r.license_or_tou_info
+            if u and (u not in uset):
+                urls.append(u)
+                uset.add(u)
+            if t and (t not in touset):
+                touset.add(t)
+                terms_of_use.append(t)
+        return urls, terms_of_use

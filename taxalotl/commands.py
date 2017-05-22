@@ -22,11 +22,29 @@ out_stream = sys.stdout
 def download_resources(taxalotl_config, id_list):
     for rid in id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid, 'download')
-        if rw.has_been_downloaded():
-            m = "{} was already present at {}"
-            _LOG.info(m.format(rw.id, rw.download_filepath))
+        lic_urls, lic_tou = taxalotl_config.get_known_license_info(rw)
+        if lic_urls or lic_tou:
+            prompt = 'The following license-related URLs were found:\n  '
+            prompt += '\n  '.join(lic_urls)
+            prompt += '\n\nThe following license or terms of use information statements were found:\n\n  '
+            prompt += '\n\n  '.join(lic_tou)
         else:
-            rw.download()
+            prompt = 'No stored license info based on the last pull from the OTifacts repository.'
+        tag = '\n\nOther license or terms of use may apply if the OTifacts repository is not ' \
+              'up-to-date.\nEnter y to continue downloading {} : '.format(rid)
+        prompt += tag
+        try:
+            resp = raw_input(prompt)
+        except NameError:
+            resp = input(prompt)
+        if resp != 'y':
+            _LOG.info('download of {} skipped due to lack of affirmative response.'.format(rid))
+        else:
+            if rw.has_been_downloaded():
+                m = "{} was already present at {}"
+                _LOG.info(m.format(rw.id, rw.download_filepath))
+            else:
+                rw.download()
 
 
 def _group_by_status(res, id_list):
