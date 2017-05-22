@@ -7,11 +7,15 @@ from __future__ import print_function
 
 from peyotl import (assure_dir_exists,
                     get_logger,
+                    read_as_json,
                     write_as_json)
 import codecs
 import os
 from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
+from taxalotl.partitions import do_partition, GEN_MAPPING_FILENAME
 from taxalotl.commands import unpack_resources
+from taxalotl.ott import _partition_ott_by_root_id
+
 _LOG = get_logger(__name__)
 
 def parse_silva_ids(fn):
@@ -54,7 +58,7 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
     part_name_to_silva_id = parse_silva_taxon_file(expect_tax_fp, preferred, acc_to_trim, itd)
     _LOG.info('{} taxonomy IDs read'.format(len(itd.to_par)))
     itd.write_to_dir(destination)
-    mapping_file = os.path.join(destination, '__mapping__.json')
+    mapping_file = os.path.join(destination, GEN_MAPPING_FILENAME)
     write_as_json(part_name_to_silva_id, mapping_file, indent=2, separators=(',', ': '))
 
 def parse_acc_to_trim_from_ncbi(tax_fp):
@@ -171,10 +175,11 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
         'Eukaryota': ('', 'Eukaryota'),
         'Archaea': ('', 'Archaea'),
         'Bacteria': ('', 'Bacteria'),
+        'SAR': ('Eukaryota', 'SAR'),
     }
     part_name_to_silva_id = {}
     for part_name, path_name in part_map_to_namepath.items():
-        part_name_to_silva_id[part_name] = namepath_to_id_pair[path_name][0]
+        part_name_to_silva_id[part_name] = [namepath_to_id_pair[path_name][0]]
     to_par = itd.to_par
     to_children = itd.to_children
     to_name = itd.to_name
@@ -207,3 +212,14 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
             to_name[silva_id] = name_path[1]
     _LOG.info('{} SILVA ids stored'.format(len(to_name)))
     return part_name_to_silva_id
+
+def partition_silva(res_wrapper, part_name, part_keys, par_frag):
+    silva_map = read_as_json(os.path.join(res_wrapper.normalized_filepath, GEN_MAPPING_FILENAME))
+    do_partition(res_wrapper,
+                 part_name,
+                 part_keys,
+                 par_frag,
+                 master_map=silva_map,
+                 parse_and_partition_fn=_partition_ott_by_root_id)
+
+

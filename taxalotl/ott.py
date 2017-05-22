@@ -200,6 +200,8 @@ def ott_build_paritition_maps(res):
                 _LOG.info("{}: {} -> (None -> {})".format(src_pre, k, v))
             else:
                 assert v == pv
+    if 'silva' in filled:
+        del filled['silva']
     return filled
 
 def ott_diagnose_new_separators(res, current_partition_key):

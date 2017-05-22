@@ -13,7 +13,7 @@ from peyotl import (assure_dir_exists,
 from taxalotl.newick import normalize_newick
 from taxalotl.ncbi import normalize_ncbi
 from taxalotl.irmng import normalize_irmng
-from taxalotl.silva import normalize_silva_taxonomy
+from taxalotl.silva import normalize_silva_taxonomy, partition_silva
 from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 from taxalotl.col import partition_col
 from taxalotl.ott import (partition_ott, partition_from_auto_maps,
@@ -415,7 +415,9 @@ class ResourceWrapper(object):
                 out.write(down_str)
 
 
-_rt_to_partition = {'col': partition_col}
+_rt_to_partition = {'col': partition_col,
+                    'silva': partition_silva,
+                   }
 
 
 # noinspection PyAbstractClass
