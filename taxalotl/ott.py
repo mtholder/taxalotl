@@ -110,45 +110,48 @@ def _partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                     raise
     else:
         syn_header = ''
-    with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
-        iinp = iter(inp)
-        header = iinp.next()
-        for n, line in enumerate(iinp):
-            ls = line.split('\t|\t')
-            if n % 1000 == 0:
-                _LOG.info(' read taxon {}'.format(n))
-            try:
-                uid, par_id = ls[0], ls[1]
+    if os.path.exists(complete_taxon_fp):
+        with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
+            iinp = iter(inp)
+            header = iinp.next()
+            for n, line in enumerate(iinp):
+                ls = line.split('\t|\t')
+                if n % 1000 == 0:
+                    _LOG.info(' read taxon {}'.format(n))
                 try:
-                    uid = int(uid)
-                except:
-                    pass
-                if uid in roots_set:
-                    #_LOG.info("{} not in {}".format(uid, roots_set))
-                    match_l = [i[1] for i in by_roots if uid in i[0]]
-                    assert len(match_l) == 1
-                    match_el = match_l[0]
-                    id_to_el[uid] = match_el
-                    match_el.add(uid, line)
-                    if garbage_bin is not None:
-                        garbage_bin.add(uid, line)
-                else:
-                    #_LOG.info("{} not in {}".format(uid, roots_set))
-                    if par_id:
-                        try:
-                            par_id = int(par_id)
-                        except:
-                            pass
-                    match_el = id_to_el.get(par_id)
-                    if match_el is not None:
+                    uid, par_id = ls[0], ls[1]
+                    try:
+                        uid = int(uid)
+                    except:
+                        pass
+                    if uid in roots_set:
+                        #_LOG.info("{} not in {}".format(uid, roots_set))
+                        match_l = [i[1] for i in by_roots if uid in i[0]]
+                        assert len(match_l) == 1
+                        match_el = match_l[0]
                         id_to_el[uid] = match_el
                         match_el.add(uid, line)
+                        if garbage_bin is not None:
+                            garbage_bin.add(uid, line)
                     else:
-                        id_by_par.setdefault(par_id, []).append(uid)
-                        id_to_line[uid] = line
-            except:
-                _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
-                raise
+                        #_LOG.info("{} not in {}".format(uid, roots_set))
+                        if par_id:
+                            try:
+                                par_id = int(par_id)
+                            except:
+                                pass
+                        match_el = id_to_el.get(par_id)
+                        if match_el is not None:
+                            id_to_el[uid] = match_el
+                            match_el.add(uid, line)
+                        else:
+                            id_by_par.setdefault(par_id, []).append(uid)
+                            id_to_line[uid] = line
+                except:
+                    _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
+                    raise
+    else:
+        header = ''
     return id_by_par, id_to_el, id_to_line, syn_by_id, roots_set, garbage_bin, header, syn_header
 
 def ott_fetch_root_taxon_for_partition(res, parts_key, root_id):

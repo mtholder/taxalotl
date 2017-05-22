@@ -357,7 +357,7 @@ def do_partition(res,
         part.write_lines(header, syn_header)
         pr = [r for r in roots_set if id_to_el.get(r) is part]
         part.write_roots(pr)
-    if remove_input:
+    if remove_input and os.path.exists(inp_filepath):
         _LOG.info("removing unpartitioned taxon file at {}".format(inp_filepath))
         os.unlink(inp_filepath)
 
