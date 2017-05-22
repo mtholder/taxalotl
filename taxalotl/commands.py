@@ -9,14 +9,15 @@ from peyotl import (get_logger,
                     filter_otifacts_by_type,
                     partition_otifacts_by_root_element,
                     write_as_json)
+
 from taxalotl.partitions import (GEN_MAPPING_FILENAME,
-                                 PART_NAMES,
                                  PART_FRAG_BY_NAME,
                                  PARTS_BY_NAME,
-                                 NONTERMINAL_PART_NAMES,
                                  PREORDER_PART_LIST)
 
 _LOG = get_logger(__name__)
+out_stream = sys.stdout
+
 
 def download_resources(taxalotl_config, id_list):
     for rid in id_list:
@@ -209,4 +210,3 @@ def clean_resources(taxalotl_config, action, id_list):
                 _LOG.info("{} had not been normalized. Skipping clean step...".format(rid))
         else:
             raise NotImplementedError("clean of {} not yet implemented".format(action))
-

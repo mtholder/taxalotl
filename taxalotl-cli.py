@@ -28,7 +28,7 @@ from taxalotl.commands import (build_partition_maps,
                                unpack_resources,
                               )
 _LOG = get_logger(__name__)
-out_stream = sys.stdout
+
 res_indep_cmds = ['pull-otifacts', 'diagnose-new-separators', 'build-partition-maps']
 res_dep_cmds = ['clean', 'status', 'download', 'unpack', 'normalize', 'partition']
 all_cmds = res_dep_cmds + res_indep_cmds
