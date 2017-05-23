@@ -18,7 +18,6 @@ from taxalotl.darwin_core import normalize_darwin_core_taxonomy
 from taxalotl.col import partition_col, partition_col_by_root_id
 from taxalotl.ott import (partition_ott, partition_from_auto_maps,
                           ott_diagnose_new_separators,
-                          ott_enforce_new_separators,
                           ott_build_paritition_maps,
                           partition_ott_by_root_id,
                           )
@@ -464,9 +463,6 @@ class OTTaxonomyWrapper(ResourceWrapper):
 
     def diagnose_new_separators(self, current_partition_key):
         return ott_diagnose_new_separators(self, current_partition_key)
-
-    def enforce_new_separators(self, curr_part_key, sep_file_name):
-        return ott_enforce_new_separators(self, curr_part_key, sep_file_name)
 
     def build_paritition_maps(self):
         return ott_build_paritition_maps(self)

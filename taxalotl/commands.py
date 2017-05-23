@@ -15,7 +15,7 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
                                  PARTS_BY_NAME,
                                  PART_NAMES,
                                  PREORDER_PART_LIST)
-
+from taxalotl.dynamic_partitioning import perform_dynamic_separation
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
 
@@ -179,7 +179,7 @@ def pull_otifacts(taxalotl_config):
             write_as_json(res_dict, fp, indent=2, separators=(',', ': '))
 
 
-DIAG_PART_FN = '__sep__.json'
+NEW_SEP_FILENAME = '__sep__.json'
 
 
 def diagnose_new_separators(taxalotl_config):
@@ -195,19 +195,18 @@ def diagnose_new_separators(taxalotl_config):
             for k, sd in nsd.items():
                 _LOG.info('{} new separators in {}'.format(sd.num_separators(),
                                                            part_name))
-                fp = os.path.join(pd, k, DIAG_PART_FN)
+                fp = os.path.join(pd, k, NEW_SEP_FILENAME)
                 write_as_json(sd.as_dict(), fp, sort_keys=True, indent=2)
                 _LOG.info("new separators written to {}".format(fp))
 
 
 def enforce_new_separators(taxalotl_config):
-    rw = taxalotl_config.get_terminalized_res_by_id("ott", 'enforce-new-separators')
-    if not rw.has_been_partitioned():
+    ott_res = taxalotl_config.get_terminalized_res_by_id("ott",
+                                                         'enforce-new-separators')
+    if not ott_res.has_been_partitioned():
         partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
-    pd = rw.partitioned_filepath
-
     for part_name in ['Archaea']:  # PART_NAMES:
-        nsd = rw.enforce_new_separators(part_name, DIAG_PART_FN)
+        perform_dynamic_separation(ott_res, part_name, NEW_SEP_FILENAME)
 
 
 def build_partition_maps(taxalotl_config):

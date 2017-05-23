@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import codecs
 import os
-import re
 
 from peyotl import get_logger, read_as_json, write_as_json
 from peyotl.utility.str_util import StringIO
@@ -11,16 +10,13 @@ from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
                                               read_taxonomy_to_get_id_to_fields,
                                               )
 from taxalotl.partitions import (do_partition,
-                                 do_new_separation,
                                  fill_empty_anc_of_mapping,
                                  get_root_ids_for_subset,
                                  get_relative_dir_for_partition,
                                  get_auto_gen_part_mapper,
                                  MISC_DIRNAME,
                                  PREORDER_PART_LIST,
-                                 PARTS_BY_NAME,
-                                 PART_FRAG_BY_NAME,
-                                 INP_TAXONOMY_DIRNAME)
+                                 PARTS_BY_NAME)
 
 _LOG = get_logger(__name__)
 
@@ -225,100 +221,6 @@ def ott_build_paritition_maps(res):
         del filled['silva']
     return filled
 
-
-def get_inp_taxdir(parts_dir, frag, taxonomy_id):
-    return os.path.join(parts_dir, frag, INP_TAXONOMY_DIRNAME, taxonomy_id)
-
-
-def get_all_taxdir_and_misc_uncles(parts_dir, frag, taxonomy_id):
-    d = [get_inp_taxdir(parts_dir, frag, taxonomy_id)]
-    if os.sep in frag:
-        frag = os.path.split(frag)[0]
-        while frag:
-            d.append(get_inp_taxdir(parts_dir, os.path.join(frag, MISC_DIRNAME), taxonomy_id))
-            if os.sep in frag:
-                frag = os.path.split(frag)[0]
-            else:
-                break
-    return d
-
-
-norm_char_pat = re.compile(r'[-a-zA-Z0-9._]')
-
-
-def escape_odd_char(s):
-    l = []
-    for i in s:
-        if norm_char_pat.match(i):
-            l.append(i)
-        else:
-            l.append('_')
-    return ''.join(l)
-
-
-def new_separation_based_on_ott_alignment(ott_res, part_name, sep_obj, frag, sep_fn):
-    edir = os.path.join(frag, part_name)
-    _LOG.info('sep_obj: {}'.format(sep_obj.keys()))
-    _LOG.info('edir: {}'.format(edir))
-    _LOG.info('sep_fn: {}'.format(sep_fn))
-    src_set = set()
-    sep_id_to_fn = {}
-    for sep_id, i in sep_obj.items():
-        src_set.update(i['src_dict'].keys())
-        sep_id_to_fn[sep_id] = escape_odd_char(i["uniqname"])
-
-    _LOG.info('src_set: {}'.format(src_set))
-    taxalotl_config = ott_res.config
-    res_list = [(i, taxalotl_config.get_terminalized_res_by_id(i)) for i in src_set]
-    res_id_to_res_dirs = {}
-    pd = ott_res.partitioned_filepath
-    new_par_dir = os.path.join(pd, edir)
-    for src, res in res_list:
-        if src != 'silva':
-            _LOG.info("skipping non silva res {}".format(src))
-            continue
-        ad = get_all_taxdir_and_misc_uncles(pd, edir, res.id)
-        ed = [i for i in ad if os.path.isfile(os.path.join(i, res.taxon_filename))]
-        sep_dir_ids_list = []
-        for sep_id, i in sep_obj.items():
-            t = (sep_id_to_fn[sep_id], i['src_dict'][src])
-            sep_dir_ids_list.append(t)
-        res_id_to_res_dirs[res.id] = (res, ed, sep_dir_ids_list)
-        _LOG.info('{}: {} : {}'.format(src, ed, sep_dir_ids_list))
-        do_new_separation(res, new_par_dir, ed, sep_dir_ids_list)
-    recursive_call_list = []
-    for sep_id, obj in sep_obj.items():
-        sub = obj.get("sub")
-        if not sub:
-            continue
-        next_part = sep_id_to_fn[sep_id]
-        subdir = os.path.join(new_par_dir, next_part)
-        subjson = os.path.join(subdir, sep_fn)
-        write_as_json(sub, subjson, indent=2, sort_keys=True, separators=(',', ': '))
-        _LOG.info('sub separation file written to "{}"'.format(subjson))
-        rec_el = (next_part, sub)
-        recursive_call_list.append(rec_el)
-    for recurse_el in recursive_call_list:
-        next_part, next_sep = recurse_el
-        new_separation_based_on_ott_alignment(ott_res,
-                                              part_name=next_part,
-                                              sep_obj=next_sep,
-                                              frag=edir,
-                                              sep_fn=sep_fn)
-
-def ott_enforce_new_separators(res, part_key, sep_fn):
-    df = get_relative_dir_for_partition(part_key)
-    sep_fp = os.path.join(res.partitioned_filepath, df, sep_fn)
-    if not os.path.isfile(sep_fp):
-        _LOG.info('No separators found for {}'.format(part_key))
-        return
-    sep_obj = read_as_json(sep_fp)
-    _LOG.info('{}: {} separators:  {}'.format(part_key, len(sep_obj.keys()), sep_obj.keys()))
-    new_separation_based_on_ott_alignment(res,
-                                          part_key,
-                                          sep_obj,
-                                          PART_FRAG_BY_NAME[part_key],
-                                          sep_fn)
 
 def ott_diagnose_new_separators(res, current_partition_key):
     tax_dir = res.get_taxdir_for_part(current_partition_key)

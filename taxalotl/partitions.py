@@ -62,6 +62,28 @@ NONTERMINAL_PART_NAMES = []
 PART_NAME_TO_DIRFRAG = {}
 
 
+def get_inp_taxdir(parts_dir, frag, taxonomy_id):
+    return os.path.join(parts_dir, frag, INP_TAXONOMY_DIRNAME, taxonomy_id)
+
+def get_all_taxdir_and_misc_uncles(parts_dir, frag, taxonomy_id):
+    """Returns a list of dirs for this taxonomy_id starting at
+    the `frag` directory, but also including the __misc__ subdirectories
+     of is ancestral directories.
+    This represents the set of directories that should hold the taxa
+        for this fragment allowing for underclassification of taxa, but
+        not misclassification into a non-ancestral group.
+    """
+    d = [get_inp_taxdir(parts_dir, frag, taxonomy_id)]
+    if os.sep in frag:
+        frag = os.path.split(frag)[0]
+        while frag:
+            d.append(get_inp_taxdir(parts_dir, os.path.join(frag, MISC_DIRNAME), taxonomy_id))
+            if os.sep in frag:
+                frag = os.path.split(frag)[0]
+            else:
+                break
+    return d
+
 def get_auto_gen_part_mapper(res):
     fp = os.path.join(res.partitioned_filepath, GEN_MAPPING_FILENAME)
     if not os.path.isfile(fp):
@@ -434,40 +456,6 @@ class TaxonPartition(object):
             pr = [r for r in self.roots_set if self.id_to_el.get(r) is part]
             part.append_write_roots(pr)
 
-
-def do_new_separation(res,
-                      new_par_dir,
-                      inp_dir_list,
-                      sub_dir_id_set_pairs_list):
-    """Partition a parent taxon into descendants and garbagebin (__misc__) dir
-    
-    :param res: a wrapper around the resource. Used for id, part_source_filepath, 
-    :param new_par_dir: parent of new dirs
-    :param inp_dir_list: list of input dirs for this res type
-    :param sub_dir_id_set_pairs_list: list of tuples the first element in each tuple
-     is a name of a new subdir to be created. The second element in each tuple
-     is the root IDs of this resource to be put into that dir.):
-    """
-    mapping = sub_dir_id_set_pairs_list
-    if not mapping:
-        _LOG.info("No {} mapping to separate {}".format(res.id, new_par_dir))
-        return
-    tp_list = []
-    to_remove = []
-    for inp_dir in inp_dir_list:
-        _LOG.info("partitioning new_par_dir = {} from {}".format(new_par_dir, inp_dir))
-        tp, rm_file = _partition_from_mapping(res,
-                                              mapping,
-                                              inp_dir,
-                                              partition_parsing_fn=res.partition_parsing_fn,
-                                              par_dir=new_par_dir)
-        tp_list.append(tp)
-        to_remove.append(rm_file)
-    merge_and_write_taxon_partition_list(tp_list)
-    for to_remove_file in to_remove:
-        if to_remove_file:
-            _LOG.info("removing pre-partitioned file at {}".format(to_remove_file))
-            os.unlink(to_remove_file)
 
 
 def do_partition(res,
