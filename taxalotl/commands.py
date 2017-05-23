@@ -181,6 +181,7 @@ def pull_otifacts(taxalotl_config):
 
 DIAG_PART_FN = '__sep__.json'
 
+
 def diagnose_new_separators(taxalotl_config):
     rw = taxalotl_config.get_terminalized_res_by_id("ott", 'diagnose-new-separators')
     if not rw.has_been_partitioned():
@@ -193,10 +194,11 @@ def diagnose_new_separators(taxalotl_config):
         else:
             for k, sd in nsd.items():
                 _LOG.info('{} new separators in {}'.format(sd.num_separators(),
-                                                        part_name))
+                                                           part_name))
                 fp = os.path.join(pd, k, DIAG_PART_FN)
                 write_as_json(sd.as_dict(), fp, sort_keys=True, indent=2)
                 _LOG.info("new separators written to {}".format(fp))
+
 
 def enforce_new_separators(taxalotl_config):
     rw = taxalotl_config.get_terminalized_res_by_id("ott", 'enforce-new-separators')
@@ -204,7 +206,7 @@ def enforce_new_separators(taxalotl_config):
         partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
     pd = rw.partitioned_filepath
 
-    for part_name in ['Archaea']: # PART_NAMES:
+    for part_name in ['Archaea']:  # PART_NAMES:
         nsd = rw.enforce_new_separators(part_name, DIAG_PART_FN)
 
 

@@ -217,7 +217,8 @@ _known_res_attr = frozenset(['aliases',
 class ResourceWrapper(object):
     taxon_filename = 'taxonomy.tsv'
     synonyms_filename = 'synonyms.tsv'
-    partition_parsing_fn = partition_ott_by_root_id
+
+    partition_parsing_fn = staticmethod(partition_ott_by_root_id)
 
     def __init__(self, obj, parent=None, refs=None, config=None):
         for k in _known_res_attr:
@@ -380,7 +381,6 @@ class ResourceWrapper(object):
     def new_separate(self, part_name, sep_obj, par_frag, sep_fn):
         return new_separation_based_on_ott_alignment(self, part_name, sep_obj, par_frag, sep_fn)
 
-
     def write_status(self, out, indent='', list_all_artifacts=False):
         dfp = self.download_filepath
         if dfp is None:
@@ -449,7 +449,8 @@ class SilvaIdListWrapper(ExternalTaxonomyWrapper):
 class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
     taxon_filename = 'taxa.txt'
     synonyms_filename = None
-    partition_parsing_fn = partition_col_by_root_id
+    partition_parsing_fn = staticmethod(partition_col_by_root_id)
+
     @property
     def partition_source_filepath(self):
         return self.unpacked_filepath

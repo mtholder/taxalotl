@@ -85,13 +85,13 @@ def write_gbif_projection_file(source, destination):
 
 
 def read_gbif_projection(proj_filepath, itd):
-    col_taxonID = 0
-    col_parentNameUsageID = 1
-    col_acceptedNameUsageID = 2
-    col_canonicalName = 3
-    col_taxonRank = 4
-    col_taxonomicStatus = 5
-    col_nameAccordingTo = 6
+    col_taxon_id = 0
+    col_par_name_usage_id = 1
+    col_accepted_name_usage_id = 2
+    col_canonical_name = 3
+    col_taxon_rank = 4
+    col_taxonomic_status = 5
+    col_name_according_to = 6
     not_doubtful = {
         8407745: "Hierococcyx"
     }
@@ -110,15 +110,15 @@ def read_gbif_projection(proj_filepath, itd):
         for row in inp:
             fields = row.split('\t')
             # acceptedNameUsageID
-            syn_target_id_string = fields[col_acceptedNameUsageID].strip()
+            syn_target_id_string = fields[col_accepted_name_usage_id].strip()
             is_synonym = False
             if syn_target_id_string:
                 is_synonym = True
-            taxon_id = int(fields[col_taxonID])
-            name = fields[col_canonicalName].strip()
+            taxon_id = int(fields[col_taxon_id])
+            name = fields[col_canonical_name].strip()
             assert name
-            source = fields[col_nameAccordingTo].strip()
-            tstatus = fields[col_taxonomicStatus].strip()  # taxonomicStatus
+            source = fields[col_name_according_to].strip()
+            tstatus = fields[col_taxonomic_status].strip()  # taxonomicStatus
             # Filter out IRMNG and IPNI tips,
             # See http://www.gbif.org/dataset/d9a4eedb-e985-4456-ad46-3df8472e00e8
             if (("IRMNG Homonym" in source) or
@@ -147,11 +147,11 @@ def read_gbif_projection(proj_filepath, itd):
                                                                   tstatus,
                                                                   source)
                 raise RuntimeError(m)
-            rank = fields[col_taxonRank].strip()
+            rank = fields[col_taxon_rank].strip()
             if rank in ranks_to_ignore:
                 to_ignore.add(taxon_id)
 
-            parent_id_string = fields[col_parentNameUsageID].strip()
+            parent_id_string = fields[col_par_name_usage_id].strip()
 
             # Past all the filters, time to store
             itd.register_id_and_name(taxon_id, name)

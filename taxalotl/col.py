@@ -4,7 +4,7 @@ import codecs
 
 from peyotl import (get_logger)
 
-from taxalotl.partitions import do_partition, separate_part_list, TaxonPartition
+from taxalotl.partitions import do_partition
 
 _LOG = get_logger(__name__)
 
@@ -44,11 +44,10 @@ def partition_col(res_wrapper, part_name, part_keys, par_frag):
                  part_name,
                  part_keys,
                  par_frag,
-                 master_map=COL_PARTMAP,
-                 parse_and_partition_fn=partition_col_by_root_id
-                 )
+                 master_map=COL_PARTMAP)
 
-def partition_col_by_root_id(tax_part): # type (TaxonPartition) -> None
+
+def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
     """Reads the serialized taxonomy of the parent, adds the easy lines to their partition element,
     and returns dicts needed to finish the assignments.
     
@@ -125,4 +124,3 @@ def partition_col_by_root_id(tax_part): # type (TaxonPartition) -> None
             except:
                 _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                 raise
-

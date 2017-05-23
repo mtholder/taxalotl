@@ -12,7 +12,6 @@ from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
                                               )
 from taxalotl.partitions import (do_partition,
                                  do_new_separation,
-                                 separate_part_list,
                                  fill_empty_anc_of_mapping,
                                  get_root_ids_for_subset,
                                  get_relative_dir_for_partition,
@@ -21,8 +20,7 @@ from taxalotl.partitions import (do_partition,
                                  PREORDER_PART_LIST,
                                  PARTS_BY_NAME,
                                  PART_FRAG_BY_NAME,
-                                 INP_TAXONOMY_DIRNAME,
-                                 TaxonPartition)
+                                 INP_TAXONOMY_DIRNAME)
 
 _LOG = get_logger(__name__)
 
@@ -70,8 +68,7 @@ def partition_from_auto_maps(res_wrapper, part_name, part_keys, par_frag):
                  part_name,
                  part_keys,
                  par_frag,
-                 master_map=auto_map,
-                 parse_and_partition_fn=partition_ott_by_root_id)
+                 master_map=auto_map)
 
 
 def partition_ott(res_wrapper, part_name, part_keys, par_frag):
@@ -79,11 +76,10 @@ def partition_ott(res_wrapper, part_name, part_keys, par_frag):
                  part_name,
                  part_keys,
                  par_frag,
-                 master_map=OTT_PARTMAP,
-                 parse_and_partition_fn=partition_ott_by_root_id)
+                 master_map=OTT_PARTMAP)
 
 
-def partition_ott_by_root_id(tax_part): # type (TaxonPartition) -> None
+def partition_ott_by_root_id(tax_part):  # type (TaxonPartition) -> None
     complete_taxon_fp = tax_part.taxon_fp
     syn_fp = tax_part.syn_fp
     roots_set = tax_part.roots_set
@@ -218,8 +214,10 @@ def ott_build_paritition_maps(res):
         del filled['silva']
     return filled
 
+
 def get_inp_taxdir(parts_dir, frag, taxonomy_id):
     return os.path.join(parts_dir, frag, INP_TAXONOMY_DIRNAME, taxonomy_id)
+
 
 def get_all_taxdir_and_misc_uncles(parts_dir, frag, taxonomy_id):
     d = [get_inp_taxdir(parts_dir, frag, taxonomy_id)]
@@ -233,7 +231,10 @@ def get_all_taxdir_and_misc_uncles(parts_dir, frag, taxonomy_id):
                 break
     return d
 
+
 norm_char_pat = re.compile(r'[-a-zA-Z0-9._]')
+
+
 def escape_odd_char(s):
     l = []
     for i in s:
@@ -242,6 +243,7 @@ def escape_odd_char(s):
         else:
             l.append('_')
     return ''.join(l)
+
 
 def new_separation_based_on_ott_alignment(res, part_name, sep_obj, frag, sep_fn):
     edir = os.path.join(frag, part_name)
@@ -281,6 +283,7 @@ def ott_enforce_new_separators(res, part_key, sep_fn):
     sep_obj = read_as_json(sep_fp)
     _LOG.info('{}: {} separators:  {}'.format(part_key, len(sep_obj.keys()), sep_obj.keys()))
     res.new_separate(part_key, sep_obj, PART_FRAG_BY_NAME[part_key], sep_fn)
+
 
 def ott_diagnose_new_separators(res, current_partition_key):
     tax_dir = res.get_taxdir_for_part(current_partition_key)
@@ -351,9 +354,7 @@ class NewSeparator(object):
             sep.write_str(out, ns)
 
     def as_dict(self):
-        d = {}
-        d["name"] = self.taxon.name
-        d["uniqname"] = self.taxon.name_that_is_unique
+        d = {"name": self.taxon.name, "uniqname": self.taxon.name_that_is_unique}
         sd = {}
         for k, v in self.taxon.src_dict.items():
             vl = list(v)

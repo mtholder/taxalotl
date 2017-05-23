@@ -154,6 +154,7 @@ def _write_taxon(header, dict_to_write, id_order, dest_path):
         outp.write(header)
     _append_taxon(dict_to_write, id_order, dest_path)
 
+
 def _write_taxon_list(header, record_list, dest_path):
     _LOG.info('Writing header to "{}"'.format(dest_path))
     pd = os.path.split(dest_path)[0]
@@ -161,6 +162,7 @@ def _write_taxon_list(header, record_list, dest_path):
     with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
         outp.write(header)
     _append_taxon_list(record_list, dest_path)
+
 
 def _append_taxon_list(record_list, dest_path):
     if not record_list:
@@ -210,7 +212,7 @@ class PartitionElement(object):
             olri = [i.strip() for i in outp if i.strip()]
             oldset = set(olri)
             sri.update(oldset)
-        self.write_roots(self, sri)
+        self.write_roots(sri)
 
     def write_lines(self, header, syn_header=None):
         _write_taxon(header, self.all_stored, self.id_order, self.dest_path)
@@ -358,6 +360,7 @@ def get_root_ids_for_subset(tax_dir):
         idset.update(content)
     return idset
 
+
 def merge_and_write_taxon_partition_list(tp_list):
     if not tp_list:
         return
@@ -365,6 +368,8 @@ def merge_and_write_taxon_partition_list(tp_list):
     dest_tp.write()
     for another in tp_list[1:]:
         another.append_write()
+
+
 class TaxonPartition(object):
     def __init__(self, taxon_fp, syn_fp, partition_el_list, parsing_func):
         self.partition_el = partition_el_list
@@ -372,11 +377,13 @@ class TaxonPartition(object):
         self.syn_fp = syn_fp
         self.taxon_header = None
         self.syn_header = None
-        self.roots_set, self.by_roots, self.garbage_bin = separate_part_list(partition_el_list)
+        t = separate_part_list(partition_el_list)
+        self.roots_set, self.by_roots, self.garbage_bin = t
         self.id_to_line = {}
         self.id_by_par = {}
         self.syn_by_id = {}
         self.id_to_el = {}
+        _LOG.info(repr(parsing_func))
         parsing_func(self)
         self.finish_partition_from_dict()
         self.register_synonyms()
@@ -418,6 +425,7 @@ class TaxonPartition(object):
             pr = [r for r in self.roots_set if self.id_to_el.get(r) is part]
             part.append_write_roots(pr)
 
+
 def do_new_separation(res,
                       new_par_dir,
                       inp_dir_list,
@@ -439,10 +447,10 @@ def do_new_separation(res,
     to_remove = []
     for inp_dir in inp_dir_list:
         tp, rm_file = _partition_from_mapping(res,
-                                     mapping,
-                                     inp_dir,
-                                     partition_parsing_fn=res.partition_parsing_fn,
-                                     par_dir=new_par_dir)
+                                              mapping,
+                                              inp_dir,
+                                              partition_parsing_fn=res.partition_parsing_fn,
+                                              par_dir=new_par_dir)
         tp_list.append(tp)
         to_remove.append(rm_file)
     merge_and_write_taxon_partition_list(tp_list)
@@ -456,9 +464,7 @@ def do_partition(res,
                  part_name,
                  part_keys,
                  par_frag,
-                 master_map,
-                 parse_and_partition_fn
-                 ):
+                 master_map):
     """Partition a parent taxon into descendants and garbagebin (__misc__) dir
 
     :param res: a wrapper around the resource. Used for id, part_source_filepath, 
@@ -466,7 +472,6 @@ def do_partition(res,
     :param part_keys:
     :param par_frag:
     :param master_map:
-    :param parse_and_partition_fn:
     :return:
     """
     par_dir = os.path.join(res.partitioned_filepath, par_frag, part_name)
@@ -481,14 +486,15 @@ def do_partition(res,
         _LOG.info("No {} mapping for {}".format(res.id, part_name))
         return
     tp, to_remove_file = _partition_from_mapping(res,
-                                           mapping,
-                                           os.path.split(inp_filepath)[0],
-                                           partition_parsing_fn=res.partition_parsing_fn,
-                                           par_dir=par_dir)
+                                                 mapping,
+                                                 os.path.split(inp_filepath)[0],
+                                                 partition_parsing_fn=res.partition_parsing_fn,
+                                                 par_dir=par_dir)
     tp.write()
     if to_remove_file is not None:
         _LOG.info("removing pre-partitioned file at {}".format(to_remove_file))
         os.unlink(to_remove_file)
+
 
 def _partition_from_mapping(res, mapping, inp_dir, partition_parsing_fn, par_dir):
     """Returns a pair: a TaxonPartition element and the filepath to remove (or None)

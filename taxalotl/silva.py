@@ -5,16 +5,17 @@
 #   Jessica Grant as a part of the reference_taxonomy and OToL efforts.
 from __future__ import print_function
 
+import codecs
+import os
+
 from peyotl import (assure_dir_exists,
                     get_logger,
                     read_as_json,
                     write_as_json)
-import codecs
-import os
+
+from taxalotl.commands import unpack_resources
 from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
 from taxalotl.partitions import do_partition, GEN_MAPPING_FILENAME
-from taxalotl.commands import unpack_resources
-from taxalotl.ott import partition_ott_by_root_id
 
 _LOG = get_logger(__name__)
 
@@ -213,5 +214,4 @@ def partition_silva(res_wrapper, part_name, part_keys, par_frag):
                  part_name,
                  part_keys,
                  par_frag,
-                 master_map=silva_map,
-                 parse_and_partition_fn=partition_ott_by_root_id)
+                 master_map=silva_map)
