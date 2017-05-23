@@ -203,7 +203,7 @@ class PartitionElement(object):
         with codecs.open(self.roots_file, 'w', encoding='utf-8') as outp:
             outp.write('\n'.join([str(i) for i in root_ids]))
 
-    def append_roots(self, root_ids):
+    def append_write_roots(self, root_ids):
         if not root_ids:
             _LOG.info('No root ids need to be apppended to "{}"'.format(self.roots_file))
             return
@@ -260,10 +260,14 @@ class TaxAndSynFileOnlyPartitionElement(PartitionElement):
                                   roots,
                                   dest_path=dest_path)
         fn = 'taxonomy.tsv'
-        assert path_suffix.endswith(fn)
-        self.syn_path_suffix = path_suffix[:-len(fn)] + syn_filename
-        self.syn_path = os.path.join(path_pref, fragment, INP_TAXONOMY_DIRNAME,
-                                     self.syn_path_suffix)
+        if path_suffix:
+            assert path_suffix.endswith(fn)
+            syn_path_suffix = path_suffix[:-len(fn)] + syn_filename
+            self.syn_path = os.path.join(path_pref, fragment, INP_TAXONOMY_DIRNAME,
+                                         syn_path_suffix)
+        else:
+            assert dest_path.endswith(fn)
+            self.syn_path = os.path.join(os.path.split(dest_path)[0], syn_filename)
         self.syn_stored = {}
         self.syn_id_order = []
         self.id_less_syn = []
@@ -290,12 +294,12 @@ class TaxAndSynFileOnlyPartitionElement(PartitionElement):
             _append_taxon(self.syn_stored, self.syn_id_order, self.syn_path)
 
 
-def create_partition_element(path_pref=None,
-                             fragment=None,
-                             path_suffix=None,
-                             roots=None,
-                             syn_filename=None,
-                             dest_path=None):
+def _create_partition_element(path_pref=None,
+                              fragment=None,
+                              path_suffix=None,
+                              roots=None,
+                              syn_filename=None,
+                              dest_path=None):
     if not syn_filename:
         return TaxonFileOnlyPartitionElement(path_pref,
                                              fragment,
@@ -364,10 +368,15 @@ def get_root_ids_for_subset(tax_dir):
 def merge_and_write_taxon_partition_list(tp_list):
     if not tp_list:
         return
-    dest_tp = tp_list[0]
-    dest_tp.write()
-    for another in tp_list[1:]:
-        another.append_write()
+    fp_set = set()
+    for tp in tp_list:
+        fp = tp.taxon_fp
+        if fp in fp_set:
+            tp.append_write()
+        else:
+            tp.write()
+            fp_set.add(fp)
+
 
 
 class TaxonPartition(object):
@@ -446,6 +455,7 @@ def do_new_separation(res,
     tp_list = []
     to_remove = []
     for inp_dir in inp_dir_list:
+        _LOG.info("partitioning new_par_dir = {} from {}".format(new_par_dir, inp_dir))
         tp, rm_file = _partition_from_mapping(res,
                                               mapping,
                                               inp_dir,
@@ -514,22 +524,22 @@ def _partition_from_mapping(res, mapping, inp_dir, partition_parsing_fn, par_dir
     remove_input = (not in_misc) and (not top_life_dir == inp_dir)
     partition_el = []
     for tag, roots in mapping:
-        pe = create_partition_element(path_pref=par_dir,
-                                      fragment=tag,
-                                      path_suffix=path_suffix,
-                                      roots=roots,
-                                      syn_filename=res.synonyms_filename)
+        pe = _create_partition_element(path_pref=par_dir,
+                                       fragment=tag,
+                                       path_suffix=path_suffix,
+                                       roots=roots,
+                                       syn_filename=res.synonyms_filename)
         partition_el.append(pe)
     if in_misc:
-        pe = create_partition_element(dest_path=inp_dir,
-                                      roots=None,
-                                      syn_filename=res.synonyms_filename)
+        pe = _create_partition_element(dest_path=inp_filepath,
+                                       roots=None,
+                                       syn_filename=res.synonyms_filename)
     else:
-        pe = create_partition_element(path_pref=par_dir,
-                                      fragment=MISC_DIRNAME,
-                                      path_suffix=path_suffix,
-                                      roots=None,
-                                      syn_filename=res.synonyms_filename)
+        pe = _create_partition_element(path_pref=par_dir,
+                                       fragment=MISC_DIRNAME,
+                                       path_suffix=path_suffix,
+                                       roots=None,
+                                       syn_filename=res.synonyms_filename)
     partition_el.append(pe)
     for part in partition_el:
         o = part.existing_output

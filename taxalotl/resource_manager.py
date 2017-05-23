@@ -20,7 +20,6 @@ from taxalotl.ott import (partition_ott, partition_from_auto_maps,
                           ott_diagnose_new_separators,
                           ott_enforce_new_separators,
                           ott_build_paritition_maps,
-                          new_separation_based_on_ott_alignment,
                           partition_ott_by_root_id,
                           )
 from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
@@ -377,9 +376,6 @@ class ResourceWrapper(object):
 
     def partition(self, part_name, part_keys, par_frag):
         raise NotImplementedError('Partition not implemented for base ResourceWrapper')
-
-    def new_separate(self, part_name, sep_obj, par_frag, sep_fn):
-        return new_separation_based_on_ott_alignment(self, part_name, sep_obj, par_frag, sep_fn)
 
     def write_status(self, out, indent='', list_all_artifacts=False):
         dfp = self.download_filepath

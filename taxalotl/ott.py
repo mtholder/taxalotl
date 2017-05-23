@@ -4,7 +4,7 @@ import codecs
 import os
 import re
 
-from peyotl import get_logger, read_as_json
+from peyotl import get_logger, read_as_json, write_as_json
 from peyotl.utility.str_util import StringIO
 
 from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
@@ -78,89 +78,100 @@ def partition_ott(res_wrapper, part_name, part_keys, par_frag):
                  par_frag,
                  master_map=OTT_PARTMAP)
 
-
-def partition_ott_by_root_id(tax_part):  # type (TaxonPartition) -> None
-    complete_taxon_fp = tax_part.taxon_fp
+def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     syn_fp = tax_part.syn_fp
+    syn_by_id = tax_part.syn_by_id
+    tax_part.syn_header = ''
+    if not os.path.exists(syn_fp):
+        return
+    with codecs.open(syn_fp, 'rU', encoding='utf-8') as inp:
+        iinp = iter(inp)
+        try:
+            tax_part.syn_header = iinp.next()
+        except StopIteration:
+            return
+        shs = tax_part.syn_header.split('\t|\t')
+        if shs[0] == 'uid':
+            uid_ind = 0
+        elif shs[1] == 'uid':
+            uid_ind = 1
+        else:
+            raise ValueError("Expected one of the first 2 columns of an OTT formatted "
+                             "synonyms file to be 'uid'. Problem reading: {}".format(syn_fp))
+        for n, line in enumerate(iinp):
+            ls = line.split('\t|\t')
+            if n % 1000 == 0:
+                _LOG.info(' read synonym {}'.format(n))
+            try:
+                accept_id = ls[uid_ind]
+                try:
+                    accept_id = int(accept_id)
+                except:
+                    pass
+                syn_by_id.setdefault(accept_id, []).append((None, line))
+            except:
+                _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
+                raise
+
+def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
+    complete_taxon_fp = tax_part.taxon_fp
     roots_set = tax_part.roots_set
     by_roots = tax_part.by_roots
     garbage_bin = tax_part.garbage_bin
     id_to_line = tax_part.id_to_line
     id_by_par = tax_part.id_by_par
-    syn_by_id = tax_part.syn_by_id
     id_to_el = tax_part.id_to_el
-
-    if os.path.exists(syn_fp):
-        with codecs.open(syn_fp, 'rU', encoding='utf-8') as inp:
-            iinp = iter(inp)
-            tax_part.syn_header = iinp.next()
-            shs = tax_part.syn_header.split('\t|\t')
-            if shs[0] == 'uid':
-                uid_ind = 0
-            elif shs[1] == 'uid':
-                uid_ind = 1
-            else:
-                raise ValueError("Expected one of the first 2 columns of an OTT formatted "
-                                 "synonyms file to be 'uid'. Problem reading: {}".format(syn_fp))
-
-            for n, line in enumerate(iinp):
-                ls = line.split('\t|\t')
-                if n % 1000 == 0:
-                    _LOG.info(' read synonym {}'.format(n))
-                try:
-                    accept_id = ls[uid_ind]
-                    try:
-                        accept_id = int(accept_id)
-                    except:
-                        pass
-                    syn_by_id.setdefault(accept_id, []).append((None, line))
-                except:
-                    _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
-                    raise
-    else:
-        tax_part.syn_header = ''
-    if os.path.exists(complete_taxon_fp):
-        with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
-            iinp = iter(inp)
+    tax_part.taxon_header = ''
+    if not os.path.exists(complete_taxon_fp):
+        return
+    with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
+        iinp = iter(inp)
+        try:
             tax_part.taxon_header = iinp.next()
-            for n, line in enumerate(iinp):
-                ls = line.split('\t|\t')
-                if n % 1000 == 0:
-                    _LOG.info(' read taxon {}'.format(n))
+        except StopIteration:
+            return
+        for n, line in enumerate(iinp):
+            ls = line.split('\t|\t')
+            if n % 1000 == 0:
+                _LOG.info(' read taxon {}'.format(n))
+            try:
+                uid, par_id = ls[0], ls[1]
                 try:
-                    uid, par_id = ls[0], ls[1]
-                    try:
-                        uid = int(uid)
-                    except:
-                        pass
-                    if uid in roots_set:
-                        # _LOG.info("{} not in {}".format(uid, roots_set))
-                        match_l = [i[1] for i in by_roots if uid in i[0]]
-                        assert len(match_l) == 1
-                        match_el = match_l[0]
+                    uid = int(uid)
+                except:
+                    pass
+                if uid in roots_set:
+                    # _LOG.info("{} not in {}".format(uid, roots_set))
+                    match_l = [i[1] for i in by_roots if uid in i[0]]
+                    assert len(match_l) == 1
+                    match_el = match_l[0]
+                    id_to_el[uid] = match_el
+                    match_el.add(uid, line)
+                    if garbage_bin is not None:
+                        garbage_bin.add(uid, line)
+                else:
+                    # _LOG.info("{} not in {}".format(uid, roots_set))
+                    if par_id:
+                        try:
+                            par_id = int(par_id)
+                        except:
+                            pass
+                    match_el = id_to_el.get(par_id)
+                    if match_el is not None:
                         id_to_el[uid] = match_el
                         match_el.add(uid, line)
-                        if garbage_bin is not None:
-                            garbage_bin.add(uid, line)
                     else:
-                        # _LOG.info("{} not in {}".format(uid, roots_set))
-                        if par_id:
-                            try:
-                                par_id = int(par_id)
-                            except:
-                                pass
-                        match_el = id_to_el.get(par_id)
-                        if match_el is not None:
-                            id_to_el[uid] = match_el
-                            match_el.add(uid, line)
-                        else:
-                            id_by_par.setdefault(par_id, []).append(uid)
-                            id_to_line[uid] = line
-                except:
-                    _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
-                    raise
-    else:
-        tax_part.taxon_header = ''
+                        id_by_par.setdefault(par_id, []).append(uid)
+                        id_to_line[uid] = line
+            except:
+                _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
+                raise
+
+
+def partition_ott_by_root_id(tax_part):  # type (TaxonPartition) -> None
+    _parse_synonyms(tax_part)
+    _parse_taxa(tax_part)
+
 
 
 def ott_fetch_root_taxon_for_partition(res, parts_key, root_id):
@@ -245,7 +256,7 @@ def escape_odd_char(s):
     return ''.join(l)
 
 
-def new_separation_based_on_ott_alignment(res, part_name, sep_obj, frag, sep_fn):
+def new_separation_based_on_ott_alignment(ott_res, part_name, sep_obj, frag, sep_fn):
     edir = os.path.join(frag, part_name)
     _LOG.info('sep_obj: {}'.format(sep_obj.keys()))
     _LOG.info('edir: {}'.format(edir))
@@ -257,12 +268,15 @@ def new_separation_based_on_ott_alignment(res, part_name, sep_obj, frag, sep_fn)
         sep_id_to_fn[sep_id] = escape_odd_char(i["uniqname"])
 
     _LOG.info('src_set: {}'.format(src_set))
-    taxalotl_config = res.config
+    taxalotl_config = ott_res.config
     res_list = [(i, taxalotl_config.get_terminalized_res_by_id(i)) for i in src_set]
     res_id_to_res_dirs = {}
-    pd = res.partitioned_filepath
+    pd = ott_res.partitioned_filepath
     new_par_dir = os.path.join(pd, edir)
     for src, res in res_list:
+        if src != 'silva':
+            _LOG.info("skipping non silva res {}".format(src))
+            continue
         ad = get_all_taxdir_and_misc_uncles(pd, edir, res.id)
         ed = [i for i in ad if os.path.isfile(os.path.join(i, res.taxon_filename))]
         sep_dir_ids_list = []
@@ -272,7 +286,25 @@ def new_separation_based_on_ott_alignment(res, part_name, sep_obj, frag, sep_fn)
         res_id_to_res_dirs[res.id] = (res, ed, sep_dir_ids_list)
         _LOG.info('{}: {} : {}'.format(src, ed, sep_dir_ids_list))
         do_new_separation(res, new_par_dir, ed, sep_dir_ids_list)
-
+    recursive_call_list = []
+    for sep_id, obj in sep_obj.items():
+        sub = obj.get("sub")
+        if not sub:
+            continue
+        next_part = sep_id_to_fn[sep_id]
+        subdir = os.path.join(new_par_dir, next_part)
+        subjson = os.path.join(subdir, sep_fn)
+        write_as_json(sub, subjson, indent=2, sort_keys=True, separators=(',', ': '))
+        _LOG.info('sub separation file written to "{}"'.format(subjson))
+        rec_el = (next_part, sub)
+        recursive_call_list.append(rec_el)
+    for recurse_el in recursive_call_list:
+        next_part, next_sep = recurse_el
+        new_separation_based_on_ott_alignment(ott_res,
+                                              part_name=next_part,
+                                              sep_obj=next_sep,
+                                              frag=edir,
+                                              sep_fn=sep_fn)
 
 def ott_enforce_new_separators(res, part_key, sep_fn):
     df = get_relative_dir_for_partition(part_key)
@@ -282,8 +314,11 @@ def ott_enforce_new_separators(res, part_key, sep_fn):
         return
     sep_obj = read_as_json(sep_fp)
     _LOG.info('{}: {} separators:  {}'.format(part_key, len(sep_obj.keys()), sep_obj.keys()))
-    res.new_separate(part_key, sep_obj, PART_FRAG_BY_NAME[part_key], sep_fn)
-
+    new_separation_based_on_ott_alignment(res,
+                                          part_key,
+                                          sep_obj,
+                                          PART_FRAG_BY_NAME[part_key],
+                                          sep_fn)
 
 def ott_diagnose_new_separators(res, current_partition_key):
     tax_dir = res.get_taxdir_for_part(current_partition_key)
