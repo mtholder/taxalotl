@@ -122,7 +122,6 @@ def read_irmng_file(irmng_file_name):
 
 def fix_irmng(itd):
     # Get rid of all synonym of a synonym
-    synonyms = itd.synonyms
     syn_id_to_valid = itd.syn_id_to_valid
     to_check = set(syn_id_to_valid.keys())
     loser_synonyms = set()
@@ -302,6 +301,7 @@ def read_extinct_info(profile_file_name, itd):
     itd.extinct_known = d
 
 
+# noinspection PyUnusedLocal
 def normalize_irmng(source, destination, res_wrapper):
     i_file, prof_file = _find_irmng_input_files(source)
     itd = read_irmng_file(i_file)

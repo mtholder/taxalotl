@@ -1,9 +1,10 @@
-from __future__ import print_function
+#!/usr/bin/env python
+# from __future__ import print_function
 
 import codecs
 import os
 
-from peyotl import get_logger, read_as_json, write_as_json
+from peyotl import get_logger
 from peyotl.utility.str_util import StringIO
 
 from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
@@ -74,6 +75,7 @@ def partition_ott(res_wrapper, part_name, part_keys, par_frag):
                  par_frag,
                  master_map=OTT_PARTMAP)
 
+
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     syn_fp = tax_part.syn_fp
     syn_by_id = tax_part.syn_by_id
@@ -109,14 +111,9 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
                 _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                 raise
 
+
 def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
     complete_taxon_fp = tax_part.taxon_fp
-    roots_set = tax_part.roots_set
-    by_roots = tax_part.by_roots
-    garbage_bin = tax_part.garbage_bin
-    id_to_line = tax_part.id_to_line
-    id_by_par = tax_part.id_by_par
-    id_to_el = tax_part.id_to_el
     tax_part.taxon_header = ''
     if not os.path.exists(complete_taxon_fp):
         return
@@ -136,29 +133,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
                     uid = int(uid)
                 except:
                     pass
-                if uid in roots_set:
-                    # _LOG.info("{} not in {}".format(uid, roots_set))
-                    match_l = [i[1] for i in by_roots if uid in i[0]]
-                    assert len(match_l) == 1
-                    match_el = match_l[0]
-                    id_to_el[uid] = match_el
-                    match_el.add(uid, line)
-                    if garbage_bin is not None:
-                        garbage_bin.add(uid, line)
-                else:
-                    # _LOG.info("{} not in {}".format(uid, roots_set))
-                    if par_id:
-                        try:
-                            par_id = int(par_id)
-                        except:
-                            pass
-                    match_el = id_to_el.get(par_id)
-                    if match_el is not None:
-                        id_to_el[uid] = match_el
-                        match_el.add(uid, line)
-                    else:
-                        id_by_par.setdefault(par_id, []).append(uid)
-                        id_to_line[uid] = line
+                tax_part.read_taxon_line(uid, par_id, line)
             except:
                 _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                 raise
@@ -167,7 +142,6 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
 def partition_ott_by_root_id(tax_part):  # type (TaxonPartition) -> None
     _parse_synonyms(tax_part)
     _parse_taxa(tax_part)
-
 
 
 def ott_fetch_root_taxon_for_partition(res, parts_key, root_id):

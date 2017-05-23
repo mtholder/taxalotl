@@ -102,18 +102,21 @@ def copy_file_list_by_linking(unpacked_dirp, normalized_dirp, file_list):
                 os.symlink(ufp, dfp)
 
 
+# noinspection PyUnusedLocal
 def copy_taxonomy_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
     copy_file_list_by_linking(unpacked_dirp,
                               normalized_dirp,
                               OTT_TAXONOMY_FILENAMES)
 
 
+# noinspection PyUnusedLocal
 def copy_id_list_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
     copy_file_list_by_linking(unpacked_dirp,
                               normalized_dirp,
                               OTT_TAXONOMY_ID_FILES)
 
 
+# noinspection PyUnusedLocal
 def copy_and_add_ott_headers(unpacked_dirp, normalized_dirp, resource_wrapper):
     motf = list(OTT_TAXONOMY_FILENAMES)
     special = [('taxonomy.tsv', INP_OTT_TAXONOMY_HEADER),
@@ -131,6 +134,7 @@ def copy_and_add_ott_headers(unpacked_dirp, normalized_dirp, resource_wrapper):
                 out.write(content)
 
 
+# noinspection PyUnusedLocal
 def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
     motf = list(OTT_TAXONOMY_FILENAMES)
     special = [('taxonomy.tsv', INP_OTT_TAXONOMY_HEADER)]
@@ -219,6 +223,7 @@ class ResourceWrapper(object):
     partition_parsing_fn = staticmethod(partition_ott_by_root_id)
 
     def __init__(self, obj, parent=None, refs=None, config=None):
+        self.base_id = None
         for k in _known_res_attr:
             self.__dict__[k] = obj.get(k)
         for k in obj.keys():

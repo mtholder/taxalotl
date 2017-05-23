@@ -35,6 +35,7 @@ def download_resources(taxalotl_config, id_list):
               'up-to-date.\nEnter y to continue downloading {} : '.format(rid)
         prompt += tag
         try:
+            # noinspection PyCompatibility
             resp = raw_input(prompt)
         except NameError:
             resp = input(prompt)

@@ -30,6 +30,7 @@ def parse_silva_ids(fn):
     return preferred
 
 
+# noinspection PyUnusedLocal
 def normalize_silva_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
     depends_on = res_wrapper.depends_on

@@ -69,14 +69,7 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
     complete_taxon_fp = tax_part.taxon_fp
     syn_fp = tax_part.syn_fp
     assert not syn_fp
-    roots_set = tax_part.roots_set
-    by_roots = tax_part.by_roots
-    garbage_bin = tax_part.garbage_bin
-    id_to_line = tax_part.id_to_line
-    id_by_par = tax_part.id_by_par
     syn_by_id = tax_part.syn_by_id
-    id_to_el = tax_part.id_to_el
-
     with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         tax_part.taxon_header = iinp.next()
@@ -103,24 +96,7 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
                     accept_id = int(accept_id)
                     syn_by_id.setdefault(accept_id, []).append((col_id, line))
                 else:
-                    if col_id in roots_set:
-                        match_l = [i[1] for i in by_roots if col_id in i[0]]
-                        assert len(match_l) == 1
-                        match_el = match_l[0]
-                        id_to_el[col_id] = match_el
-                        match_el.add(col_id, line)
-                        if garbage_bin is not None:
-                            garbage_bin.add(col_id, line)
-                    else:
-                        if par_id:
-                            par_id = int(par_id)
-                        match_el = id_to_el.get(par_id)
-                        if match_el is not None:
-                            id_to_el[col_id] = match_el
-                            match_el.add(col_id, line)
-                        else:
-                            id_by_par.setdefault(par_id, []).append(col_id)
-                            id_to_line[col_id] = line
+                    tax_part.read_taxon_line(col_id, par_id, line)
             except:
                 _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                 raise

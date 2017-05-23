@@ -239,6 +239,7 @@ def add_fake_root(itd):
     itd.root_nodes = {0}
 
 
+# noinspection PyUnusedLocal
 def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
     proj_out = os.path.join(destination, 'projection.tsv')

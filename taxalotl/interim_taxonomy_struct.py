@@ -209,6 +209,8 @@ class InterimTaxonomyData(object):
         self.synonyms = {}
         self.repeated_names = set()
         self.extinct_known = None
+        self.syn_id_to_valid = None
+        self.extra_blob = None
 
     def finalize(self):
         self.details_log['num_forwards'] = len(self.forwards)
