@@ -2,14 +2,16 @@ from __future__ import print_function
 
 import codecs
 import os
+import re
 
-from peyotl import get_logger
+from peyotl import get_logger, read_as_json
 from peyotl.utility.str_util import StringIO
 
 from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
                                               read_taxonomy_to_get_id_to_fields,
                                               )
 from taxalotl.partitions import (do_partition,
+                                 do_new_separation,
                                  separate_part_list,
                                  fill_empty_anc_of_mapping,
                                  get_root_ids_for_subset,
@@ -17,7 +19,10 @@ from taxalotl.partitions import (do_partition,
                                  get_auto_gen_part_mapper,
                                  MISC_DIRNAME,
                                  PREORDER_PART_LIST,
-                                 PARTS_BY_NAME)
+                                 PARTS_BY_NAME,
+                                 PART_FRAG_BY_NAME,
+                                 INP_TAXONOMY_DIRNAME,
+                                 TaxonPartition)
 
 _LOG = get_logger(__name__)
 
@@ -78,17 +83,22 @@ def partition_ott(res_wrapper, part_name, part_keys, par_frag):
                  parse_and_partition_fn=partition_ott_by_root_id)
 
 
-def partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
-    roots_set, by_roots, garbage_bin = separate_part_list(partition_el_list)
-    id_to_line = {}
-    id_by_par = {}
-    syn_by_id = {}
-    id_to_el = {}
+def partition_ott_by_root_id(tax_part): # type (TaxonPartition) -> None
+    complete_taxon_fp = tax_part.taxon_fp
+    syn_fp = tax_part.syn_fp
+    roots_set = tax_part.roots_set
+    by_roots = tax_part.by_roots
+    garbage_bin = tax_part.garbage_bin
+    id_to_line = tax_part.id_to_line
+    id_by_par = tax_part.id_by_par
+    syn_by_id = tax_part.syn_by_id
+    id_to_el = tax_part.id_to_el
+
     if os.path.exists(syn_fp):
         with codecs.open(syn_fp, 'rU', encoding='utf-8') as inp:
             iinp = iter(inp)
-            syn_header = iinp.next()
-            shs = syn_header.split('\t|\t')
+            tax_part.syn_header = iinp.next()
+            shs = tax_part.syn_header.split('\t|\t')
             if shs[0] == 'uid':
                 uid_ind = 0
             elif shs[1] == 'uid':
@@ -112,11 +122,11 @@ def partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                     _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                     raise
     else:
-        syn_header = ''
+        tax_part.syn_header = ''
     if os.path.exists(complete_taxon_fp):
         with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
             iinp = iter(inp)
-            header = iinp.next()
+            tax_part.taxon_header = iinp.next()
             for n, line in enumerate(iinp):
                 ls = line.split('\t|\t')
                 if n % 1000 == 0:
@@ -154,8 +164,7 @@ def partition_ott_by_root_id(complete_taxon_fp, syn_fp, partition_el_list):
                     _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                     raise
     else:
-        header = ''
-    return id_by_par, id_to_el, id_to_line, syn_by_id, roots_set, garbage_bin, header, syn_header
+        tax_part.taxon_header = ''
 
 
 def ott_fetch_root_taxon_for_partition(res, parts_key, root_id):
@@ -209,6 +218,69 @@ def ott_build_paritition_maps(res):
         del filled['silva']
     return filled
 
+def get_inp_taxdir(parts_dir, frag, taxonomy_id):
+    return os.path.join(parts_dir, frag, INP_TAXONOMY_DIRNAME, taxonomy_id)
+
+def get_all_taxdir_and_misc_uncles(parts_dir, frag, taxonomy_id):
+    d = [get_inp_taxdir(parts_dir, frag, taxonomy_id)]
+    if os.sep in frag:
+        frag = os.path.split(frag)[0]
+        while frag:
+            d.append(get_inp_taxdir(parts_dir, os.path.join(frag, MISC_DIRNAME), taxonomy_id))
+            if os.sep in frag:
+                frag = os.path.split(frag)[0]
+            else:
+                break
+    return d
+
+norm_char_pat = re.compile(r'[-a-zA-Z0-9._]')
+def escape_odd_char(s):
+    l = []
+    for i in s:
+        if norm_char_pat.match(i):
+            l.append(i)
+        else:
+            l.append('_')
+    return ''.join(l)
+
+def new_separation_based_on_ott_alignment(res, part_name, sep_obj, frag, sep_fn):
+    edir = os.path.join(frag, part_name)
+    _LOG.info('sep_obj: {}'.format(sep_obj.keys()))
+    _LOG.info('edir: {}'.format(edir))
+    _LOG.info('sep_fn: {}'.format(sep_fn))
+    src_set = set()
+    sep_id_to_fn = {}
+    for sep_id, i in sep_obj.items():
+        src_set.update(i['src_dict'].keys())
+        sep_id_to_fn[sep_id] = escape_odd_char(i["uniqname"])
+
+    _LOG.info('src_set: {}'.format(src_set))
+    taxalotl_config = res.config
+    res_list = [(i, taxalotl_config.get_terminalized_res_by_id(i)) for i in src_set]
+    res_id_to_res_dirs = {}
+    pd = res.partitioned_filepath
+    new_par_dir = os.path.join(pd, edir)
+    for src, res in res_list:
+        ad = get_all_taxdir_and_misc_uncles(pd, edir, res.id)
+        ed = [i for i in ad if os.path.isfile(os.path.join(i, res.taxon_filename))]
+        sep_dir_ids_list = []
+        for sep_id, i in sep_obj.items():
+            t = (sep_id_to_fn[sep_id], i['src_dict'][src])
+            sep_dir_ids_list.append(t)
+        res_id_to_res_dirs[res.id] = (res, ed, sep_dir_ids_list)
+        _LOG.info('{}: {} : {}'.format(src, ed, sep_dir_ids_list))
+        do_new_separation(res, new_par_dir, ed, sep_dir_ids_list)
+
+
+def ott_enforce_new_separators(res, part_key, sep_fn):
+    df = get_relative_dir_for_partition(part_key)
+    sep_fp = os.path.join(res.partitioned_filepath, df, sep_fn)
+    if not os.path.isfile(sep_fp):
+        _LOG.info('No separators found for {}'.format(part_key))
+        return
+    sep_obj = read_as_json(sep_fp)
+    _LOG.info('{}: {} separators:  {}'.format(part_key, len(sep_obj.keys()), sep_obj.keys()))
+    res.new_separate(part_key, sep_obj, PART_FRAG_BY_NAME[part_key], sep_fn)
 
 def ott_diagnose_new_separators(res, current_partition_key):
     tax_dir = res.get_taxdir_for_part(current_partition_key)

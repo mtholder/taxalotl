@@ -9,6 +9,7 @@ from taxalotl import TaxalotlConfig
 from taxalotl.commands import (build_partition_maps,
                                clean_resources,
                                diagnose_new_separators,
+                               enforce_new_separators,
                                download_resources,
                                normalize_resources,
                                partition_resources,
@@ -22,7 +23,10 @@ from taxalotl.partitions import (PART_NAMES,
 
 _LOG = get_logger(__name__)
 
-res_indep_cmds = ['pull-otifacts', 'diagnose-new-separators', 'build-partition-maps']
+res_indep_cmds = ['pull-otifacts',
+                  'diagnose-new-separators',
+                  'build-partition-maps',
+                  'enforce-new-separators']
 res_dep_cmds = ['clean', 'status', 'download', 'unpack', 'normalize', 'partition']
 all_cmds = res_dep_cmds + res_indep_cmds
 
@@ -51,6 +55,8 @@ def main_post_parse(args):
             pull_otifacts(taxalotl_config)
         elif args.which == 'diagnose-new-separators':
             diagnose_new_separators(taxalotl_config)
+        elif args.which == 'enforce-new-separators':
+            enforce_new_separators(taxalotl_config)
         elif args.which == 'build-partition-maps':
             build_partition_maps(taxalotl_config)
         elif args.which == 'partition':
@@ -128,6 +134,13 @@ def main():
                                  help="Uses the last OTT build to find taxa IDs that "
                                       "feature are common to the relevant inputs")
     diag_sep_p.set_defaults(which="diagnose-new-separators")
+    # DIAGNOSE-NEW-SEPARATORS
+    enf_sep_p = subp.add_parser('enforce-new-separators',
+                                 help="Uses the __sep__.json files created by "
+                                "diagnose-new-separators to partition by unproblematic"
+                                "taxa")
+    enf_sep_p.set_defaults(which="enforce-new-separators")
+
     # BUILD-PARTITION-MAPS
     build_partition_maps_p = subp.add_parser('build-partition-maps',
                                              help="Uses the last OTT build to find the "

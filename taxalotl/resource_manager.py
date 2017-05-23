@@ -15,10 +15,13 @@ from taxalotl.ncbi import normalize_ncbi
 from taxalotl.irmng import normalize_irmng
 from taxalotl.silva import normalize_silva_taxonomy, partition_silva
 from taxalotl.darwin_core import normalize_darwin_core_taxonomy
-from taxalotl.col import partition_col
+from taxalotl.col import partition_col, partition_col_by_root_id
 from taxalotl.ott import (partition_ott, partition_from_auto_maps,
                           ott_diagnose_new_separators,
-                          ott_build_paritition_maps
+                          ott_enforce_new_separators,
+                          ott_build_paritition_maps,
+                          new_separation_based_on_ott_alignment,
+                          partition_ott_by_root_id,
                           )
 from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_part_inp_taxdir,
@@ -214,6 +217,7 @@ _known_res_attr = frozenset(['aliases',
 class ResourceWrapper(object):
     taxon_filename = 'taxonomy.tsv'
     synonyms_filename = 'synonyms.tsv'
+    partition_parsing_fn = partition_ott_by_root_id
 
     def __init__(self, obj, parent=None, refs=None, config=None):
         for k in _known_res_attr:
@@ -373,6 +377,10 @@ class ResourceWrapper(object):
     def partition(self, part_name, part_keys, par_frag):
         raise NotImplementedError('Partition not implemented for base ResourceWrapper')
 
+    def new_separate(self, part_name, sep_obj, par_frag, sep_fn):
+        return new_separation_based_on_ott_alignment(self, part_name, sep_obj, par_frag, sep_fn)
+
+
     def write_status(self, out, indent='', list_all_artifacts=False):
         dfp = self.download_filepath
         if dfp is None:
@@ -441,7 +449,7 @@ class SilvaIdListWrapper(ExternalTaxonomyWrapper):
 class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
     taxon_filename = 'taxa.txt'
     synonyms_filename = None
-
+    partition_parsing_fn = partition_col_by_root_id
     @property
     def partition_source_filepath(self):
         return self.unpacked_filepath
@@ -459,6 +467,9 @@ class OTTaxonomyWrapper(ResourceWrapper):
 
     def diagnose_new_separators(self, current_partition_key):
         return ott_diagnose_new_separators(self, current_partition_key)
+
+    def enforce_new_separators(self, curr_part_key, sep_file_name):
+        return ott_enforce_new_separators(self, curr_part_key, sep_file_name)
 
     def build_paritition_maps(self):
         return ott_build_paritition_maps(self)

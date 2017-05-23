@@ -198,6 +198,16 @@ def diagnose_new_separators(taxalotl_config):
                 write_as_json(sd.as_dict(), fp, sort_keys=True, indent=2)
                 _LOG.info("new separators written to {}".format(fp))
 
+def enforce_new_separators(taxalotl_config):
+    rw = taxalotl_config.get_terminalized_res_by_id("ott", 'enforce-new-separators')
+    if not rw.has_been_partitioned():
+        partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
+    pd = rw.partitioned_filepath
+
+    for part_name in ['Archaea']: # PART_NAMES:
+        nsd = rw.enforce_new_separators(part_name, DIAG_PART_FN)
+
+
 def build_partition_maps(taxalotl_config):
     partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
     rw = taxalotl_config.get_terminalized_res_by_id("ott", 'partition')

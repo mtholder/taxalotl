@@ -163,11 +163,14 @@ def _write_taxon_list(header, record_list, dest_path):
 
 
 class PartitionElement(object):
-    def __init__(self, path_pref, fragment, path_suffix, roots):
-        self.path_pref = path_pref
-        self.fragment = fragment
-        self.path_suffix = path_suffix
-        self.dest_path = os.path.join(path_pref, fragment, INP_TAXONOMY_DIRNAME, path_suffix)
+    def __init__(self, path_pref, fragment, path_suffix, roots, dest_path):
+        if dest_path:
+            self.dest_path = dest_path
+        else:
+            self.path_pref = path_pref
+            self.fragment = fragment
+            self.path_suffix = path_suffix
+            self.dest_path = os.path.join(path_pref, fragment, INP_TAXONOMY_DIRNAME, path_suffix)
         self.roots = roots
         self.all_stored = {}
         self.id_order = []
@@ -203,16 +206,26 @@ class PartitionElement(object):
 
 
 class TaxonFileOnlyPartitionElement(PartitionElement):
-    def __init__(self, path_pref, fragment, path_suffix, roots):
-        PartitionElement.__init__(self, path_pref, fragment, path_suffix, roots)
+    def __init__(self, path_pref, fragment, path_suffix, roots, dest_path):
+        PartitionElement.__init__(self,
+                                  path_pref,
+                                  fragment,
+                                  path_suffix,
+                                  roots,
+                                  dest_path=dest_path)
 
     def add_synonym(self, el_id, line):
         self.add(el_id, line)
 
 
 class TaxAndSynFileOnlyPartitionElement(PartitionElement):
-    def __init__(self, path_pref, fragment, path_suffix, roots, syn_filename):
-        PartitionElement.__init__(self, path_pref, fragment, path_suffix, roots)
+    def __init__(self, path_pref, fragment, path_suffix, roots, syn_filename, dest_path):
+        PartitionElement.__init__(self,
+                                  path_pref,
+                                  fragment,
+                                  path_suffix,
+                                  roots,
+                                  dest_path=dest_path)
         fn = 'taxonomy.tsv'
         assert path_suffix.endswith(fn)
         self.syn_path_suffix = path_suffix[:-len(fn)] + syn_filename
@@ -237,10 +250,24 @@ class TaxAndSynFileOnlyPartitionElement(PartitionElement):
             _write_taxon(header, self.syn_stored, self.syn_id_order, self.syn_path)
 
 
-def create_partition_element(path_pref, fragment, path_suffix, roots, syn_filename):
+def create_partition_element(path_pref=None,
+                             fragment=None,
+                             path_suffix=None,
+                             roots=None,
+                             syn_filename=None,
+                             dest_path=None):
     if not syn_filename:
-        return TaxonFileOnlyPartitionElement(path_pref, fragment, path_suffix, roots)
-    return TaxAndSynFileOnlyPartitionElement(path_pref, fragment, path_suffix, roots, syn_filename)
+        return TaxonFileOnlyPartitionElement(path_pref,
+                                             fragment,
+                                             path_suffix,
+                                             roots,
+                                             dest_path=dest_path)
+    return TaxAndSynFileOnlyPartitionElement(path_pref,
+                                             fragment,
+                                             path_suffix,
+                                             roots,
+                                             syn_filename,
+                                             dest_path=dest_path)
 
 
 def find_partition_dirs_for_taxonomy(path_pref, res_id):
@@ -294,6 +321,117 @@ def get_root_ids_for_subset(tax_dir):
     return idset
 
 
+class TaxonPartition(object):
+    def __init__(self, taxon_fp, syn_fp, partition_el_list, parsing_func):
+        self.partition_el = partition_el_list
+        self.taxon_fp = taxon_fp
+        self.syn_fp = syn_fp
+        self.taxon_header = None
+        self.syn_header = None
+        self.roots_set, self.by_roots, self.garbage_bin = separate_part_list(partition_el_list)
+        self.id_to_line = {}
+        self.id_by_par = {}
+        self.syn_by_id = {}
+        self.id_to_el = {}
+        parsing_func(self)
+        self.finish_partition_from_dict()
+        self.register_synonyms()
+
+    def finish_partition_from_dict(self):
+        while True:
+            par_id_matched = [p for p in self.id_by_par.keys() if p in self.id_to_el]
+            if not par_id_matched:
+                break
+            for p in par_id_matched:
+                id_list = self.id_by_par[p]
+                match_el = self.id_to_el[p]
+                for col_id in id_list:
+                    self.id_to_el[col_id] = match_el
+                    match_el.add(col_id, self.id_to_line[col_id])
+                    del self.id_to_line[col_id]
+                del self.id_by_par[p]
+        if self.garbage_bin is not None:
+            for col_id, line in self.id_to_line.items():
+                self.garbage_bin.add(col_id, line)
+
+    def register_synonyms(self):
+        for accept_id, i_l_list in self.syn_by_id.items():
+            match_el = self.id_to_el.get(accept_id)
+            if match_el is None:
+                match_el = self.garbage_bin
+            for col_id, line in i_l_list:
+                match_el.add_synonym(col_id, line)
+
+    def write(self):
+        for part in self.partition_el:
+            part.write_lines(self.taxon_header, self.syn_header)
+            pr = [r for r in self.roots_set if self.id_to_el.get(r) is part]
+            part.write_roots(pr)
+
+def do_new_separation(res,
+                      new_par_dir,
+                      inp_dir_list,
+                      sub_dir_id_set_pairs_list):
+    """Partition a parent taxon into descendants and garbagebin (__misc__) dir
+    
+    :param res: a wrapper around the resource. Used for id, part_source_filepath, 
+    :param new_par_dir: parent of new dirs
+    :param inp_dir_list: list of input dirs for this res type
+    :param sub_dir_id_set_pairs_list: list of tuples the first element in each tuple
+     is a name of a new subdir to be created. The second element in each tuple
+     is the root IDs of this resource to be put into that dir.):
+    """
+    taxon_filename = res.taxon_filename
+    path_suffix = os.path.join(res.id, taxon_filename)
+    mapping = sub_dir_id_set_pairs_list
+    partition_parsing_fn = res.partition_parsing_fn
+    in_misc = False
+    for inp_dir in inp_dir_list:
+        misc_suffix = os.path.join(MISC_DIRNAME, INP_TAXONOMY_DIRNAME, res.id)
+        if inp_dir.endswith(misc_suffix):
+            in_misc = True
+        remove_input = not in_misc
+        inp_filepath = os.path.join(inp_dir, taxon_filename)
+        _LOG.info('Rewrite "{}" ? {}'.format(inp_filepath, rewrite_input))
+        if not mapping:
+            _LOG.info("No {} mapping to separate {}".format(res.id, new_par_dir))
+            return
+        partition_el = []
+        for tag, roots in mapping:
+            pe = create_partition_element(path_pref=new_par_dir,
+                                          fragment=tag,
+                                          path_suffix=path_suffix,
+                                          roots=roots,
+                                          syn_filename=res.synonyms_filename)
+            partition_el.append(pe)
+        if in_misc:
+            pe = create_partition_element(dest_path=inp_dir,
+                                          roots=None,
+                                          syn_filename=res.synonyms_filename)
+        else:
+            pe = create_partition_element(path_pref=new_par_dir,
+                                          fragment=MISC_DIRNAME,
+                                          path_suffix=path_suffix,
+                                          roots=None,
+                                          syn_filename=res.synonyms_filename)
+        partition_el.append(pe)
+        for part in partition_el:
+            o = part.existing_output
+            if o and not in_misc:
+                m = 'Output for {} already exists at "{}"'
+                _LOG.info(m.format(part.fragment, o))
+                return
+        if res.synonyms_filename:
+            syn_file = os.path.join(os.path.split(inp_filepath)[0], res.synonyms_filename)
+        else:
+            syn_file = ''
+        tp = TaxonPartition(inp_filepath, syn_file, partition_el,
+                            parsing_func=partition_parsing_fn)
+        tp.write()
+        if remove_input and os.path.exists(inp_filepath):
+            _LOG.info("removing unpartitioned taxon file at {}".format(inp_filepath))
+            os.unlink(inp_filepath)
+
 def do_partition(res,
                  part_name,
                  part_keys,
@@ -304,16 +442,13 @@ def do_partition(res,
     """Partition a parent taxon into descendants and garbagebin (__misc__) dir
     
     :param res: a wrapper around the resource. Used for id, part_source_filepath, 
-    :param part_name: 
-    :param part_keys: 
-    :param par_frag: 
-    :param master_map: 
-    :param parse_and_partition_fn: 
-    :return: 
+    :param part_name:
+    :param part_keys:
+    :param par_frag:
+    :param master_map:
+    :param parse_and_partition_fn:
+    :return:
     """
-    # _LOG.info('part_name = {}'.format(part_keys))
-    # _LOG.info('part_keys = {}'.format(part_keys))
-    # _LOG.info('par_frag = {}'.format(repr(par_frag)))
     par_dir = os.path.join(res.partitioned_filepath, par_frag)
     par_dir = os.path.join(par_dir, part_name)
     # _LOG.info('par_dir = {}'.format(repr(par_dir)))
@@ -351,42 +486,9 @@ def do_partition(res,
         syn_file = os.path.join(os.path.split(inp_filepath)[0], res.synonyms_filename)
     else:
         syn_file = ''
-    tup = parse_and_partition_fn(inp_filepath, syn_file, partition_el)
-    id_by_par, id_to_el, id_to_line, syn_by_id, roots_set, garbage_bin, header, syn_header = tup
-
-    finish_partition_from_dict(id_by_par, id_to_el, id_to_line, garbage_bin)
-    register_synonyms(syn_by_id, id_to_el, garbage_bin)
-    for part in partition_el:
-        part.write_lines(header, syn_header)
-        pr = [r for r in roots_set if id_to_el.get(r) is part]
-        part.write_roots(pr)
+    tp = TaxonPartition(inp_filepath, syn_file, partition_el,
+                        parsing_func=parse_and_partition_fn)
+    tp.write()
     if remove_input and os.path.exists(inp_filepath):
         _LOG.info("removing unpartitioned taxon file at {}".format(inp_filepath))
         os.unlink(inp_filepath)
-
-
-def register_synonyms(syn_by_id, id_to_el, garbage_bin):
-    for accept_id, i_l_list in syn_by_id.items():
-        match_el = id_to_el.get(accept_id)
-        if match_el is None:
-            match_el = garbage_bin
-        for col_id, line in i_l_list:
-            match_el.add_synonym(col_id, line)
-
-
-def finish_partition_from_dict(id_by_par, id_to_el, id_to_line, garbage_bin):
-    while True:
-        par_id_matched = [p for p in id_by_par.keys() if p in id_to_el]
-        if not par_id_matched:
-            break
-        for p in par_id_matched:
-            id_list = id_by_par[p]
-            match_el = id_to_el[p]
-            for col_id in id_list:
-                id_to_el[col_id] = match_el
-                match_el.add(col_id, id_to_line[col_id])
-                del id_to_line[col_id]
-            del id_by_par[p]
-    if garbage_bin is not None:
-        for col_id, line in id_to_line.items():
-            garbage_bin.add(col_id, line)
