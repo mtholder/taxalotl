@@ -150,7 +150,8 @@ class LightTaxonomyHolder(object):
         sk.intersection_update(dest_tax_part.contained_ids())
         for s in sk:
             sd = self._syn_by_id[s]
-            dest_tax_part.add_synonym(s, sd[0], sd[1])
+            for pair in sd:
+                dest_tax_part.add_synonym(s, pair[0], pair[1])
             del self._syn_by_id[s]
 
     def move_from_self_to_new_part(self, other):  # type: (PartitioningLightTaxHolder) -> None
