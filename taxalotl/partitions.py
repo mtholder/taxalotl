@@ -6,10 +6,10 @@ import os
 
 from peyotl import get_logger, read_as_json
 
-from taxalotl.tax_partition import (TaxonPartition,
-                                    INP_TAXONOMY_DIRNAME,
+from taxalotl.tax_partition import (INP_TAXONOMY_DIRNAME,
                                     MISC_DIRNAME,
-                                    GEN_MAPPING_FILENAME)
+                                    GEN_MAPPING_FILENAME,
+                                    get_taxon_partition)
 
 _LOG = get_logger(__name__)
 
@@ -68,8 +68,10 @@ PART_NAME_TO_DIRFRAG = {}
 def get_inp_taxdir(parts_dir, frag, taxonomy_id):
     return os.path.join(parts_dir, frag, INP_TAXONOMY_DIRNAME, taxonomy_id)
 
+
 def get_misc_inp_taxdir(parts_dir, frag, taxonomy_id):
     return os.path.join(parts_dir, frag, MISC_DIRNAME, INP_TAXONOMY_DIRNAME, taxonomy_id)
+
 
 def get_all_taxdir_and_misc_uncles(parts_dir, frag, taxonomy_id):
     """Returns a list of dirs for this taxonomy_id starting at
@@ -220,26 +222,14 @@ def do_partition(res,
     :param master_map:
     :return:
     """
-    par_dir = os.path.join(res.partitioned_filepath, par_frag, part_name)
-    taxon_filename = res.taxon_filename
-    path_suffix = os.path.join(res.id, taxon_filename)
-    if part_name == 'Life':
-        inp_filepath = os.path.join(res.partition_source_filepath, taxon_filename)
-    else:
-        inp_filepath = os.path.join(par_dir, INP_TAXONOMY_DIRNAME, path_suffix)
+    fragment = os.path.join(par_frag, part_name)
     mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
     if not mapping:
         _LOG.info("No {} mapping for {}".format(res.id, part_name))
         return
-    tp, to_remove_file = partition_from_mapping(res,
-                                                mapping,
-                                                os.path.split(inp_filepath)[0],
-                                                partition_parsing_fn=res.partition_parsing_fn,
-                                                par_dir=par_dir)
-    tp.write()
-    if to_remove_file is not None:
-        _LOG.info("removing pre-partitioned file at {}".format(to_remove_file))
-        os.unlink(to_remove_file)
+    tp = get_taxon_partition(res, fragment)
+    tp.do_partition(mapping)
+    tp.flush()
 
 
 def get_inverse_misc_non_misc_dir_for_tax(inp_dir, tax_id):
@@ -255,6 +245,7 @@ def get_inverse_misc_non_misc_dir_for_tax(inp_dir, tax_id):
     return os.path.join(non_misc, MISC_DIRNAME, INP_TAXONOMY_DIRNAME, tax_id), True
 
 
+'''
 def partition_from_mapping(res, mapping, inp_dir, partition_parsing_fn, par_dir):
     """Returns a pair: a TaxonPartition element and the filepath to remove (or None)
     
@@ -305,3 +296,4 @@ def partition_from_mapping(res, mapping, inp_dir, partition_parsing_fn, par_dir)
                         parsing_func=partition_parsing_fn)
     to_remove_file = inp_filepath if remove_input and os.path.exists(inp_filepath) else None
     return tp, to_remove_file
+'''
