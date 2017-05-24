@@ -82,7 +82,8 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
         assert term_most == self.tax_fp_unpartitioned
         if infile_name_list:
             uncle_fp = infile_name_list[0]
-            self.misc_uncle = TAX_SLICE_CACHE.get((self.src_id, uncle_fp))
+            uk = (VirtualTaxonomyToRootSlice,self.src_id, uncle_fp)
+            self.misc_uncle = TAX_SLICE_CACHE.get(uk)
             if self.misc_uncle is None:
                 uf = os.path.split(self.fragment)[0]
                 mu = get_virtual_tax_to_root_slice(res,

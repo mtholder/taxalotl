@@ -91,6 +91,8 @@ class PartitionedTaxDirBase(object):
 
 
 class LightTaxonomyHolder(object):
+    _DATT = ['_id_order', '_id_to_line', '_id_to_child_set', '_syn_by_id', '_id_to_el', '_roots']
+
     def __init__(self, fragment):
         self.fragment = fragment
         self._id_order = []
@@ -102,13 +104,12 @@ class LightTaxonomyHolder(object):
         self.taxon_header = None
         self.syn_header = None
         self.treat_syn_as_taxa = False
+        self._populated = False
 
     def _del_data(self):
-        self._id_order = None
-        self._id_to_line = None
-        self._id_to_child_set = None
-        self._syn_by_id = None
-        self._id_to_el = None
+        for el in LightTaxonomyHolder._DATT:
+            setattr(self, el, None)
+        self._populated = False
 
     def add_root_taxon_from_higher_tax_part(self, uid, par_id, line):
         self._roots.add(uid)
@@ -144,6 +145,14 @@ class LightTaxonomyHolder(object):
                 part_element.add_taxon(child_id, par_id, self._id_to_line[child_id])
                 del self._id_to_line[child_id]
 
+    def move_matched_synonyms(self, dest_tax_part):  # type: (PartitioningLightTaxHolder) -> None
+        sk = set(self._syn_by_id.keys())
+        sk.intersection_update(dest_tax_part.contained_ids())
+        for s in sk:
+            sd = self._syn_by_id[s]
+            dest_tax_part.add_synonym(s, sd[0], sd[1])
+            del self._syn_by_id[s]
+
     def move_from_self_to_new_part(self, other):  # type: (PartitioningLightTaxHolder) -> None
         cids = set(self._id_to_child_set.keys())
         for dest_tax_part in other._root_to_lth.values():
@@ -155,7 +164,17 @@ class LightTaxonomyHolder(object):
                         m = "Transferring {} from {} to {}"
                         _LOG.info(m.format(com_id, self.fragment, dest_tax_part.fragment))
                         self._transfer_subtree(com_id, dest_tax_part)
+                self.move_matched_synonyms(dest_tax_part)
+                dest_tax_part._populated = True
                 cids = set(self._id_to_child_set.keys())
+
+    def add_synonym(self, accept_id, syn_id, line):
+        if self.treat_syn_as_taxa:
+            # CoL uses the taxonomy file for synonyms.
+            assert syn_id is not None
+            self.add_taxon(syn_id, None, line)
+        else:
+            self._syn_by_id.setdefault(accept_id, []).append((syn_id, line))
 
 
 # noinspection PyProtectedMember
@@ -167,13 +186,6 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         self._roots_for_sub = set()
         self._root_to_lth = {}
 
-    def add_synonym(self, accept_id, syn_id, line):
-        if self.treat_syn_as_taxa:
-            # CoL uses the taxonomy file for synonyms.
-            assert syn_id is not None
-            self.read_taxon_line(syn_id, None, line)
-        else:
-            self._syn_by_id.setdefault(accept_id, []).append((syn_id, line))
 
     def read_taxon_line(self, uid, par_id, line):
         if uid in self._roots_for_sub:
@@ -229,7 +241,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         for par_id in self._id_to_child_set.keys():
             if par_id not in mitl and par_id not in mite:
                 assert par_id not in self._id_to_el
-                line = self._id_to_line[par_id]
+                line = self._id_to_line.get(par_id)
                 if line:
                     self._id_to_el[par_id] = self._misc_part
                     mitl[par_id] = line
@@ -249,7 +261,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         self._id_to_line = None
 
     def _partition_synonyms(self):
-        for accept_id, i_l_list in self.syn_by_id.items():
+        for accept_id, i_l_list in self._syn_by_id.items():
             match_el = self._id_to_el.get(accept_id)
             if match_el is None:
                 m = "Transferring synonyms for {} to __misc__ of {}"
@@ -274,7 +286,6 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         self._read_from_partitioning_scratch = False
         self._read_from_misc = False
         self._fs_is_partitioned = None
-        self._populated = False
         self._has_flushed = False
 
     def _diagnose_state_of_fs(self):
@@ -314,9 +325,46 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                 self._root_to_lth[r] = subtp
             self._subdirname_to_tp_roots[subname] = (subtp, subroot)
         if self._populated:
-            raise NotImplementedError("partition of populated via in-memory")
+            self._partition_from_in_mem()
         else:
             self._read_inputs()
+
+    def _partition_from_in_mem(self):
+        moved = set()
+        assert not self._misc_part._populated
+        for sub_tp, subroot in self._subdirname_to_tp_roots.values():
+            for r in subroot:
+                if r in self._id_to_child_set:
+                    self._transfer_subtree(r, sub_tp)
+                    sub_tp._roots.add(r)
+                elif r in self._id_to_line:
+                    sub_tp._id_to_line[r] = self._id_to_line[r]
+                    sub_tp._roots.add(r)
+            self.move_matched_synonyms(sub_tp)
+            self._copy_shared_fields(sub_tp)
+            sub_tp._populated = True
+        self._move_data_to_empty_misc()
+
+    def _move_data_to_empty_misc(self):
+        assert not self._misc_part._populated
+        m = self._misc_part
+        for a in LightTaxonomyHolder._DATT:
+            setattr(m, a, getattr(self, a))
+            setattr(self, a, None)
+        self._copy_shared_fields(m)
+        m._populated = True
+
+    def sub_tax_parts(self, include_misc=True):
+        ret = [i for i in self._root_to_lth.values()]
+        if include_misc:
+            ret.append(self._misc_part)
+        return ret
+
+    def _copy_shared_fields(self, other):
+        other.taxon_header = self.taxon_header
+        other.syn_header = self.syn_header
+        other.treat_syn_as_taxa = self.treat_syn_as_taxa
+
 
     def _read_inputs(self):
         self._read = True
@@ -334,6 +382,9 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             self.res.partition_parsing_fn(self)
             self._finish_partition_after_parse()
             self._partition_synonyms()
+            for el in self.sub_tax_parts():
+                self._copy_shared_fields(el)
+                el._populated = True
             self._populated = True
         except:
             self._read = False
@@ -383,7 +434,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                 outp.write('\n'.join([str(i) for i in dh._roots]))
         if syndest is None:
             return
-        _write_d_as_tsv(self.syn_header, dh._syn_by_id, syn_id_order, syndest)
+        _write_syn_d_as_tsv(self.syn_header, dh._syn_by_id, syn_id_order, syndest)
         return True
 
 
@@ -397,9 +448,7 @@ def get_taxon_partition(res, fragment):
 
 def _append_taxon(dict_to_write, id_order, dest_path):
     if not dict_to_write:
-        _LOG.info('No records need to be appended to "{}"'.format(dest_path))
-        return
-    _LOG.info('Appending {} records to "{}"'.format(len(id_order), dest_path))
+        return []
     ret = []
     with codecs.open(dest_path, 'a', encoding='utf-8') as outp:
         for i in id_order:
@@ -407,24 +456,51 @@ def _append_taxon(dict_to_write, id_order, dest_path):
             if el is not None:
                 ret.append(i)
                 outp.write(el)
-
-        if len(id_order) != len(dict_to_write):
-            oset = frozenset(ret)
-            for key, line in dict_to_write.items():
-                if key not in oset:
-                    ret.append(key)
-                    outp.write(line)
+        oset = frozenset(ret)
+        for key, line in dict_to_write.items():
+            if key not in oset:
+                ret.append(key)
+                outp.write(line)
     return ret
+
+def _append_synonym(dict_to_write, id_order, dest_path):
+    if not dict_to_write:
+        return 0
+    x = 0
+    with codecs.open(dest_path, 'a', encoding='utf-8') as outp:
+        for i in id_order:
+            synlist = dict_to_write.get(i)
+            if synlist is not None:
+                for p in synlist:
+                    x += 1
+                    outp.write(p[1])
+
+        oset = frozenset(id_order)
+        for key, synlist in dict_to_write.items():
+            if key not in oset:
+                for syn_pair in synlist:
+                    x += 1
+                    outp.write(syn_pair[1])
+    return x
 
 
 def _write_d_as_tsv(header, dict_to_write, id_order, dest_path):
-    _LOG.info('Writing header to "{}"'.format(dest_path))
     pd = os.path.split(dest_path)[0]
     assure_dir_exists(pd)
     with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
         outp.write(header)
-    return _append_taxon(dict_to_write, id_order, dest_path)
+    r = _append_taxon(dict_to_write, id_order, dest_path)
+    _LOG.info('Wrote {} records to "{}"'.format(len(r), dest_path))
+    return r
 
+
+def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
+    pd = os.path.split(dest_path)[0]
+    assure_dir_exists(pd)
+    with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
+        outp.write(header)
+    x = _append_synonym(dict_to_write, id_order, dest_path)
+    _LOG.info('Wrote {} records to "{}"'.format(x, dest_path))
 
 '''
 def _write_taxon_list(header, record_list, dest_path):
