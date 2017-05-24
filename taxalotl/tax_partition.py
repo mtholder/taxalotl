@@ -49,7 +49,8 @@ class TaxonomySliceCache(object):
         kv = [(k, v) for k, v in self._ck_to_obj.items()]
         _ex = None
         for k, v in kv:
-            del self._ck_to_obj[k]
+            if k in self._ck_to_obj:
+                del self._ck_to_obj[k]
             try:
                 v.flush()
             except Exception as x:
@@ -274,7 +275,12 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         self.syn_by_id = None
         self._id_to_el = None
 
+    def _read_inputs(self):
+        raise NotImplementedError("_read_input pure virtual in PartitioningLightTaxHolder")
+
     def move_from_misc_to_new_part(self, other):  # type: (PartitioningLightTaxHolder) -> None
+        if not self._populated:
+            self._read_inputs()
         return self._misc_part.move_from_self_to_new_part(other)
 
 
@@ -395,6 +401,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     def flush(self):
         if self._has_flushed:
             return
+        _LOG.info("flushing TaxonPartition for {}".format(self.fragment))
         wrote = self.write_if_needed()
         if wrote and self._read_from_misc is False and self._read_from_partitioning_scratch:
             tr = [self.tax_fp_unpartitioned]

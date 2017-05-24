@@ -68,6 +68,7 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
     def __init__(self,
                  res,
                  fragment):
+        _LOG.info("Creating VirtualTaxonomyToRootSlice for {}".format(fragment))
         PartitionedTaxDirBase.__init__(self, res, fragment)
         self._taxon_partition = None
         self._garbage_bin_tax_part = None
@@ -106,7 +107,7 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
                  list_of_subdirname_and_roots,
                  dest_tax_part_obj=None):
         assert not self._has_flushed
-        if not list_of_subdirname_and_roots:
+        if dest_tax_part_obj is None and (not list_of_subdirname_and_roots):
             m = "No {} mapping to separate {}"
             _LOG.info(m.format(self.src_id, fragment_to_partition))
             return
@@ -129,6 +130,7 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
     def flush(self):
         if self._has_flushed:
             return
+        _LOG.info("flushing VirtualTaxonomyToRootSlice for {}".format(self.fragment))
         if self._taxon_partition:
             tp = self._taxon_partition
             self._taxon_partition = None
@@ -190,8 +192,8 @@ def _general_dynamic_separation_from_obj(ott_res,
         sep_id_to_fn[sep_id] = _escape_odd_char(i["uniqname"])
     _LOG.info('src_set: {}'.format(src_set))
     for src_id in src_set:
-        if src_id != 'ncbi':
-            continue
+        #if src_id != 'ncbi':
+        #    continue
         _gen_dyn_separation_from_obj_for_source(ott_res,
                                                 fragment=fragment,
                                                 sep_obj=sep_obj,
@@ -215,6 +217,7 @@ def _gen_dyn_separation_from_obj_for_source(ott_res,
         for sep_id, i in sep_obj.items():
             t = (sep_id_to_fn[sep_id], i['src_dict'][src_id])
             sep_dir_ids_list.append(t)
+        _LOG.info("frag {} sep_dir_ids_list={}".format(fragment, sep_dir_ids_list))
         virt_taxon_slice.separate(fragment, sep_dir_ids_list)
 
         # Write the subdirectory separtion files, if needed (only first source)
