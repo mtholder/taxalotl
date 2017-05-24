@@ -23,7 +23,9 @@ from taxalotl.ott import (partition_ott, partition_from_auto_maps,
                           )
 from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_part_inp_taxdir,
-                                 get_par_and_par_misc_taxdir)
+                                 get_par_and_par_misc_taxdir,
+                                 get_inp_taxdir,
+                                 get_misc_inp_taxdir)
 from taxalotl.interim_taxonomy_struct import (INP_OTT_SYNONYMS_HEADER,
                                               INP_OTT_TAXONOMY_HEADER)
 
@@ -219,7 +221,6 @@ _known_res_attr = frozenset(['aliases',
 class ResourceWrapper(object):
     taxon_filename = 'taxonomy.tsv'
     synonyms_filename = 'synonyms.tsv'
-
     partition_parsing_fn = staticmethod(partition_ott_by_root_id)
 
     def __init__(self, obj, parent=None, refs=None, config=None):
@@ -422,6 +423,18 @@ class ResourceWrapper(object):
                 out.write(unp_str)
             else:
                 out.write(down_str)
+
+    def get_taxon_filepath_for_part(self, fragment):
+        return os.path.join(self.get_taxon_dir_for_part(fragment), self.taxon_filename)
+
+    def get_misc_taxon_filepath_for_part(self, fragment):
+        return os.path.join(self.get_misc_taxon_dir_for_part(fragment), self.taxon_filename)
+
+    def get_taxon_dir_for_part(self, fragment):
+        return get_inp_taxdir(self.partitioned_filepath, fragment, self.id)
+
+    def get_misc_taxon_dir_for_part(self, fragment):
+        return get_misc_inp_taxdir(self.partitioned_filepath, fragment, self.id)
 
 
 _rt_to_partition = {'col': partition_col,

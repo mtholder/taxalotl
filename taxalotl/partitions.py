@@ -6,12 +6,12 @@ import os
 
 from peyotl import get_logger, read_as_json
 
-from taxalotl.tax_partition import create_partition_element, TaxonPartition
+from taxalotl.tax_partition import (TaxonPartition,
+                                    INP_TAXONOMY_DIRNAME,
+                                    MISC_DIRNAME,
+                                    GEN_MAPPING_FILENAME)
 
 _LOG = get_logger(__name__)
-INP_TAXONOMY_DIRNAME = '__inputs__'
-MISC_DIRNAME = '__misc__'
-GEN_MAPPING_FILENAME = '__mapping__.json'
 
 ####################################################################################################
 # Some data (to later be refactored
@@ -68,6 +68,8 @@ PART_NAME_TO_DIRFRAG = {}
 def get_inp_taxdir(parts_dir, frag, taxonomy_id):
     return os.path.join(parts_dir, frag, INP_TAXONOMY_DIRNAME, taxonomy_id)
 
+def get_misc_inp_taxdir(parts_dir, frag, taxonomy_id):
+    return os.path.join(parts_dir, frag, MISC_DIRNAME, INP_TAXONOMY_DIRNAME, taxonomy_id)
 
 def get_all_taxdir_and_misc_uncles(parts_dir, frag, taxonomy_id):
     """Returns a list of dirs for this taxonomy_id starting at
@@ -292,8 +294,7 @@ def partition_from_mapping(res, mapping, inp_dir, partition_parsing_fn, par_dir)
         o = part.existing_output
         if o and not in_misc:
             m = 'Output for {} already exists at "{}"'
-            _LOG.info(m.format(part.fragment, o))
-            return
+            raise RuntimeError(m.format(part.taxon_fp, o))
     if res.synonyms_filename:
         syn_file = os.path.join(os.path.split(inp_filepath)[0], res.synonyms_filename)
     else:

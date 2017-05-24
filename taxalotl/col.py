@@ -66,7 +66,7 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
       7. header for synonyms file (or None)
     
     """
-    complete_taxon_fp = tax_part.taxon_fp
+    complete_taxon_fp = tax_part.tax_fp
     syn_fp = tax_part.syn_fp
     assert not syn_fp
     syn_by_id = tax_part.syn_by_id

@@ -78,7 +78,6 @@ def partition_ott(res_wrapper, part_name, part_keys, par_frag):
 
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     syn_fp = tax_part.syn_fp
-    syn_by_id = tax_part.syn_by_id
     tax_part.syn_header = ''
     if not os.path.exists(syn_fp):
         return
@@ -106,14 +105,14 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
                     accept_id = int(accept_id)
                 except:
                     pass
-                syn_by_id.setdefault(accept_id, []).append((None, line))
+                tax_part.add_synonym(accept_id, syn_id=None, line=line)
             except:
                 _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                 raise
 
 
 def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
-    complete_taxon_fp = tax_part.taxon_fp
+    complete_taxon_fp = tax_part.tax_fp
     tax_part.taxon_header = ''
     if not os.path.exists(complete_taxon_fp):
         return
