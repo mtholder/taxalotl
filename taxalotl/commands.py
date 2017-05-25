@@ -216,8 +216,9 @@ def enforce_new_separators(taxalotl_config):
         TAX_SLICE_CACHE.flush()
 
 def build_partition_maps(taxalotl_config):
-    partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
     rw = taxalotl_config.get_terminalized_res_by_id("ott", 'partition')
+    if not rw.has_been_partitioned():
+        partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
     nsd = rw.build_paritition_maps()
     if not nsd:
         return

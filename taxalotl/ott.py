@@ -59,22 +59,6 @@ OTT_PARTMAP = {
 OTT_3_SEPARATION_TAXA = OTT_PARTMAP
 
 
-def partition_from_auto_maps(res_wrapper, part_name, part_keys, par_frag):
-    auto_map = get_auto_gen_part_mapper(res_wrapper)
-    do_partition(res_wrapper,
-                 part_name,
-                 part_keys,
-                 par_frag,
-                 master_map=auto_map)
-
-
-def partition_ott(res_wrapper, part_name, part_keys, par_frag):
-    do_partition(res_wrapper,
-                 part_name,
-                 part_keys,
-                 par_frag,
-                 master_map=OTT_PARTMAP)
-
 
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     syn_fp = tax_part.syn_fp
@@ -116,6 +100,13 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
     tax_part.taxon_header = ''
     if not os.path.exists(complete_taxon_fp):
         return
+    pd = tax_part.res.partitioned_filepath
+    if complete_taxon_fp.startswith(pd):
+        ptp = complete_taxon_fp[len(pd):]
+        while ptp.startswith('/'):
+            ptp = ptp[1:]
+    else:
+        ptp = complete_taxon_fp
     with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         try:
@@ -124,8 +115,8 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
             return
         for n, line in enumerate(iinp):
             ls = line.split('\t|\t')
-            if n % 1000 == 0:
-                _LOG.info(' read taxon {}'.format(n))
+            if n % 10000 == 0:
+                _LOG.info(' read taxon {} from {}'.format(n, ptp))
             try:
                 uid, par_id = ls[0], ls[1]
                 try:
@@ -170,6 +161,7 @@ def ott_build_paritition_maps(res):
             continue
         tax_dir = res.get_taxdir_for_part(pk)
         rids = get_root_ids_for_subset(tax_dir)
+        _LOG.info("{} -> {} roots = {}".format(pk, tax_dir, rids))
         if not rids:
             continue
         assert len(rids) == 1
@@ -193,10 +185,10 @@ def ott_build_paritition_maps(res):
     if 'silva' in filled:
         del filled['silva']
     # @TODO: make this automatic not generic
-    gbif = filled['gbif']
-    gbif["Rhodophyta"] = [106]
-    gbif["Glaucophyta"] = [37]
-    gbif["Chloroplastida"] = [13, 9, 7707728, 7819616, 36, 35]
+    # gbif = filled['gbif']
+    # gbif["Rhodophyta"] = [106]
+    # gbif["Glaucophyta"] = [37]
+    # gbif["Chloroplastida"] = [13, 9, 7707728, 7819616, 36, 35]
 
     return filled
 

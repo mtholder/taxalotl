@@ -9,10 +9,11 @@ from peyotl import get_logger, read_as_json
 from taxalotl.tax_partition import (INP_TAXONOMY_DIRNAME,
                                     MISC_DIRNAME,
                                     GEN_MAPPING_FILENAME,
-                                    get_taxon_partition)
+                                    get_taxon_partition,
+                                    TAX_SLICE_CACHE)
 
 _LOG = get_logger(__name__)
-
+_LIFE = 'Life'
 ####################################################################################################
 # Some data (to later be refactored
 _x = {
@@ -57,7 +58,7 @@ _x = {
     'Viruses': {},
     MISC_DIRNAME: {},
 }
-BASE_PARTITIONS_DICT = {"Life": _x}
+BASE_PARTITIONS_DICT = {_LIFE: _x}
 del _x
 PARTS_BY_NAME = {}
 PART_FRAG_BY_NAME = {}
@@ -227,10 +228,16 @@ def do_partition(res,
     if not mapping:
         _LOG.info("No {} mapping for {}".format(res.id, part_name))
         return
-    tp = get_taxon_partition(res, fragment)
-    tp.external_input_fp = os.path.join(res.partition_source_dir, res.taxon_filename)
-    tp.do_partition(mapping)
-    tp.flush()
+    TAX_SLICE_CACHE.flush()
+    try:
+        tp = get_taxon_partition(res, fragment)
+        life_fp = res.get_misc_taxon_filepath_for_part(_LIFE)
+        life_misc_fp = res.get_misc_taxon_filepath_for_part(_LIFE)
+        if (not os.path.exists(life_misc_fp)) and (not os.path.exists(life_fp)):
+            tp.external_input_fp = os.path.join(res.partition_source_dir, res.taxon_filename)
+        tp.do_partition(mapping)
+    finally:
+        TAX_SLICE_CACHE.flush()
 
 
 def get_inverse_misc_non_misc_dir_for_tax(inp_dir, tax_id):
