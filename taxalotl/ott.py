@@ -10,11 +10,11 @@ from taxalotl.ott_schema import (read_taxonomy_to_get_single_taxon,
                                  read_taxonomy_to_get_id_to_fields,
                                  )
 from taxalotl.partitions import (fill_empty_anc_of_mapping,
-                                 get_root_ids_for_subset,
-                                 get_relative_dir_for_partition,
+                                 get_fragment_from_part_name,
                                  MISC_DIRNAME,
                                  PREORDER_PART_LIST,
                                  PARTS_BY_NAME)
+from taxalotl.tax_partition import (get_taxon_partition, get_root_ids_for_subset, )
 from taxalotl.resource_wrapper import ResourceWrapper, ExternalTaxonomyWrapper
 
 _LOG = get_logger(__name__)
@@ -114,49 +114,7 @@ def ott_build_paritition_maps(res):
 
     return filled
 
-
-def ott_diagnose_new_separators(res, current_partition_key):
-    tax_dir = res.get_taxdir_for_part(current_partition_key)
-    rids = get_root_ids_for_subset(tax_dir)
-    _LOG.info('tax_dir = {}'.format(tax_dir))
-    id_to_obj = read_taxonomy_to_get_id_to_fields(tax_dir)
-    _LOG.info('{} taxa read'.format(len(id_to_obj)))
-    par_set = set()
-    src_prefix_set = set()
-    for v in id_to_obj.values():
-        par_set.add(v.par_id)
-        all_src_keys = v.src_dict.keys()
-        filtered = [i for i in all_src_keys if not i.startswith('additions')]
-        filtered = [i for i in filtered if i not in ('h2007', 'study713')]
-        src_prefix_set.update(filtered)
-    max_num_srcs = len(src_prefix_set)
-    _LOG.info("Relevant sources appear to be: {}".format(src_prefix_set))
-    nst = []
-    if len(rids) > 1:
-        rids = set()
-    for i, obj in id_to_obj.items():
-        if i in rids:
-            continue  # no point in partitioning at the root taxon
-        if i not in par_set:
-            continue  # no point in partitioning leaves...
-        if len(obj.src_dict) == max_num_srcs:
-            nst.append((i, obj))
-    if not nst:
-        _LOG.debug('No new separators found for "{}"'.format(current_partition_key))
-        return None
-    par_to_child = {}
-    to_par = {}
-    for ott_id, obj in nst:
-        par = obj.par_id
-        to_par[ott_id] = par
-        par_to_child.setdefault(par, [None, []])[1].append(ott_id)
-        this_el = par_to_child.setdefault(ott_id, [None, []])
-        assert this_el[0] is None
-        this_el[0] = obj
-    roots = set(par_to_child.keys()) - set(to_par.keys())
-    rel_dir_for_part = get_relative_dir_for_partition(current_partition_key)
-    return {rel_dir_for_part: NestedNewSeparator(roots, par_to_child)}
-
+UNSTABLE_SRC_PREFIXES = frozenset(['h2007', 'study713', 'https', 'http'])
 
 class NewSeparator(object):
     def __init__(self, ott_taxon_obj):
@@ -255,7 +213,47 @@ class OTTaxonomyWrapper(ExternalTaxonomyWrapper):
         ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def diagnose_new_separators(self, current_partition_key):
-        return ott_diagnose_new_separators(self, current_partition_key)
+        fragment = get_fragment_from_part_name(current_partition_key)
+        tax_part = get_taxon_partition(self, fragment)
+        tax_part.read_inputs_for_read_only()
+        rids = tax_part.get_root_ids()
+        id_to_obj = tax_part.get_id_to_ott_taxon()
+        _LOG.info('{} taxa read from {}'.format(len(id_to_obj), tax_part.tax_fp))
+        par_set = set()
+        src_prefix_set = set()
+        for v in id_to_obj.values():
+            par_set.add(v.par_id)
+            all_src_keys = v.src_dict.keys()
+            filtered = [i for i in all_src_keys if not i.startswith('additions')]
+            filtered = [i for i in filtered if i not in UNSTABLE_SRC_PREFIXES]
+            src_prefix_set.update(filtered)
+        max_num_srcs = len(src_prefix_set)
+        _LOG.info("Relevant sources appear to be: {}".format(src_prefix_set))
+        nst = []
+        if len(rids) > 1:
+            rids = set()
+        for i, obj in id_to_obj.items():
+            if i in rids:
+                continue  # no point in partitioning at the root taxon
+            if i not in par_set:
+                continue  # no point in partitioning leaves...
+            if len(obj.src_dict) == max_num_srcs:
+                nst.append((i, obj))
+        if not nst:
+            _LOG.debug('No new separators found for "{}"'.format(current_partition_key))
+            return None
+        par_to_child = {}
+        to_par = {}
+        for ott_id, obj in nst:
+            par = obj.par_id
+            to_par[ott_id] = par
+            par_to_child.setdefault(par, [None, []])[1].append(ott_id)
+            this_el = par_to_child.setdefault(ott_id, [None, []])
+            assert this_el[0] is None
+            this_el[0] = obj
+        roots = set(par_to_child.keys()) - set(to_par.keys())
+        rel_dir_for_part = get_fragment_from_part_name(current_partition_key)
+        return {rel_dir_for_part: NestedNewSeparator(roots, par_to_child)}
 
     def build_paritition_maps(self):
         return ott_build_paritition_maps(self)

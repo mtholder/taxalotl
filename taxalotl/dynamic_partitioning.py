@@ -6,7 +6,7 @@ import copy
 
 from peyotl import get_logger, read_as_json, write_as_json, assure_dir_exists
 
-from taxalotl.partitions import (get_relative_dir_for_partition,
+from taxalotl.partitions import (get_fragment_from_part_name,
                                  get_all_taxdir_and_misc_uncles,
                                  )
 from taxalotl.tax_partition import (TAX_SLICE_CACHE,
@@ -29,7 +29,7 @@ def _escape_odd_char(s):
 
 def perform_dynamic_separation(ott_res, part_key, sep_fn, suppress_cache_flush=False, src_id=None):
     """Called where part_key is a PART_NAME element from the OTT 3 separation taxa."""
-    fragment = get_relative_dir_for_partition(part_key)
+    fragment = get_fragment_from_part_name(part_key)
     general_dynamic_separation(ott_res,
                                fragment,
                                sep_fn,

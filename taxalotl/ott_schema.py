@@ -39,8 +39,8 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
                              "synonyms file to be 'uid'. Problem reading: {}".format(syn_fp))
         for n, line in enumerate(iinp):
             ls = line.split('\t|\t')
-            if n % 1000 == 0:
-                _LOG.info(' read synonym {}'.format(n))
+            if n > 0 and n % 1000 == 0:
+                _LOG.debug(' read synonym {}'.format(n))
             try:
                 accept_id = ls[uid_ind]
                 try:
@@ -67,8 +67,8 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
             return
         for n, line in enumerate(iinp):
             ls = line.split('\t|\t')
-            if (1 + n) % 10000 == 0:
-                _LOG.info(' read taxon {} from {}'.format(n, ptp))
+            if n > 0 and n % 10000 == 0:
+                _LOG.debug(' read taxon {} from {}'.format(n, ptp))
             try:
                 uid, par_id = ls[0], ls[1]
                 try:
@@ -196,7 +196,7 @@ def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
 
 
 class OTTTaxon(object):
-    def __init__(self, interim_taxonomy_format_line, line_num):
+    def __init__(self, interim_taxonomy_format_line, line_num='<unknown>'):
         self.line_num = line_num
         line = interim_taxonomy_format_line
         try:

@@ -174,31 +174,23 @@ def find_partition_dirs_for_taxonomy(path_pref, res_id):
     return [i for i, sd, fl in os.walk(path_pref) if i.endswith(suffix)]
 
 
-def get_relative_dir_for_partition(parts_key):
+def get_fragment_from_part_name(parts_key):
     return PART_NAME_TO_DIRFRAG[parts_key]
 
 
 def get_part_inp_taxdir(parts_dir, part_key, taxonomy_id):
-    df = get_relative_dir_for_partition(part_key)
+    df = get_fragment_from_part_name(part_key)
     return os.path.join(parts_dir, df, INP_TAXONOMY_DIRNAME, taxonomy_id)
 
 
 def get_par_and_par_misc_taxdir(parts_dir, part_key, taxonomy_id):
-    df = get_relative_dir_for_partition(part_key)
+    df = get_fragment_from_part_name(part_key)
     par_df = os.path.split(df)[0]
     misc_df = os.path.join(par_df, MISC_DIRNAME)
     par_part_key = os.path.split(par_df)[0]
     pmtd = os.path.join(parts_dir, misc_df, INP_TAXONOMY_DIRNAME, taxonomy_id)
     return par_part_key, pmtd
 
-
-def get_root_ids_for_subset(tax_dir):
-    rf = os.path.join(tax_dir, 'roots.txt')
-    idset = set()
-    if os.path.exists(rf):
-        content = [int(i.strip()) for i in open(rf, 'r') if i.strip()]
-        idset.update(content)
-    return idset
 
 
 def merge_and_write_taxon_partition_list(tp_list):

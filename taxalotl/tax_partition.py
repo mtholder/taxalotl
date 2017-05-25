@@ -4,12 +4,22 @@ import codecs
 import os
 
 from peyotl import get_logger, assure_dir_exists
+from taxalotl.ott_schema import OTTTaxon
 
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
 GEN_MAPPING_FILENAME = '__mapping__.json'
+ROOTS_FILENAME = 'roots.txt'
 
 _LOG = get_logger(__name__)
+
+def get_root_ids_for_subset(tax_dir):
+    rf = os.path.join(tax_dir, ROOTS_FILENAME)
+    idset = set()
+    if os.path.exists(rf):
+        content = [int(i.strip()) for i in open(rf, 'r') if i.strip()]
+        idset.update(content)
+    return idset
 
 
 class TaxonomySliceCache(object):
@@ -403,6 +413,24 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             sub_tp._populated = True
         self._move_data_to_empty_misc()
 
+    def read_inputs_for_read_only(self):
+        # Only to be used for accessors
+        assert not self._read_from_fs
+        assert not self._populated
+        self._read_inputs(do_part_if_reading=False)
+
+    def get_root_ids(self):
+        return set(self._roots)
+
+    def get_id_to_ott_taxon(self):
+        id_to_obj = {}
+        for line in self._id_to_line.values():
+            obj = OTTTaxon(line)
+            oid = obj.id
+            assert oid not in id_to_obj
+            id_to_obj[oid] = obj
+        return id_to_obj
+
     def _read_inputs(self, do_part_if_reading=True):
         self._read_from_fs = True
         self._has_unread_tax_inp = False
@@ -414,15 +442,19 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             if os.path.exists(self.tax_fp_misc):
                 self._read_from_partitioning_scratch = True
                 self.tax_fp = self.tax_fp_misc
+                tax_dir = self.tax_dir_misc
                 self._read_from_misc = True
             else:
                 self._read_from_partitioning_scratch = True
                 self.tax_fp = self.tax_fp_unpartitioned
                 self._read_from_misc = False
+                tax_dir = self.tax_dir_unpartitioned
         try:
             # format-specific callback which will set headers and call
             #   add_synonym and read_taxon_line
             self.res.partition_parsing_fn(self)
+            read_roots = get_root_ids_for_subset(os.path.join(tax_dir, ROOTS_FILENAME))
+            self._roots.update(read_roots)
             m = "prepart {} taxa in {}"
             _LOG.info(m.format(len(self._misc_part._id_to_line) + len(self._id_to_line), self.fragment))
             self._read_from_fs
@@ -473,13 +505,13 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             dh = self._misc_part
             dest = self.tax_fp_misc
             syndest = self.syn_fp_misc
-            roots_file = os.path.join(self.tax_dir_misc, 'roots.txt')
+            roots_file = os.path.join(self.tax_dir_misc, ROOTS_FILENAME)
         else:
             # _LOG.debug("write from self for {}".format(self.fragment))
             dh = self
             dest = self.tax_fp_unpartitioned
             syndest = self.syn_fp
-            roots_file = os.path.join(self.tax_dir_unpartitioned, 'roots.txt')
+            roots_file = os.path.join(self.tax_dir_unpartitioned, ROOTS_FILENAME)
         if not dh._id_to_line:
             _LOG.debug("write not needed for {} no records".format(self.fragment))
             return False
