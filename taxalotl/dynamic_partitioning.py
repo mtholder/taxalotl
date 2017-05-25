@@ -192,8 +192,8 @@ def _general_dynamic_separation_from_obj(ott_res,
         sep_id_to_fn[sep_id] = _escape_odd_char(i["uniqname"])
     _LOG.info('src_set: {}'.format(src_set))
     for src_id in src_set:
-        #if src_id != 'ncbi':
-        #    continue
+        if src_id != 'ncbi':
+            continue
         _gen_dyn_separation_from_obj_for_source(ott_res,
                                                 fragment=fragment,
                                                 sep_obj=sep_obj,
@@ -236,7 +236,7 @@ def _gen_dyn_separation_from_obj_for_source(ott_res,
                 _LOG.info('sub separation file written to "{}"'.format(subjson))
             rec_el = (next_frag, sub)
             recursive_call_list.append(rec_el)
-
+        #_LOG.info("Skipping recursion"); recursive_call_list = []
         for recurse_el in recursive_call_list:
             next_frag, next_sep_obj = recurse_el
             _gen_dyn_separation_from_obj_for_source(ott_res=ott_res,

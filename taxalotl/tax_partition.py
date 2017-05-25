@@ -112,12 +112,9 @@ class LightTaxonomyHolder(object):
             setattr(self, el, None)
         self._populated = False
 
-    def add_root_taxon_from_higher_tax_part(self, uid, par_id, line):
-        self._roots.add(uid)
-        self.add_taxon(uid, par_id, line)
-
     def add_taxon(self, uid, par_id, line):
-        assert uid not in self._id_to_line
+        old = self._id_to_line.get(uid)
+        assert old is None or old == line
         self._id_to_line[uid] = line
         self._id_order.append(uid)
         self._id_to_child_set.setdefault(par_id, set()).add(uid)
@@ -130,20 +127,23 @@ class LightTaxonomyHolder(object):
         c.update(self._id_to_line.keys())
         return c
 
-    def _transfer_subtree(self, par_id, part_element):
-        child_list = self._id_to_child_set[par_id]
-        self._id_to_el[par_id] = part_element
+    def _transfer_subtree(self, par_id, dest_part):
+        child_set = self._id_to_child_set[par_id]
+        # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
+        #    _LOG.info("par_id {} -> child_list {}".format(par_id, child_set))
+        self._id_to_el[par_id] = dest_part
         line = self._id_to_line.get(par_id)
         if line is not None:
-            part_element._id_to_line[par_id] = line
+            dest_part._id_to_line[par_id] = line
             del self._id_to_line[par_id]
         del self._id_to_child_set[par_id]
-        for child_id in child_list:
-            self._id_to_el[child_id] = part_element
+        dest_part._id_to_child_set.setdefault(par_id, set()).update(child_set)
+        for child_id in child_set:
+            self._id_to_el[child_id] = dest_part
             if child_id in self._id_to_child_set:
-                self._transfer_subtree(child_id, part_element)
+                self._transfer_subtree(child_id, dest_part)
             else:
-                part_element.add_taxon(child_id, par_id, self._id_to_line[child_id])
+                dest_part.add_taxon(child_id, par_id, self._id_to_line[child_id])
                 del self._id_to_line[child_id]
 
     def move_matched_synonyms(self, dest_tax_part):  # type: (PartitioningLightTaxHolder) -> None
@@ -187,93 +187,58 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         self._misc_part = LightTaxonomyHolder(os.path.join(fragment, MISC_DIRNAME))
         self._roots_for_sub = set()
         self._root_to_lth = {}
+        self._during_parse_root_to_par = {}
 
 
     def read_taxon_line(self, uid, par_id, line):
+        if par_id:
+            try:
+                par_id = int(par_id)
+            except:
+                pass
+        self._id_to_child_set.setdefault(par_id, set()).add(uid)
+        self._id_to_line[uid] = line
         if uid in self._roots_for_sub:
-            # _LOG.info("{} not in {}".format(uid, roots_set))
-            match_el = self._root_to_lth[uid]
-            self._id_to_el[uid] = match_el
-            match_el.add_root_taxon_from_higher_tax_part(uid, par_id, line)
-            # add as a leaf to the __misc__
-            self._misc_part.add_moved_taxon(uid, par_id, line)
-        else:
-            if par_id:
-                try:
-                    par_id = int(par_id)
-                except:
-                    pass
-            match_el = self._id_to_el.get(par_id)
-            if match_el is not None:
-                self._id_to_el[uid] = match_el
-                match_el.add_taxon_from_higher_tax_part(uid, par_id, line)
-            else:
-                self._id_to_child_set.setdefault(par_id, set()).add(uid)
-                self._id_to_line[uid] = line
+            self._during_parse_root_to_par[uid] = par_id
 
     def _finish_partition_after_parse(self):
         """On entry _id_to_el will be set for the root elements (and some of their
             children), but taxa processed before their ancestors may have been missed.
         _id_to_child_list and _id_to_line are only filled for these
         """
-        par_id_matched = [p for p in self._id_to_child_set.keys() if p in self._id_to_el]
-        for p in par_id_matched:
-            match_el = self._id_to_el[p]
-            self._transfer_subtree(p, match_el)
-        mitcs = self._misc_part._id_to_child_set
-        mitl = self._misc_part._id_to_line
-        mite = self._misc_part._id_to_el
-        for par_id, child_set in self._id_to_child_set.items():
-            mics = mitcs.setdefault(par_id, set())
-            mics.update(child_set)
-            for c in child_set:
-                curr_el = self._id_to_el.get(c)
-                if curr_el:
-                    assert False
-                    # mite[c] = curr_el
-                else:
-                    self._id_to_el[c] = self._misc_part
-                    line = self._id_to_line.get(c)
-                    if not line:
-                        m = "Child ID {} in {} not associated with a line or el"
-                        raise ValueError(m.format(c, self.fragment))
-                    mitl[c] = line
-                    del self._id_to_line[c]
-
-        for par_id in self._id_to_child_set.keys():
-            if par_id not in mitl and par_id not in mite:
-                assert par_id not in self._id_to_el
-                line = self._id_to_line.get(par_id)
-                if line:
-                    self._id_to_el[par_id] = self._misc_part
-                    mitl[par_id] = line
-                    del self._id_to_line[par_id]
-                else:
-                    # par_id was mentioned by its children, but not included.
-                    #   so each child is a root wrt its slice of the taxonomy
-                    cset = self._id_to_child_set[par_id]
-                    for c in cset:
-                        dest_for_c = self._id_to_el[c]
-                        dest_for_c._roots.update(cset)
-        for k in self._id_to_line.keys():
-            m = "End of partitioning and taxon {} has not been moved in {}"
-            raise ValueError(m.format(k, self.fragment))
-        # Save some memory
-        self._id_to_child_set = None
-        self._id_to_line = None
-
-    def _partition_synonyms(self):
-        for accept_id, i_l_list in self._syn_by_id.items():
-            match_el = self._id_to_el.get(accept_id)
-            if match_el is None:
-                m = "Transferring synonyms for {} to __misc__ of {}"
-                _LOG.info(m.format(accept_id, self.fragment))
-                match_el = self._misc_part
-            for syn_id, line in i_l_list:
-                match_el.add_synonym(accept_id, syn_id, line)
-        # Save some memory
-        self.syn_by_id = None
-        self._id_to_el = None
+        des_children_for_misc = []
+        for uid, par_id in self._during_parse_root_to_par.items():
+            line = self._id_to_line[uid]
+            des_children_for_misc.append((uid, par_id, line))
+        for uid, par_id in self._during_parse_root_to_par.items():
+            match_el = self._root_to_lth[uid]
+            match_el._roots.add(uid)
+            if uid in self._id_to_child_set:
+                self._transfer_subtree(uid, match_el)
+            elif uid in self._id_to_line:
+                match_el._id_to_line[uid] = self._id_to_line[uid]
+                del self._id_to_line[uid]
+            pc = self._id_to_child_set.get(par_id)
+            if pc:
+                pc.remove(uid)
+            self._id_to_el[uid] = match_el
+        assert not self._misc_part._id_to_child_set
+        assert not self._misc_part._id_to_line
+        assert not self._misc_part._id_to_el
+        # Move all data to misc, but make a copy of th id to el that we'l
+        self._move_data_to_empty_misc()
+        for el in des_children_for_misc:
+            self._misc_part.add_moved_taxon(el[0], el[1], el[2])
+        #  _partition_synonyms that have now moved to the misc part
+        to_del = set()
+        for accept_id, i_l_list in self._misc_part._syn_by_id.items():
+            match_el = self._misc_part._id_to_el.get(accept_id)
+            if match_el is not None:
+                for syn_id, line in i_l_list:
+                    match_el.add_synonym(accept_id, syn_id, line)
+                to_del.add(accept_id)
+        for i in to_del:
+            del self._misc_part._syn_by_id[i]
 
     def _read_inputs(self):
         raise NotImplementedError("_read_input pure virtual in PartitioningLightTaxHolder")
@@ -311,6 +276,8 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             if self._fs_is_partitioned is None:
                 m = "Taxa files not found for {} and TaxonPartition is empty"
                 raise ValueError(m.format(self.fragment))
+        '''
+        Need to make this check for the input tax dir, not just scaffold...
         cur_sub_names = self.scaffold_tax_subdirs()
         if cur_sub_names:
             req_fulfilled = True
@@ -323,7 +290,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                 raise ValueError(m.format(self.fragment))
             m = "Some taxonomic subdirs found for {} TaxonPartition"
             raise ValueError(m.format(self.fragment))
-
+        '''
         for subname, subroot in list_of_subdirname_and_roots:
             subfrag = os.path.join(self.fragment, subname)
             subtp = get_taxon_partition(self.res, subfrag)
@@ -337,16 +304,32 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             self._read_inputs()
 
     def _partition_from_in_mem(self):
+        _LOG.info("_partition_from_in_mem for fragment \"{}\"".format(self.fragment))
         moved = set()
         assert not self._misc_part._populated
         for sub_tp, subroot in self._subdirname_to_tp_roots.values():
+            _LOG.info("subroot {} for \"{}\"".format(subroot, sub_tp.fragment))
+            x = self._id_to_child_set
+            # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
+            #    _LOG.info(" self._id_to_child_set = {}".format(repr(x)))
+            #    #_LOG.info(" self._id_to_line = {}".format(self._id_to_line))
             for r in subroot:
-                if r in self._id_to_child_set:
+                # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
+                #     _LOG.info(" checking subroot {}".format(repr(r)))
+                if r in x:
+                    # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
+                    #     _LOG.info(" {} in _id_to_child_set".format(repr(r)))
                     self._transfer_subtree(r, sub_tp)
                     sub_tp._roots.add(r)
                 elif r in self._id_to_line:
+                    # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
+                    #     _LOG.info(" {} in _id_to_line".format(repr(r)))
                     sub_tp._id_to_line[r] = self._id_to_line[r]
                     sub_tp._roots.add(r)
+                # else:
+                #     if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
+                #         _LOG.info(" not stored".format(r))
+
             self.move_matched_synonyms(sub_tp)
             self._copy_shared_fields(sub_tp)
             sub_tp._populated = True
@@ -387,8 +370,10 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             # format-specific callback which will set headers and call
             #   add_synonym and read_taxon_line
             self.res.partition_parsing_fn(self)
+            m = "prepart {} lines in misc. {} lines in self for {}"
+            _LOG.info(m.format(len(self._misc_part._id_to_line),
+                               len(self._id_to_line), self.fragment))
             self._finish_partition_after_parse()
-            self._partition_synonyms()
             for el in self.sub_tax_parts():
                 self._copy_shared_fields(el)
                 el._populated = True
@@ -396,6 +381,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         except:
             self._read = False
             self._read_from_misc = None
+            self._read_from_partitioning_scratch = False
             raise
 
     def flush(self):
@@ -403,7 +389,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             return
         _LOG.info("flushing TaxonPartition for {}".format(self.fragment))
         wrote = self.write_if_needed()
-        if wrote and self._read_from_misc is False and self._read_from_partitioning_scratch:
+        if self._read_from_misc is False and self._read_from_partitioning_scratch:
             tr = [self.tax_fp_unpartitioned]
             if self.syn_fp:
                 tr.append(self.syn_fp)
@@ -420,22 +406,28 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
 
     def write_if_needed(self):
         if not self._populated:
+            _LOG.info("write not needed for {} not populated".format(self.fragment))
             return False
         if self._subdirname_to_tp_roots:
+            # _LOG.debug("write from misc for {}".format(self.fragment))
             dh = self._misc_part
             dest = self.tax_fp_misc
             syndest = self.syn_fp_misc
             roots_file = os.path.join(self.tax_dir_misc, 'roots.txt')
         else:
+            # _LOG.debug("write from self for {}".format(self.fragment))
             dh = self
             dest = self.tax_fp_unpartitioned
             syndest = self.syn_fp
             roots_file = os.path.join(self.tax_dir_unpartitioned, 'roots.txt')
+        if not dh._id_to_line:
+            _LOG.debug("write not needed for {} no records".format(self.fragment))
+            return False
         syn_id_order = _write_d_as_tsv(self.taxon_header, dh._id_to_line, dh._id_order, dest)
         if not dh._roots:
-            _LOG.info('No root ids need to be written to "{}"'.format(roots_file))
+            _LOG.debug('No root ids need to be written to "{}"'.format(roots_file))
         else:
-            _LOG.info('Writing {} root_ids to "{}"'.format(len(dh._roots), roots_file))
+            _LOG.debug('Writing {} root_ids to "{}"'.format(len(dh._roots), roots_file))
             pd = os.path.split(roots_file)[0]
             assure_dir_exists(pd)
             with codecs.open(roots_file, 'w', encoding='utf-8') as outp:
@@ -454,11 +446,15 @@ def get_taxon_partition(res, fragment):
     return TaxonPartition(res, fragment)
 
 
-def _append_taxon(dict_to_write, id_order, dest_path):
+def _write_d_as_tsv(header, dict_to_write, id_order, dest_path):
     if not dict_to_write:
-        return []
+        return
     ret = []
-    with codecs.open(dest_path, 'a', encoding='utf-8') as outp:
+    pd = os.path.split(dest_path)[0]
+    assure_dir_exists(pd)
+    _LOG.info('Writing {} records to "{}"'.format(len(dict_to_write), dest_path))
+    with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
+        outp.write(header)
         for i in id_order:
             el = dict_to_write.get(i)
             if el is not None:
@@ -471,44 +467,29 @@ def _append_taxon(dict_to_write, id_order, dest_path):
                 outp.write(line)
     return ret
 
-def _append_synonym(dict_to_write, id_order, dest_path):
-    if not dict_to_write:
-        return 0
-    x = 0
-    with codecs.open(dest_path, 'a', encoding='utf-8') as outp:
-        for i in id_order:
-            synlist = dict_to_write.get(i)
-            if synlist is not None:
-                for p in synlist:
-                    x += 1
-                    outp.write(p[1])
-
-        oset = frozenset(id_order)
-        for key, synlist in dict_to_write.items():
-            if key not in oset:
-                for syn_pair in synlist:
-                    x += 1
-                    outp.write(syn_pair[1])
-    return x
-
-
-def _write_d_as_tsv(header, dict_to_write, id_order, dest_path):
-    pd = os.path.split(dest_path)[0]
-    assure_dir_exists(pd)
-    with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
-        outp.write(header)
-    r = _append_taxon(dict_to_write, id_order, dest_path)
-    _LOG.info('Wrote {} records to "{}"'.format(len(r), dest_path))
-    return r
-
 
 def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
+    ltw = []
+    for i in id_order:
+        synlist = dict_to_write.get(i)
+        if synlist is not None:
+            for p in synlist:
+                ltw.append(p[1])
+    oset = frozenset(id_order)
+    for key, synlist in dict_to_write.items():
+        if key not in oset:
+            for syn_pair in synlist:
+                ltw.append(syn_pair[1])
+    if not ltw:
+        return
+    x = len(ltw)
     pd = os.path.split(dest_path)[0]
     assure_dir_exists(pd)
+    _LOG.info('Writing {} records to "{}"'.format(x, dest_path))
     with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
         outp.write(header)
-    x = _append_synonym(dict_to_write, id_order, dest_path)
-    _LOG.info('Wrote {} records to "{}"'.format(x, dest_path))
+        for l in ltw:
+            outp.write(l)
 
 '''
 def _write_taxon_list(header, record_list, dest_path):
