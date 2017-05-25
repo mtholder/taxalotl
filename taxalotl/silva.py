@@ -14,7 +14,7 @@ from peyotl import (assure_dir_exists,
                     write_as_json)
 
 from taxalotl.commands import unpack_resources
-from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
+from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.partitions import GEN_MAPPING_FILENAME
 from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
 

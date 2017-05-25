@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
+from taxalotl.ott_schema import InterimTaxonomyData
 from peyotl.phylo.tree import parse_newick
 from peyotl import get_logger
 import os

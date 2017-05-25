@@ -11,10 +11,10 @@ from peyotl import (assure_dir_exists,
                     get_logger, gunzip, gunzip_and_untar,
                     unzip)
 
-from taxalotl.interim_taxonomy_struct import (INP_OTT_SYNONYMS_HEADER,
-                                              INP_OTT_TAXONOMY_HEADER)
+from taxalotl.ott_schema import (INP_OTT_SYNONYMS_HEADER,
+                                 INP_OTT_TAXONOMY_HEADER,
+                                 partition_ott_by_root_id)
 from taxalotl.newick import normalize_newick
-from taxalotl.ott import partition_ott_by_root_id
 from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_auto_gen_part_mapper,
                                  get_part_inp_taxdir,

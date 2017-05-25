@@ -4,7 +4,7 @@ import codecs
 import os
 import time
 from peyotl import (add_or_append_to_dict, get_logger)
-from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
+from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
 
 _LOG = get_logger(__name__)

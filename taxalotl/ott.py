@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 # from __future__ import print_function
 
-import codecs
 import os
 
 from peyotl import get_logger
 from peyotl.utility.str_util import StringIO
 
-from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
-                                              read_taxonomy_to_get_id_to_fields,
-                                              )
+from taxalotl.ott_schema import (read_taxonomy_to_get_single_taxon,
+                                 read_taxonomy_to_get_id_to_fields,
+                                 )
 from taxalotl.partitions import (fill_empty_anc_of_mapping,
                                  get_root_ids_for_subset,
                                  get_relative_dir_for_partition,
@@ -56,80 +55,6 @@ OTT_PARTMAP = {
 
 
 OTT_3_SEPARATION_TAXA = OTT_PARTMAP
-
-
-def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
-    syn_fp = tax_part.syn_fp
-    tax_part.syn_header = ''
-    if not os.path.exists(syn_fp):
-        return
-    with codecs.open(syn_fp, 'rU', encoding='utf-8') as inp:
-        iinp = iter(inp)
-        try:
-            tax_part.syn_header = iinp.next()
-        except StopIteration:
-            return
-        shs = tax_part.syn_header.split('\t|\t')
-        if shs[0] == 'uid':
-            uid_ind = 0
-        elif shs[1] == 'uid':
-            uid_ind = 1
-        else:
-            raise ValueError("Expected one of the first 2 columns of an OTT formatted "
-                             "synonyms file to be 'uid'. Problem reading: {}".format(syn_fp))
-        for n, line in enumerate(iinp):
-            ls = line.split('\t|\t')
-            if n % 1000 == 0:
-                _LOG.info(' read synonym {}'.format(n))
-            try:
-                accept_id = ls[uid_ind]
-                try:
-                    accept_id = int(accept_id)
-                except:
-                    pass
-                tax_part.add_synonym(accept_id, syn_id=None, line=line)
-            except:
-                _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
-                raise
-
-
-def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
-    complete_taxon_fp = tax_part.tax_fp
-    tax_part.taxon_header = ''
-    if not os.path.exists(complete_taxon_fp):
-        return
-    pd = tax_part.res.partitioned_filepath
-    if complete_taxon_fp.startswith(pd):
-        ptp = complete_taxon_fp[len(pd):]
-        while ptp.startswith('/'):
-            ptp = ptp[1:]
-    else:
-        ptp = complete_taxon_fp
-    with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
-        iinp = iter(inp)
-        try:
-            tax_part.taxon_header = iinp.next()
-        except StopIteration:
-            return
-        for n, line in enumerate(iinp):
-            ls = line.split('\t|\t')
-            if n % 10000 == 0:
-                _LOG.info(' read taxon {} from {}'.format(n, ptp))
-            try:
-                uid, par_id = ls[0], ls[1]
-                try:
-                    uid = int(uid)
-                except:
-                    pass
-                tax_part.read_taxon_line(uid, par_id, line)
-            except:
-                _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
-                raise
-
-
-def partition_ott_by_root_id(tax_part):  # type (TaxonPartition) -> None
-    _parse_synonyms(tax_part)
-    _parse_taxa(tax_part)
 
 
 def ott_fetch_root_taxon_for_partition(res, parts_key, root_id):
