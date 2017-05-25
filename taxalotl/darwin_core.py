@@ -15,9 +15,8 @@ from peyotl import (assure_dir_exists,
                     get_logger)
 
 from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
-
+from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
 _LOG = get_logger(__name__)
-
 
 # Cases to deal with:
 #  Foo bar
@@ -258,3 +257,8 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
         for taxon_id in paleos:
             paleofile.write('{}\n'.format(taxon_id))
     itd.write_to_dir(destination)
+
+
+class GBIFWrapper(ExternalTaxonomyWrapper):
+    def normalize(self):
+        normalize_darwin_core_taxonomy(self.unpacked_filepath, self.normalized_filepath, self)

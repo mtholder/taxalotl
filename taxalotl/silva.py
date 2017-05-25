@@ -15,7 +15,8 @@ from peyotl import (assure_dir_exists,
 
 from taxalotl.commands import unpack_resources
 from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
-from taxalotl.partitions import do_partition, GEN_MAPPING_FILENAME
+from taxalotl.partitions import GEN_MAPPING_FILENAME
+from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
 
 _LOG = get_logger(__name__)
 
@@ -209,10 +210,14 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
     return part_name_to_silva_id
 
 
-def partition_silva(res_wrapper, part_name, part_keys, par_frag):
-    silva_map = read_as_json(os.path.join(res_wrapper.normalized_filepath, GEN_MAPPING_FILENAME))
-    do_partition(res_wrapper,
-                 part_name,
-                 part_keys,
-                 par_frag,
-                 master_map=silva_map)
+# noinspection PyAbstractClass
+class SilvaIdListWrapper(ExternalTaxonomyWrapper):
+    resource_type = 'id list'
+
+
+class SilvaWrapper(ExternalTaxonomyWrapper):
+    def normalize(self):
+        normalize_silva_taxonomy(self.unpacked_filepath, self.normalized_filepath, self)
+
+    def get_primary_partition_map(self):
+        return read_as_json(os.path.join(self.normalized_filepath, GEN_MAPPING_FILENAME))

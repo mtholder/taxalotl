@@ -1,46 +1,38 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import urllib
-import shutil
+
 import codecs
 import json
 import os
 
-from peyotl import (assure_dir_exists,
-                    download_large_file,
-                    get_logger, gunzip, gunzip_and_untar,
-                    unzip)
-from taxalotl.newick import normalize_newick
-from taxalotl.ncbi import normalize_ncbi
-from taxalotl.irmng import normalize_irmng
-from taxalotl.silva import normalize_silva_taxonomy, partition_silva
-from taxalotl.darwin_core import normalize_darwin_core_taxonomy
-from taxalotl.col import partition_col, partition_col_by_root_id
-from taxalotl.ott import (ott_diagnose_new_separators,
-                          ott_build_paritition_maps,
-                          partition_ott_by_root_id,
-                          )
-from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
-                                 get_part_inp_taxdir,
-                                 get_par_and_par_misc_taxdir,
-                                 get_inp_taxdir,
-                                 get_misc_inp_taxdir)
-from taxalotl.interim_taxonomy_struct import (INP_OTT_SYNONYMS_HEADER,
-                                              INP_OTT_TAXONOMY_HEADER)
+from peyotl import (get_logger)
 
 _LOG = get_logger(__name__)
 
 
+def read_resource_file(fp):
+    try:
+        with codecs.open(fp, 'rU', encoding='utf-8') as inp:
+            return json.load(inp)
+    except:
+        _LOG.exception("Error reading JSON from \"{}\"".format(fp))
+        raise
+
+
+def write_resources_file(obj, fp):
+    with codecs.open(fp, 'w', encoding='utf-8') as outp:
+        json.dump(obj, outp, indent=2, sort_keys=True, separators=(',', ': '))
+
+
 def get_resource_wrapper(raw, refs, parent=None):
     from taxalotl.resource_mapper import BASE_ID_TO_RES_TYPE, wrapper_types
-    base = raw["base_id"].lower()
+    base = BASE_ID_TO_RES_TYPE.get(raw["base_id"].lower())
     if base:
-        base(raw, parent=parent, refs)
-    else:
-        rt = raw["resource_type"].lower()
-        for wt in wrapper_types:
-            if rt == wt.resource_type:
-                return wt(raw, parent=parent, refs=refs)
+        return base(raw, parent=parent, refs=refs)
+    rt = raw["resource_type"].lower()
+    for wt in wrapper_types:
+        if rt == wt.resource_type:
+            return wt(raw, parent=parent, refs=refs)
     raise RuntimeError("resource_type '{}' not recognized".format(rt))
 
 
@@ -84,10 +76,6 @@ def wrap_otifact_resources(res, refs=None):
                     raise RuntimeError("Repeated alias for an id: {}".format(a))
                 aliases[a] = w
     rd.update(aliases)
-    res_list = rd.values()
-    for res in res_list:
-        if res.base_id == 'col':
-            res.__class__ = CoLExternalTaxonomyWrapper
     return rd
 
 

@@ -4,7 +4,7 @@ import codecs
 
 from peyotl import (get_logger)
 
-from taxalotl.partitions import do_partition
+from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
 
 _LOG = get_logger(__name__)
 
@@ -37,14 +37,6 @@ COL_PARTMAP = {
     'Porifera': frozenset([33527549]),
     'Viruses': frozenset([33521407]),
 }
-
-
-def partition_col(res_wrapper, part_name, part_keys, par_frag):
-    do_partition(res_wrapper,
-                 part_name,
-                 part_keys,
-                 par_frag,
-                 master_map=COL_PARTMAP)
 
 
 def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
@@ -100,3 +92,17 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
             except:
                 _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                 raise
+
+
+# noinspection PyAbstractClass
+class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
+    taxon_filename = 'taxa.txt'
+    synonyms_filename = None
+    partition_parsing_fn = staticmethod(partition_col_by_root_id)
+
+    @property
+    def partition_source_dir(self):
+        return self.unpacked_filepath
+
+    def get_primary_partition_map(self):
+        return COL_PARTMAP

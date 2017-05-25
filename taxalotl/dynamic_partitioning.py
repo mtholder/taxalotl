@@ -84,7 +84,7 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
         assert term_most == self.tax_fp_unpartitioned
         if infile_name_list:
             uncle_fp = infile_name_list[0]
-            uk = (VirtualTaxonomyToRootSlice,self.src_id, uncle_fp)
+            uk = (VirtualTaxonomyToRootSlice, self.src_id, uncle_fp)
             self.misc_uncle = TAX_SLICE_CACHE.get(uk)
             if self.misc_uncle is None:
                 uf = os.path.split(self.fragment)[0]
@@ -241,7 +241,7 @@ def _gen_dyn_separation_from_obj_for_source(ott_res,
                 _LOG.info('sub separation file written to "{}"'.format(subjson))
             rec_el = (next_frag, sub)
             recursive_call_list.append(rec_el)
-        #_LOG.info("Skipping recursion"); recursive_call_list = []
+        # _LOG.info("Skipping recursion"); recursive_call_list = []
         for recurse_el in recursive_call_list:
             next_frag, next_sep_obj = recurse_el
             _gen_dyn_separation_from_obj_for_source(ott_res=ott_res,

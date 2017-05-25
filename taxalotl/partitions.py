@@ -212,17 +212,16 @@ def merge_and_write_taxon_partition_list(tp_list):
 def do_partition(res,
                  part_name,
                  part_keys,
-                 par_frag,
-                 master_map):
+                 par_frag):
     """Partition a parent taxon into descendants and garbagebin (__misc__) dir
 
     :param res: a wrapper around the resource. Used for id, part_source_filepath, 
     :param part_name:
     :param part_keys:
     :param par_frag:
-    :param master_map:
     :return:
     """
+    master_map = res.get_primary_partition_map()
     fragment = os.path.join(par_frag, part_name)
     mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
     if not mapping:

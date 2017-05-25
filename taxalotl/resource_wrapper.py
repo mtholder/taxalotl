@@ -1,32 +1,27 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import urllib
-import shutil
+
 import codecs
-import json
 import os
+import shutil
+import urllib
 
 from peyotl import (assure_dir_exists,
                     download_large_file,
                     get_logger, gunzip, gunzip_and_untar,
                     unzip)
+
+from taxalotl.interim_taxonomy_struct import (INP_OTT_SYNONYMS_HEADER,
+                                              INP_OTT_TAXONOMY_HEADER)
 from taxalotl.newick import normalize_newick
-from taxalotl.ncbi import normalize_ncbi
-from taxalotl.irmng import normalize_irmng
-from taxalotl.silva import normalize_silva_taxonomy, partition_silva
-from taxalotl.darwin_core import normalize_darwin_core_taxonomy
-from taxalotl.col import partition_col, partition_col_by_root_id
-from taxalotl.ott import (ott_diagnose_new_separators,
-                          ott_build_paritition_maps,
-                          partition_ott_by_root_id,
-                          )
+from taxalotl.ott import partition_ott_by_root_id
 from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
+                                 get_auto_gen_part_mapper,
                                  get_part_inp_taxdir,
                                  get_par_and_par_misc_taxdir,
                                  get_inp_taxdir,
-                                 get_misc_inp_taxdir)
-from taxalotl.interim_taxonomy_struct import (INP_OTT_SYNONYMS_HEADER,
-                                              INP_OTT_TAXONOMY_HEADER)
+                                 get_misc_inp_taxdir,
+                                 do_partition)
 
 _LOG = get_logger(__name__)
 
@@ -153,41 +148,12 @@ def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
                         out.write('\t|\t'.join(ls))
 
 
-_schema_to_norm_fn = {"ott": copy_taxonomy_by_linking,
-                      "headerless ott": copy_and_add_ott_headers,
-                      "ott id csv": copy_id_list_by_linking,
-                      "ncbi taxonomy": normalize_ncbi,
-                      "http://rs.tdwg.org/dwc/": normalize_darwin_core_taxonomy,
+_schema_to_norm_fn = {"headerless ott": copy_and_add_ott_headers,
                       "newick": normalize_newick,
-                      "irmng dwc": normalize_irmng,
-                      "silva taxmap": normalize_silva_taxonomy,
+                      "ott": copy_taxonomy_by_linking,
+                      "ott id csv": copy_id_list_by_linking,
                       "tab-separated ott": normalize_tab_sep_ott,
                       }
-
-
-def normalize_archive(unpacked_fp, normalized_fp, schema_str, resource_wrapper):
-    schema = schema_str.lower()
-    try:
-        norm_fn = _schema_to_norm_fn[schema]
-    except KeyError:
-        m = "Normalization from \"{}\" schema is not currently supported"
-        raise NotImplementedError(m.format(schema_str))
-    norm_fn(unpacked_fp, normalized_fp, resource_wrapper)
-
-
-def read_resource_file(fp):
-    try:
-        with codecs.open(fp, 'rU', encoding='utf-8') as inp:
-            return json.load(inp)
-    except:
-        _LOG.exception("Error reading JSON from \"{}\"".format(fp))
-        raise
-
-
-def write_resources_file(obj, fp):
-    with codecs.open(fp, 'w', encoding='utf-8') as outp:
-        json.dump(obj, outp, indent=2, sort_keys=True, separators=(',', ': '))
-
 
 _known_res_attr = frozenset(['aliases',
                              'base_id',  # base ID in inherits from graph
@@ -217,12 +183,42 @@ _known_res_attr = frozenset(['aliases',
                              ])
 
 
-class ResourceWrapper(object):
+class FromOTifacts(object):
+    def __init__(self):
+        self.aliases = None
+        self.base_id = None
+        self.copy_status = None
+        self.date = None
+        self.depends_on = None
+        self.doc_url = None
+        self.format = None
+        self.id = None
+        self.inherits_from = None
+        self.inputs = None
+        self.id_list = None
+        self.latest_download_url = None
+        self.license_url = None
+        self.license_or_tou_info = None
+        self.local_filename = None
+        self.maintainer = None
+        self.notes = None
+        self.preceded_by = None
+        self.references = None
+        self.resource_type = None
+        self.schema = None
+        self.source = None
+        self.stats = None
+        self.url = None
+        self.version = None
+
+
+class ResourceWrapper(FromOTifacts):
     taxon_filename = 'taxonomy.tsv'
     synonyms_filename = 'synonyms.tsv'
     partition_parsing_fn = staticmethod(partition_ott_by_root_id)
 
     def __init__(self, obj, parent=None, refs=None, config=None):
+        FromOTifacts.__init__(self)
         self.base_id = None
         for k in _known_res_attr:
             self.__dict__[k] = obj.get(k)
@@ -376,7 +372,13 @@ class ResourceWrapper(object):
         unpack_archive(self.download_filepath, self.unpacked_filepath, self.format, self)
 
     def normalize(self):
-        normalize_archive(self.unpacked_filepath, self.normalized_filepath, self.schema, self)
+        schema = self.schema.lower()
+        try:
+            norm_fn = _schema_to_norm_fn[schema]
+        except KeyError:
+            m = "Normalization from \"{}\" is not currently supported"
+            raise NotImplementedError(m.format(self.base_id))
+        norm_fn(self.unpacked_filepath, self.normalized_filepath, self)
 
     def partition(self, part_name, part_keys, par_frag):
         raise NotImplementedError('Partition not implemented for base ResourceWrapper')
@@ -435,10 +437,8 @@ class ResourceWrapper(object):
     def get_misc_taxon_dir_for_part(self, fragment):
         return get_misc_inp_taxdir(self.partitioned_filepath, fragment, self.id)
 
-
-_rt_to_partition = {'col': partition_col,
-                    'silva': partition_silva,
-                    }
+    def get_primary_partition_map(self):
+        return get_auto_gen_part_mapper(self)
 
 
 # noinspection PyAbstractClass
@@ -450,60 +450,7 @@ class ExternalTaxonomyWrapper(ResourceWrapper):
         # print("ET obj = {}".format(obj))
 
     def partition(self, part_name, part_keys, par_frag):
-        auto_map = get_auto_gen_part_mapper(self)
         do_partition(self,
                      part_name,
                      part_keys,
-                     par_frag,
-                     master_map=auto_map)
-        fn = _rt_to_partition.get(self.base_id, partition_from_auto_maps)
-        return fn(self, part_name, part_keys, par_frag)
-
-
-class SilvaIdListWrapper(ExternalTaxonomyWrapper):
-    resource_type = 'id list'
-
-
-class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
-    taxon_filename = 'taxa.txt'
-    synonyms_filename = None
-    partition_parsing_fn = staticmethod(partition_col_by_root_id)
-
-    @property
-    def partition_source_dir(self):
-        return self.unpacked_filepath
-
-
-# noinspection PyAbstractClass
-class OTTaxonomyWrapper(ResourceWrapper):
-    resource_type = 'open tree taxonomy'
-
-    def __init__(self, obj, parent=None, refs=None):
-        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
-
-    def partition(self, part_name, part_keys, par_frag):
-        do_partition(self,
-                     part_name,
-                     part_keys,
-                     par_frag,
-                     master_map=OTT_PARTMAP)
-
-    def diagnose_new_separators(self, current_partition_key):
-        return ott_diagnose_new_separators(self, current_partition_key)
-
-    def build_paritition_maps(self):
-        return ott_build_paritition_maps(self)
-
-
-# noinspection PyAbstractClass
-class OTTaxonomyIdListWrapper(ResourceWrapper):
-    resource_type = 'open tree taxonomy idlist'
-
-    def __init__(self, obj, parent=None, refs=None):
-        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
-
-    def has_been_normalized(self):
-        dfp = self.normalized_filepath
-        return (dfp is not None
-                and os.path.exists(dfp)
-                and os.path.exists(os.path.join(dfp, 'by_qid.csv')))
+                     par_frag)

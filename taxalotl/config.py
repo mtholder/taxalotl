@@ -4,7 +4,6 @@ from __future__ import print_function
 import os
 from peyotl import get_logger
 from taxalotl.resource_manager import ResourceManager
-from taxalotl.resource_manager import ResourceWrapper
 
 _LOG = get_logger(__name__)
 
@@ -93,7 +92,7 @@ class TaxalotlConfig(object):
         return self._resources_mgr
 
     def get_resource_by_id(self, res_id):
-        # type: (str) -> ResourceWrapper
+        # from taxalotl.resource_wrapper import ResourceWrapper type: (str) -> ResourceWrapper
         try:
             return self.resources_mgr.resources[res_id]
         except:

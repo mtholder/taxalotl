@@ -91,6 +91,7 @@ class PartitionedTaxDirBase(object):
         return n
 
 
+# noinspection PyProtectedMember
 class LightTaxonomyHolder(object):
     _DATT = ['_id_order', '_id_to_line', '_id_to_child_set', '_syn_by_id', '_id_to_el', '_roots']
 
@@ -264,6 +265,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         other.treat_syn_as_taxa = self.treat_syn_as_taxa
 
 
+# noinspection PyProtectedMember
 class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     def __init__(self, res, fragment):
         PartitioningLightTaxHolder.__init__(self, fragment)
@@ -361,6 +363,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     def sub_tax_parts(self, include_misc=True):
         ret = [i for i in self._root_to_lth.values()]
         if include_misc:
+            # noinspection PyTypeChecker
             ret.append(self._misc_part)
         return ret
 

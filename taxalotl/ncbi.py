@@ -5,6 +5,7 @@ import os
 import time
 from peyotl import (add_or_append_to_dict, get_logger)
 from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
+from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
 
 _LOG = get_logger(__name__)
 
@@ -238,4 +239,9 @@ def normalize_ncbi(source, destination, res_wrapper):
     deal_with_ncbi_env_samples_names(itd)
     itd.write_to_dir(destination)
 
+
 ###################################################################################################
+
+class NCBIWrapper(ExternalTaxonomyWrapper):
+    def normalize(self):
+        normalize_ncbi(self.unpacked_filepath, self.normalized_filepath, self)

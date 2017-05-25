@@ -16,6 +16,7 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
                                  PART_NAMES,
                                  PREORDER_PART_LIST)
 from taxalotl.dynamic_partitioning import perform_dynamic_separation, TAX_SLICE_CACHE
+
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
 
@@ -214,6 +215,7 @@ def enforce_new_separators(taxalotl_config):
                                        suppress_cache_flush=True)
     finally:
         TAX_SLICE_CACHE.flush()
+
 
 def build_partition_maps(taxalotl_config):
     rw = taxalotl_config.get_terminalized_res_by_id("ott", 'partition')

@@ -10,14 +10,13 @@ from peyotl.utility.str_util import StringIO
 from taxalotl.interim_taxonomy_struct import (read_taxonomy_to_get_single_taxon,
                                               read_taxonomy_to_get_id_to_fields,
                                               )
-from taxalotl.partitions import (do_partition,
-                                 fill_empty_anc_of_mapping,
+from taxalotl.partitions import (fill_empty_anc_of_mapping,
                                  get_root_ids_for_subset,
                                  get_relative_dir_for_partition,
-                                 get_auto_gen_part_mapper,
                                  MISC_DIRNAME,
                                  PREORDER_PART_LIST,
                                  PARTS_BY_NAME)
+from taxalotl.resource_wrapper import ResourceWrapper, ExternalTaxonomyWrapper
 
 _LOG = get_logger(__name__)
 
@@ -57,7 +56,6 @@ OTT_PARTMAP = {
 
 
 OTT_3_SEPARATION_TAXA = OTT_PARTMAP
-
 
 
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
@@ -323,3 +321,34 @@ def _add_nst_subtree_el_to_dict(rd, nst_el, par_to_child):
     for c in children:
         next_el = par_to_child[c]
         _add_nst_subtree_el_to_dict(nd, next_el, par_to_child)
+
+
+# noinspection PyAbstractClass
+class OTTaxonomyWrapper(ExternalTaxonomyWrapper):
+    resource_type = 'open tree taxonomy'
+
+    def __init__(self, obj, parent=None, refs=None):
+        ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
+
+    def diagnose_new_separators(self, current_partition_key):
+        return ott_diagnose_new_separators(self, current_partition_key)
+
+    def build_paritition_maps(self):
+        return ott_build_paritition_maps(self)
+
+    def get_primary_partition_map(self):
+        return OTT_PARTMAP
+
+
+# noinspection PyAbstractClass
+class OTTaxonomyIdListWrapper(ResourceWrapper):
+    resource_type = 'open tree taxonomy idlist'
+
+    def __init__(self, obj, parent=None, refs=None):
+        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
+
+    def has_been_normalized(self):
+        dfp = self.normalized_filepath
+        return (dfp is not None
+                and os.path.exists(dfp)
+                and os.path.exists(os.path.join(dfp, 'by_qid.csv')))

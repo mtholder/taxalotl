@@ -11,6 +11,7 @@ import re
 from peyotl import (get_logger)
 
 from taxalotl.interim_taxonomy_struct import InterimTaxonomyData
+from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
 
 _LOG = get_logger(__name__)
 
@@ -58,6 +59,7 @@ def read_irmng_file(irmng_file_name):
             m = 'IRMNG csv failed header check: header[5] == {} != not "FAMILY"'.format(header[5])
             raise RuntimeError(m)
         for raw_row in csvreader:
+            # noinspection PyCompatibility
             row = [unicode(i, 'utf-8') for i in raw_row]
             taxon_id = int(row[0])
             long_name = row[1]
@@ -308,6 +310,11 @@ def normalize_irmng(source, destination, res_wrapper):
     fix_irmng(itd)
     read_extinct_info(prof_file, itd)
     itd.write_to_dir(destination)
+
+
+class IRMNGWrapper(ExternalTaxonomyWrapper):
+    def normalize(self):
+        normalize_irmng(self.unpacked_filepath, self.normalized_filepath, self)
 
 
 """
