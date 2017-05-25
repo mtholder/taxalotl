@@ -27,19 +27,21 @@ def _escape_odd_char(s):
     return ''.join(l)
 
 
-def perform_dynamic_separation(ott_res, part_key, sep_fn, suppress_cache_flush=False):
+def perform_dynamic_separation(ott_res, part_key, sep_fn, suppress_cache_flush=False, src_id=None):
     """Called where part_key is a PART_NAME element from the OTT 3 separation taxa."""
     fragment = get_relative_dir_for_partition(part_key)
     general_dynamic_separation(ott_res,
                                fragment,
                                sep_fn,
-                               suppress_cache_flush=suppress_cache_flush)
+                               suppress_cache_flush=suppress_cache_flush,
+                               src_id=src_id)
 
 
 def general_dynamic_separation(ott_res,
                                fragment,
                                sep_fn,
-                               suppress_cache_flush=False):
+                               suppress_cache_flush=False,
+                               src_id=None):
     """
     :param suppress_cache_flush: 
     :param ott_res: resource wrapper for OTT
@@ -56,7 +58,8 @@ def general_dynamic_separation(ott_res,
         _general_dynamic_separation_from_obj(ott_res,
                                              fragment,
                                              sep_obj,
-                                             sep_fn)
+                                             sep_fn,
+                                             src_id=src_id)
     finally:
         if not suppress_cache_flush:
             TAX_SLICE_CACHE.flush()
@@ -171,7 +174,8 @@ def get_virtual_tax_to_root_slice(res,
 def _general_dynamic_separation_from_obj(ott_res,
                                          fragment,
                                          sep_obj,
-                                         sep_fn):
+                                         sep_fn,
+                                         src_id=None):
     """Separtes all sources and handles the recursion. Delegates to do_new_separation_of_src
     
     :param ott_res: 
@@ -196,13 +200,13 @@ def _general_dynamic_separation_from_obj(ott_res,
         src_set.update(a['src_dict'].keys())
         sep_id_to_fn[sep_id] = _escape_odd_char(i["uniqname"])
     _LOG.info('src_set: {}'.format(src_set))
-    for src_id in src_set:
-        if src_id != 'gbif':
+    for it_src_id in src_set:
+        if src_id is not None and src_id != it_src_id:
             continue
         _gen_dyn_separation_from_obj_for_source(ott_res,
                                                 fragment=fragment,
                                                 sep_obj=sep_obj,
-                                                src_id=src_id,
+                                                src_id=it_src_id,
                                                 sep_fn=sep_fn)
 
 

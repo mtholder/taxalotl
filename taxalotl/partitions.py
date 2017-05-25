@@ -63,6 +63,7 @@ del _x
 PARTS_BY_NAME = {}
 PART_FRAG_BY_NAME = {}
 NONTERMINAL_PART_NAMES = []
+TERMINAL_PART_NAMES = []
 PART_NAME_TO_DIRFRAG = {}
 
 
@@ -124,6 +125,8 @@ def _fill_parts_indices(d, par_frag):
         if subd:
             NONTERMINAL_PART_NAMES.append(k)
             _fill_parts_indices(subd, cf)
+        else:
+            TERMINAL_PART_NAMES.append(k)
 
 
 _fill_parts_indices(BASE_PARTITIONS_DICT, '')
@@ -133,6 +136,8 @@ PART_NAMES = tuple(PART_NAMES)
 PREORDER_PART_LIST = tuple(NONTERMINAL_PART_NAMES)
 NONTERMINAL_PART_NAMES.sort()
 NONTERMINAL_PART_NAMES = tuple(NONTERMINAL_PART_NAMES)
+TERMINAL_PART_NAMES.sort()
+TERMINAL_PART_NAMES = tuple(TERMINAL_PART_NAMES)
 
 
 def _rec_populate(d_to_fill, key_to_filled_set):

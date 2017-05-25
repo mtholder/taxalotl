@@ -206,19 +206,29 @@ def diagnose_new_separators(taxalotl_config):
                 _LOG.info("new separators written to {}".format(fp))
 
 
-def enforce_new_separators(taxalotl_config):
-    ott_res = taxalotl_config.get_terminalized_res_by_id("ott",
-                                                         'enforce-new-separators')
+def enforce_new_separators(taxalotl_config, id_list, level_list):
+    if level_list == [None]:
+        level_list = PART_NAMES
+    ott_res = taxalotl_config.get_terminalized_res_by_id("ott", 'enforce-new-separators')
     if not ott_res.has_been_partitioned():
         partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
-    try:
-        for part_name in PART_NAMES:
-            perform_dynamic_separation(ott_res,
-                                       part_key=part_name,
-                                       sep_fn=NEW_SEP_FILENAME,
-                                       suppress_cache_flush=True)
-    finally:
+    if not id_list:
+        id_list = [None]
+    for src in id_list:
+        if src is not None:
+            res = taxalotl_config.get_terminalized_res_by_id(src, 'enforce-new-separators')
+            if not res.has_been_partitioned():
+                partition_resources(taxalotl_config, [src], PREORDER_PART_LIST)
         TAX_SLICE_CACHE.flush()
+        try:
+            for part_name in level_list:
+                perform_dynamic_separation(ott_res,
+                                           src_id=src,
+                                           part_key=part_name,
+                                           sep_fn=NEW_SEP_FILENAME,
+                                           suppress_cache_flush=True)
+        finally:
+            TAX_SLICE_CACHE.flush()
 
 
 def build_partition_maps(taxalotl_config):

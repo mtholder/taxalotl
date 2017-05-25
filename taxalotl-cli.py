@@ -19,15 +19,23 @@ from taxalotl.commands import (build_partition_maps,
                                )
 from taxalotl.partitions import (PART_NAMES,
                                  PARTS_BY_NAME,
-                                 NONTERMINAL_PART_NAMES)
+                                 NONTERMINAL_PART_NAMES,
+                                 TERMINAL_PART_NAMES, )
 
 _LOG = get_logger(__name__)
 
-res_indep_cmds = ['pull-otifacts',
+res_indep_cmds = ['build-partition-maps',
                   'diagnose-new-separators',
-                  'build-partition-maps',
-                  'enforce-new-separators']
-res_dep_cmds = ['clean', 'status', 'download', 'unpack', 'normalize', 'partition']
+                  'pull-otifacts',
+                  ]
+res_dep_cmds = ['clean',
+                'download',
+                'enforce-new-separators',
+                'normalize',
+                'partition',
+                'status',
+                'unpack',
+               ]
 all_cmds = res_dep_cmds + res_indep_cmds
 
 
@@ -56,7 +64,9 @@ def main_post_parse(args):
         elif args.which == 'diagnose-new-separators':
             diagnose_new_separators(taxalotl_config)
         elif args.which == 'enforce-new-separators':
-            enforce_new_separators(taxalotl_config)
+            if args.level is not None and args.level not in PARTS_BY_NAME:
+                raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
+            enforce_new_separators(taxalotl_config, args.resources, [args.level])
         elif args.which == 'build-partition-maps':
             build_partition_maps(taxalotl_config)
         elif args.which == 'partition':
@@ -123,7 +133,7 @@ def main():
     # PARTITION
     partition_p = subp.add_parser('partition',
                                   help="Breaks the resource taxon")
-    partition_p.add_argument('resources', nargs="+", help="IDs of the resources to unpack")
+    partition_p.add_argument('resources', nargs="+", help="IDs of the resources to partitition")
     partition_p.add_argument("--level",
                              default=None,
                              help="The level of the taxonomy to partition")
@@ -139,6 +149,10 @@ def main():
                                  help="Uses the __sep__.json files created by "
                                 "diagnose-new-separators to partition by unproblematic"
                                 "taxa")
+    enf_sep_p.add_argument('resources', nargs="*", help="IDs of the resources to separate")
+    enf_sep_p.add_argument("--level",
+                             default=None,
+                             help="The partition that is the root of the separation (default all)")
     enf_sep_p.set_defaults(which="enforce-new-separators")
 
     # BUILD-PARTITION-MAPS
@@ -210,6 +224,12 @@ def main():
                     # sys.stderr.write(str(a))
                     if '--level' == a[-1] or (len(a) > 1 and '--level' == a[-2]):
                         comp_list = list(NONTERMINAL_PART_NAMES)
+                    elif '--level' not in a:
+                        comp_list.extend(['--level'])
+                elif sel_cmd == 'enforce-new-separators':
+                    # sys.stderr.write(str(a))
+                    if '--level' == a[-1] or (len(a) > 1 and '--level' == a[-2]):
+                        comp_list = list(TERMINAL_PART_NAMES)
                     elif '--level' not in a:
                         comp_list.extend(['--level'])
                 elif sel_cmd == 'clean' and num_cmds == 1:
