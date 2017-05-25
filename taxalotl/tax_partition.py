@@ -215,14 +215,21 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         if uid in self._roots_for_sub:
             self._during_parse_root_to_par[uid] = par_id
 
+    def sub_tax_parts(self, include_misc=True):
+        ret = [i for i in self._root_to_lth.values()]
+        if include_misc:
+            # noinspection PyTypeChecker
+            ret.append(self._misc_part)
+        return ret
+
     def _finish_partition_after_parse(self):
         """On entry _id_to_el will be set for the root elements (and some of their
             children), but taxa processed before their ancestors may have been missed.
         _id_to_child_list and _id_to_line are only filled for these
         """
-        for v in self._subdirname_to_tp_roots.values():
-            if v._has_unread_tax_inp:
-                v._read_inputs(False)
+        for tp in self.sub_tax_parts(include_misc=False):
+            if tp._has_unread_tax_inp:
+                tp._read_inputs(False)
         des_children_for_misc = []
         for uid, par_id in self._during_parse_root_to_par.items():
             line = self._id_to_line[uid]
@@ -325,10 +332,10 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                 _LOG.info(m.format(self.fragment))
         cur_sub_names = self.scaffold_tax_subdir_names()
         do_part_if_reading = True
+        having_inp_to_read = set()
         if cur_sub_names:
             req_fulfilled = True
             some_part_found = False
-            having_inp_to_read = set()
             for x in list_of_subdirname_and_roots:
                 subname = x[0]
                 if subname in cur_sub_names:
@@ -395,13 +402,6 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             self._copy_shared_fields(sub_tp)
             sub_tp._populated = True
         self._move_data_to_empty_misc()
-
-    def sub_tax_parts(self, include_misc=True):
-        ret = [i for i in self._root_to_lth.values()]
-        if include_misc:
-            # noinspection PyTypeChecker
-            ret.append(self._misc_part)
-        return ret
 
     def _read_inputs(self, do_part_if_reading=True):
         self._read_from_fs = True
