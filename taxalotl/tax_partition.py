@@ -143,8 +143,10 @@ class LightTaxonomyHolder(object):
             if child_id in self._id_to_child_set:
                 self._transfer_subtree(child_id, dest_part)
             else:
-                dest_part.add_taxon(child_id, par_id, self._id_to_line[child_id])
-                del self._id_to_line[child_id]
+                line = self._id_to_line.get(child_id)
+                if line:
+                    dest_part.add_taxon(child_id, par_id, line)
+                    del self._id_to_line[child_id]
 
     def move_matched_synonyms(self, dest_tax_part):  # type: (PartitioningLightTaxHolder) -> None
         sk = set(self._syn_by_id.keys())
@@ -275,7 +277,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             self._diagnose_state_of_fs()
             if self._fs_is_partitioned is None:
                 m = "Taxa files not found for {} and TaxonPartition is empty"
-                raise ValueError(m.format(self.fragment))
+                _LOG.info(m.format(self.fragment))
         '''
         Need to make this check for the input tax dir, not just scaffold...
         cur_sub_names = self.scaffold_tax_subdirs()

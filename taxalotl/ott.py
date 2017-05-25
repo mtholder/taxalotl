@@ -192,6 +192,12 @@ def ott_build_paritition_maps(res):
                 assert v == pv
     if 'silva' in filled:
         del filled['silva']
+    # @TODO: make this automatic not generic
+    gbif = filled['gbif']
+    gbif["Rhodophyta"] = [106]
+    gbif["Glaucophyta"] = [37]
+    gbif["Chloroplastida"] = [13, 9, 7707728, 7819616, 36, 35]
+
     return filled
 
 

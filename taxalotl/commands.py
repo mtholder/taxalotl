@@ -15,7 +15,7 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
                                  PARTS_BY_NAME,
                                  PART_NAMES,
                                  PREORDER_PART_LIST)
-from taxalotl.dynamic_partitioning import perform_dynamic_separation
+from taxalotl.dynamic_partitioning import perform_dynamic_separation, TAX_SLICE_CACHE
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
 
@@ -206,9 +206,14 @@ def enforce_new_separators(taxalotl_config):
                                                          'enforce-new-separators')
     if not ott_res.has_been_partitioned():
         partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
-    for part_name in ['Archaea']:  # PART_NAMES:
-        perform_dynamic_separation(ott_res, part_name, NEW_SEP_FILENAME)
-
+    try:
+        for part_name in PART_NAMES:
+            perform_dynamic_separation(ott_res,
+                                       part_key=part_name,
+                                       sep_fn=NEW_SEP_FILENAME,
+                                       suppress_cache_flush=True)
+    finally:
+        TAX_SLICE_CACHE.flush()
 
 def build_partition_maps(taxalotl_config):
     partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)

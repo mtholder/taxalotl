@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import os
 import re
+import copy
 
 from peyotl import get_logger, read_as_json, write_as_json, assure_dir_exists
 
@@ -187,12 +188,16 @@ def _general_dynamic_separation_from_obj(ott_res,
     #   subdirectory
     src_set = set()
     sep_id_to_fn = {}
+    aug_sep_obj = {}
     for sep_id, i in sep_obj.items():
-        src_set.update(i['src_dict'].keys())
+        a = copy.deepcopy(i)
+        aug_sep_obj[sep_id] = a
+        a['src_dict']["ott"] = [sep_id]
+        src_set.update(a['src_dict'].keys())
         sep_id_to_fn[sep_id] = _escape_odd_char(i["uniqname"])
     _LOG.info('src_set: {}'.format(src_set))
     for src_id in src_set:
-        if src_id != 'ncbi':
+        if src_id != 'gbif':
             continue
         _gen_dyn_separation_from_obj_for_source(ott_res,
                                                 fragment=fragment,
