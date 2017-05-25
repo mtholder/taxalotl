@@ -438,6 +438,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         if self._external_inp_fp:
             self._read_from_partitioning_scratch = True
             self.tax_fp = self._external_inp_fp
+            tax_dir = os.path.split(self.tax_fp)[0]
         else:
             if os.path.exists(self.tax_fp_misc):
                 self._read_from_partitioning_scratch = True

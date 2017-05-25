@@ -171,6 +171,18 @@ def get_virtual_tax_to_root_slice(res,
     return VirtualTaxonomyToRootSlice(res, fragment)
 
 
+def _return_sep_obj_copy_with_ott_fields(sep_obj):
+    r = {}
+    for sep_id, i in sep_obj.items():
+        cobj = copy.deepcopy(i)
+        r[sep_id] = cobj
+        cobj["ott"] = [sep_id]
+        s = cobj.get("sub")
+        if s:
+            cobj["sub"] = _return_sep_obj_copy_with_ott_fields(s)
+    return r
+
+
 def _general_dynamic_separation_from_obj(ott_res,
                                          fragment,
                                          sep_obj,
@@ -192,12 +204,9 @@ def _general_dynamic_separation_from_obj(ott_res,
     #   subdirectory
     src_set = set()
     sep_id_to_fn = {}
-    aug_sep_obj = {}
-    for sep_id, i in sep_obj.items():
-        a = copy.deepcopy(i)
-        aug_sep_obj[sep_id] = a
-        a['src_dict']["ott"] = [sep_id]
-        src_set.update(a['src_dict'].keys())
+    aug_sep_obj = _return_sep_obj_copy_with_ott_fields(sep_obj)
+    for sep_id, i in aug_sep_obj.items():
+        src_set.update(i['src_dict'].keys())
         sep_id_to_fn[sep_id] = _escape_odd_char(i["uniqname"])
     _LOG.info('src_set: {}'.format(src_set))
     for it_src_id in src_set:
@@ -205,7 +214,7 @@ def _general_dynamic_separation_from_obj(ott_res,
             continue
         _gen_dyn_separation_from_obj_for_source(ott_res,
                                                 fragment=fragment,
-                                                sep_obj=sep_obj,
+                                                sep_obj=aug_sep_obj,
                                                 src_id=it_src_id,
                                                 sep_fn=sep_fn)
 
