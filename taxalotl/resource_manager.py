@@ -292,7 +292,7 @@ class ResourceWrapper(object):
         return self.config.partitioned_dir
 
     @property
-    def partition_source_filepath(self):
+    def partition_source_dir(self):
         return self.normalized_filepath
 
     @property
@@ -465,7 +465,7 @@ class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
     partition_parsing_fn = staticmethod(partition_col_by_root_id)
 
     @property
-    def partition_source_filepath(self):
+    def partition_source_dir(self):
         return self.unpacked_filepath
 
 

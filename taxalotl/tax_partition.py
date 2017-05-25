@@ -127,7 +127,7 @@ class LightTaxonomyHolder(object):
         c.update(self._id_to_line.keys())
         return c
 
-    def _transfer_subtree(self, par_id, dest_part):
+    def _transfer_subtree(self, par_id, dest_part):  # type (int, LightTaxonomyHolder) -> None
         child_set = self._id_to_child_set[par_id]
         # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
         #    _LOG.info("par_id {} -> child_list {}".format(par_id, child_set))
@@ -191,7 +191,6 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         self._root_to_lth = {}
         self._during_parse_root_to_par = {}
 
-
     def read_taxon_line(self, uid, par_id, line):
         if par_id:
             try:
@@ -231,7 +230,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         self._move_data_to_empty_misc()
         for el in des_children_for_misc:
             self._misc_part.add_moved_taxon(el[0], el[1], el[2])
-        #  _partition_synonyms that have now moved to the misc part
+        # _partition_synonyms that have now moved to the misc part
         to_del = set()
         for accept_id, i_l_list in self._misc_part._syn_by_id.items():
             match_el = self._misc_part._id_to_el.get(accept_id)
@@ -250,6 +249,20 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
             self._read_inputs()
         return self._misc_part.move_from_self_to_new_part(other)
 
+    def _move_data_to_empty_misc(self):
+        assert not self._misc_part._populated
+        m = self._misc_part
+        for a in LightTaxonomyHolder._DATT:
+            setattr(m, a, getattr(self, a))
+            setattr(self, a, None)
+        self._copy_shared_fields(m)
+        m._populated = True
+
+    def _copy_shared_fields(self, other):
+        other.taxon_header = self.taxon_header
+        other.syn_header = self.syn_header
+        other.treat_syn_as_taxa = self.treat_syn_as_taxa
+
 
 class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     def __init__(self, res, fragment):
@@ -261,6 +274,15 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         self._read_from_misc = False
         self._fs_is_partitioned = None
         self._has_flushed = False
+        self._external_inp_fp = None
+
+    @property
+    def external_input_fp(self):
+        return self._external_inp_fp
+
+    @external_input_fp.setter
+    def external_input_fp(self, value):
+        self._external_inp_fp = value
 
     def _diagnose_state_of_fs(self):
         if os.path.exists(self.tax_fp_misc):
@@ -307,7 +329,6 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
 
     def _partition_from_in_mem(self):
         _LOG.info("_partition_from_in_mem for fragment \"{}\"".format(self.fragment))
-        moved = set()
         assert not self._misc_part._populated
         for sub_tp, subroot in self._subdirname_to_tp_roots.values():
             _LOG.info("subroot {} for \"{}\"".format(subroot, sub_tp.fragment))
@@ -328,23 +349,14 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                     #     _LOG.info(" {} in _id_to_line".format(repr(r)))
                     sub_tp._id_to_line[r] = self._id_to_line[r]
                     sub_tp._roots.add(r)
-                # else:
-                #     if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
-                #         _LOG.info(" not stored".format(r))
+                    # else:
+                    #     if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
+                    #         _LOG.info(" not stored".format(r))
 
             self.move_matched_synonyms(sub_tp)
             self._copy_shared_fields(sub_tp)
             sub_tp._populated = True
         self._move_data_to_empty_misc()
-
-    def _move_data_to_empty_misc(self):
-        assert not self._misc_part._populated
-        m = self._misc_part
-        for a in LightTaxonomyHolder._DATT:
-            setattr(m, a, getattr(self, a))
-            setattr(self, a, None)
-        self._copy_shared_fields(m)
-        m._populated = True
 
     def sub_tax_parts(self, include_misc=True):
         ret = [i for i in self._root_to_lth.values()]
@@ -352,22 +364,20 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             ret.append(self._misc_part)
         return ret
 
-    def _copy_shared_fields(self, other):
-        other.taxon_header = self.taxon_header
-        other.syn_header = self.syn_header
-        other.treat_syn_as_taxa = self.treat_syn_as_taxa
-
-
     def _read_inputs(self):
         self._read = True
-        if os.path.exists(self.tax_fp_misc):
+        if self._external_inp_fp:
             self._read_from_partitioning_scratch = True
-            self.tax_fp = self.tax_fp_misc
-            self._read_from_misc = True
+            self.tax_fp = self._external_inp_fp
         else:
-            self._read_from_partitioning_scratch = True
-            self.tax_fp = self.tax_fp_unpartitioned
-            self._read_from_misc = False
+            if os.path.exists(self.tax_fp_misc):
+                self._read_from_partitioning_scratch = True
+                self.tax_fp = self.tax_fp_misc
+                self._read_from_misc = True
+            else:
+                self._read_from_partitioning_scratch = True
+                self.tax_fp = self.tax_fp_unpartitioned
+                self._read_from_misc = False
         try:
             # format-specific callback which will set headers and call
             #   add_synonym and read_taxon_line
@@ -390,7 +400,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         if self._has_flushed:
             return
         _LOG.info("flushing TaxonPartition for {}".format(self.fragment))
-        wrote = self.write_if_needed()
+        self.write_if_needed()
         if self._read_from_misc is False and self._read_from_partitioning_scratch:
             tr = [self.tax_fp_unpartitioned]
             if self.syn_fp:
@@ -492,6 +502,7 @@ def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
         outp.write(header)
         for l in ltw:
             outp.write(l)
+
 
 '''
 def _write_taxon_list(header, record_list, dest_path):

@@ -228,6 +228,7 @@ def do_partition(res,
         _LOG.info("No {} mapping for {}".format(res.id, part_name))
         return
     tp = get_taxon_partition(res, fragment)
+    tp.external_input_fp = os.path.join(res.partition_source_dir, res.taxon_filename)
     tp.do_partition(mapping)
     tp.flush()
 
