@@ -4,6 +4,7 @@
 from __future__ import print_function
 from peyotl import (add_or_append_to_dict, assure_dir_exists,
                     get_logger,
+                    shorter_fp_form,
                     write_as_json)
 import tempfile
 import codecs
@@ -57,13 +58,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
     tax_part.taxon_header = ''
     if not os.path.exists(complete_taxon_fp):
         return
-    pd = tax_part.res.partitioned_filepath
-    if complete_taxon_fp.startswith(pd):
-        ptp = complete_taxon_fp[len(pd):]
-        while ptp.startswith('/'):
-            ptp = ptp[1:]
-    else:
-        ptp = complete_taxon_fp
+    ptp = shorter_fp_form(complete_taxon_fp)
     with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         try:
@@ -72,7 +67,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
             return
         for n, line in enumerate(iinp):
             ls = line.split('\t|\t')
-            if n % 10000 == 0:
+            if (1 + n) % 10000 == 0:
                 _LOG.info(' read taxon {} from {}'.format(n, ptp))
             try:
                 uid, par_id = ls[0], ls[1]

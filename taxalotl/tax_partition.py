@@ -31,12 +31,15 @@ class TaxonomySliceCache(object):
         return self._ck_to_obj[ck]
 
     def __delitem__(self, ck):
+        _LOG.debug("TAX_SLICE_CACHE __delitem__ for {}".format(ck))
         obj = self._ck_to_obj.get(ck)
         if obj:
             del self._ck_to_obj[ck]
+            _LOG.debug("TAX_SLICE_CACHE call of flush for {}".format(k))
             obj.flush()
 
     def try_del(self, ck):
+        _LOG.debug("TAX_SLICE_CACHE try_del for {}".format(ck))
         try:
             if ck in self._ck_to_obj:
                 self.__delitem__(ck)
@@ -46,12 +49,14 @@ class TaxonomySliceCache(object):
                 del self._ck_to_obj[ck]
 
     def flush(self):
+        _LOG.debug("TAX_SLICE_CACHE flush")
         kv = [(k, v) for k, v in self._ck_to_obj.items()]
         _ex = None
         for k, v in kv:
             if k in self._ck_to_obj:
                 del self._ck_to_obj[k]
             try:
+                _LOG.debug("TAX_SLICE_CACHE calling flush for {}".format(k))
                 v.flush()
             except Exception as x:
                 _LOG.exception('exception in flushing')
@@ -80,8 +85,10 @@ class PartitionedTaxDirBase(object):
         assert TAX_SLICE_CACHE.get(self.cache_key) is None
         TAX_SLICE_CACHE[self.cache_key] = self
 
-    def scaffold_tax_subdirs(self):
+    def scaffold_tax_subdir_names(self):
         """Returns a list of subdirectory names for self.scaffold_dir with __misc__ suppressed"""
+        if not os.path.isdir(self.scaffold_dir):
+            return []
         n = []
         for x in os.listdir(self.scaffold_dir):
             if x == INP_TAXONOMY_DIRNAME or x == MISC_DIRNAME:
@@ -107,6 +114,7 @@ class LightTaxonomyHolder(object):
         self.syn_header = None
         self.treat_syn_as_taxa = False
         self._populated = False
+        self._has_unread_tax_inp = False
 
     def _del_data(self):
         for el in LightTaxonomyHolder._DATT:
@@ -159,6 +167,9 @@ class LightTaxonomyHolder(object):
             del self._syn_by_id[s]
 
     def move_from_self_to_new_part(self, other):  # type: (PartitioningLightTaxHolder) -> None
+        self._has_moved_taxa = True
+        if other._has_unread_tax_inp:
+            other._read_inputs(False)
         cids = set(self._id_to_child_set.keys())
         for dest_tax_part in other._root_to_lth.values():
             tpids = dest_tax_part.contained_ids()
@@ -191,6 +202,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         self._roots_for_sub = set()
         self._root_to_lth = {}
         self._during_parse_root_to_par = {}
+        self._has_moved_taxa = False # true when taxa have been moved to another partition
 
     def read_taxon_line(self, uid, par_id, line):
         if par_id:
@@ -208,6 +220,9 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
             children), but taxa processed before their ancestors may have been missed.
         _id_to_child_list and _id_to_line are only filled for these
         """
+        for v in self._subdirname_to_tp_roots.values():
+            if v._has_unread_tax_inp:
+                v._read_inputs(False)
         des_children_for_misc = []
         for uid, par_id in self._during_parse_root_to_par.items():
             line = self._id_to_line[uid]
@@ -246,6 +261,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         raise NotImplementedError("_read_input pure virtual in PartitioningLightTaxHolder")
 
     def move_from_misc_to_new_part(self, other):  # type: (PartitioningLightTaxHolder) -> None
+        self._has_moved_taxa = True
         if not self._populated:
             self._read_inputs()
         return self._misc_part.move_from_self_to_new_part(other)
@@ -271,7 +287,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         PartitioningLightTaxHolder.__init__(self, fragment)
         PartitionedTaxDirBase.__init__(self, res, fragment)
         self.treat_syn_as_taxa = self.syn_fp is None
-        self._read = False
+        self._read_from_fs = False
         self._read_from_partitioning_scratch = False
         self._read_from_misc = False
         self._fs_is_partitioned = None
@@ -294,6 +310,11 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         else:
             self._fs_is_unpartitioned = None
 
+    def taxa_files_exist_for_a_frag(self, frag):
+        if os.path.exists(self.res.get_taxon_filepath_for_part(frag)):
+            return True
+        return os.path.exists(self.res.get_misc_taxon_dir_for_part(frag))
+
     def do_partition(self, list_of_subdirname_and_roots):
         if self._subdirname_to_tp_roots:
             raise ValueError("do_partition called twice for {}".format(self.fragment))
@@ -302,24 +323,36 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             if self._fs_is_partitioned is None:
                 m = "Taxa files not found for {} and TaxonPartition is empty"
                 _LOG.info(m.format(self.fragment))
-        '''
-        Need to make this check for the input tax dir, not just scaffold...
-        cur_sub_names = self.scaffold_tax_subdirs()
+        cur_sub_names = self.scaffold_tax_subdir_names()
+        do_part_if_reading = True
         if cur_sub_names:
             req_fulfilled = True
+            some_part_found = False
+            having_inp_to_read = set()
             for x in list_of_subdirname_and_roots:
-                if x[0] not in cur_sub_names:
+                subname = x[0]
+                if subname in cur_sub_names:
+                    subfrag = os.path.join(self.fragment, subname)
+                    if self.taxa_files_exist_for_a_frag(subfrag):
+                        _LOG.info("previous content for {}".format(subfrag))
+                        some_part_found = True
+                        having_inp_to_read.add(subname)
+                    else:
+                        _LOG.warn("no previous taxonomic content for {}".format(subfrag))
+                        req_fulfilled = False
+                else:
+                    _LOG.warn("no previous subdir for {}".format(subname))
                     req_fulfilled = False
-                    break
-            if req_fulfilled:
-                m = "Partition subdirs found for {} TaxonPartition"
-                raise ValueError(m.format(self.fragment))
-            m = "Some taxonomic subdirs found for {} TaxonPartition"
-            raise ValueError(m.format(self.fragment))
-        '''
+            if some_part_found:
+                do_part_if_reading = False
+                quant = 'All' if req_fulfilled else 'Some'
+                m = "{} subdir partitions found for {}. No more partitioning of parent will be done!"
+                _LOG.warn(m.format(quant, self.fragment))
         for subname, subroot in list_of_subdirname_and_roots:
             subfrag = os.path.join(self.fragment, subname)
             subtp = get_taxon_partition(self.res, subfrag)
+            if subname in having_inp_to_read:
+                subtp._has_unread_tax_inp = True
             self._roots_for_sub.update(subroot)
             for r in subroot:
                 self._root_to_lth[r] = subtp
@@ -327,13 +360,16 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         if self._populated:
             self._partition_from_in_mem()
         else:
-            self._read_inputs()
+            self._read_inputs(do_part_if_reading)
 
     def _partition_from_in_mem(self):
         _LOG.info("_partition_from_in_mem for fragment \"{}\"".format(self.fragment))
         assert not self._misc_part._populated
+        self._has_moved_taxa = True
         for sub_tp, subroot in self._subdirname_to_tp_roots.values():
             _LOG.info("subroot {} for \"{}\"".format(subroot, sub_tp.fragment))
+            if sub_tp._has_unread_tax_inp:
+                sub_tp._read_inputs(False)
             x = self._id_to_child_set
             # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
             #    _LOG.info(" self._id_to_child_set = {}".format(repr(x)))
@@ -367,8 +403,10 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             ret.append(self._misc_part)
         return ret
 
-    def _read_inputs(self):
-        self._read = True
+    def _read_inputs(self, do_part_if_reading=True):
+        self._read_from_fs = True
+        self._has_unread_tax_inp = False
+
         if self._external_inp_fp:
             self._read_from_partitioning_scratch = True
             self.tax_fp = self._external_inp_fp
@@ -385,23 +423,30 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             # format-specific callback which will set headers and call
             #   add_synonym and read_taxon_line
             self.res.partition_parsing_fn(self)
-            m = "prepart {} lines in misc. {} lines in self for {}"
-            _LOG.info(m.format(len(self._misc_part._id_to_line),
-                               len(self._id_to_line), self.fragment))
-            self._finish_partition_after_parse()
-            for el in self.sub_tax_parts():
-                self._copy_shared_fields(el)
-                el._populated = True
+            m = "prepart {} taxa in {}"
+            _LOG.info(m.format(len(self._misc_part._id_to_line) + len(self._id_to_line), self.fragment))
+            self._read_from_fs
+            if do_part_if_reading:
+                self._has_moved_taxa = True
+                self._finish_partition_after_parse()
+                for el in self.sub_tax_parts():
+                    self._copy_shared_fields(el)
+                    el._populated = True
             self._populated = True
         except:
-            self._read = False
+            self._read_from_fs = False
             self._read_from_misc = None
             self._read_from_partitioning_scratch = False
             raise
 
     def flush(self):
         if self._has_flushed:
+            _LOG.info("duplicate flush of TaxonPartition for {} ignored.".format(self.fragment))
             return
+        if not self._has_moved_taxa:
+            if self._read_from_fs:
+                _LOG.info("Flush of unaltered TaxonPartition for {} ignored".format(self.fragment))
+                return
         _LOG.info("flushing TaxonPartition for {}".format(self.fragment))
         self.write_if_needed()
         if self._read_from_misc is False and self._read_from_partitioning_scratch:

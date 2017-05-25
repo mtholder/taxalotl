@@ -62,6 +62,7 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
     syn_fp = tax_part.syn_fp
     assert not syn_fp
     syn_by_id = tax_part.syn_by_id
+    ptp = shorter_fp_form(complete_taxon_fp)
     with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         tax_part.taxon_header = iinp.next()
@@ -80,7 +81,7 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
                 prev_line = ''
             ls = line.split('\t')
             if n % 1000 == 0:
-                _LOG.info(' read line {}'.format(n))
+                _LOG.info(' read taxon {} from {}'.format(n, ptp))
             try:
                 col_id, accept_id, par_id = ls[0], ls[4], ls[5]
                 col_id = int(col_id)

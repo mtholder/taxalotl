@@ -161,7 +161,11 @@ def partition_resources(taxalotl_config, id_list, level_list):
             _LOG.info(m.format(rw.id))
             unpack_resources(taxalotl_config, [rw.id])
         for level in level_list:
-            rw.partition(level, PARTS_BY_NAME[level], PART_FRAG_BY_NAME[level])
+            part_keys = PARTS_BY_NAME[level]
+            if not part_keys:
+                _LOG.info('"{}" is a terminal group in the primary partition map'.format(level))
+                continue
+            rw.partition(level, part_keys, PART_FRAG_BY_NAME[level])
 
 
 def pull_otifacts(taxalotl_config):
