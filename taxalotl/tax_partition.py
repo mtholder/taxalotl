@@ -41,15 +41,15 @@ class TaxonomySliceCache(object):
         return self._ck_to_obj[ck]
 
     def __delitem__(self, ck):
-        _LOG.debug("TAX_SLICE_CACHE __delitem__ for {}".format(ck))
+        #_LOG.debug("TAX_SLICE_CACHE __delitem__ for {}".format(ck))
         obj = self._ck_to_obj.get(ck)
         if obj:
             del self._ck_to_obj[ck]
-            _LOG.debug("TAX_SLICE_CACHE call of flush for {}".format(ck))
-            obj.flush()
+            #_LOG.debug("TAX_SLICE_CACHE call of flush for {}".format(ck))
+            obj._flush()
 
     def try_del(self, ck):
-        _LOG.debug("TAX_SLICE_CACHE try_del for {}".format(ck))
+        #_LOG.debug("TAX_SLICE_CACHE try_del for {}".format(ck))
         try:
             if ck in self._ck_to_obj:
                 self.__delitem__(ck)
@@ -59,15 +59,14 @@ class TaxonomySliceCache(object):
                 del self._ck_to_obj[ck]
 
     def flush(self):
-        _LOG.debug("TAX_SLICE_CACHE flush")
+        #_LOG.debug("TAX_SLICE_CACHE flush")
         kv = [(k, v) for k, v in self._ck_to_obj.items()]
+        self._ck_to_obj = {}
         _ex = None
         for k, v in kv:
-            if k in self._ck_to_obj:
-                del self._ck_to_obj[k]
             try:
-                _LOG.debug("TAX_SLICE_CACHE calling flush for {}".format(k))
-                v.flush()
+                #_LOG.debug("TAX_SLICE_CACHE calling flush for {}".format(k))
+                v._flush()
             except Exception as x:
                 _LOG.exception('exception in flushing')
                 _ex = x
@@ -142,8 +141,11 @@ class LightTaxonomyHolder(object):
     add_taxon_from_higher_tax_part = add_taxon
 
     def contained_ids(self):
-        c = set(self._id_to_child_set.keys())
-        c.update(self._id_to_line.keys())
+        c = set()
+        if self._id_to_child_set:
+            c.update(self._id_to_child_set.keys())
+        if self._id_to_line:
+            c.update(self._id_to_line.keys())
         return c
 
     def _transfer_subtree(self, par_id, dest_part):  # type (int, LightTaxonomyHolder) -> None
@@ -185,6 +187,8 @@ class LightTaxonomyHolder(object):
             tpids = dest_tax_part.contained_ids()
             common = cids.intersection(tpids)
             if common:
+                if dest_tax_part._has_unread_tax_inp:
+                    dest_tax_part._read_inputs(False)
                 for com_id in common:
                     if com_id in self._id_to_child_set:
                         m = "Transferring {} from {} to {}"
@@ -384,7 +388,9 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
 
     def _partition_from_in_mem(self):
         _LOG.info("_partition_from_in_mem for fragment \"{}\"".format(self.fragment))
-        assert not self._misc_part._populated
+        if self._misc_part._populated:
+            m = "_partition_from_in_mem called for {}, but misc already has {}"
+            raise ValueError(m.format(self.fragment, self.contained_ids()))
         self._has_moved_taxa = True
         for sub_tp, subroot in self._subdirname_to_tp_roots.values():
             _LOG.info("subroot {} for \"{}\"".format(subroot, sub_tp.fragment))
@@ -476,7 +482,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             self._read_from_partitioning_scratch = False
             raise
 
-    def flush(self):
+    def _flush(self):
         if self._has_flushed:
             _LOG.info("duplicate flush of TaxonPartition for {} ignored.".format(self.fragment))
             return

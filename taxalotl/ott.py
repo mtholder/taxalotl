@@ -213,6 +213,8 @@ class OTTaxonomyWrapper(ExternalTaxonomyWrapper):
         ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def diagnose_new_separators(self, current_partition_key):
+        NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
+                                   'species group', 'species subgroup', 'varietas', 'variety', ])
         fragment = get_fragment_from_part_name(current_partition_key)
         tax_part = get_taxon_partition(self, fragment)
         tax_part.read_inputs_for_read_only()
@@ -238,7 +240,8 @@ class OTTaxonomyWrapper(ExternalTaxonomyWrapper):
             if i not in par_set:
                 continue  # no point in partitioning leaves...
             if len(obj.src_dict) == max_num_srcs:
-                nst.append((i, obj))
+                if not obj.rank or (obj.rank not in NON_SEP_RANKS):
+                    nst.append((i, obj))
         if not nst:
             _LOG.debug('No new separators found for "{}"'.format(current_partition_key))
             return None

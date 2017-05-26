@@ -59,7 +59,8 @@ def general_dynamic_separation(ott_res,
                                              fragment,
                                              sep_obj,
                                              sep_fn,
-                                             src_id=src_id)
+                                             src_id=src_id,
+                                             suppress_cache_flush=suppress_cache_flush)
     finally:
         if not suppress_cache_flush:
             TAX_SLICE_CACHE.flush()
@@ -110,7 +111,8 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
                  fragment_to_partition,
                  list_of_subdirname_and_roots,
                  dest_tax_part_obj=None):
-        assert not self._has_flushed
+        if self._has_flushed:
+            raise RuntimeError("Calling separate on a flushed partition {}".format(self.fragment))
         if dest_tax_part_obj is None and (not list_of_subdirname_and_roots):
             m = "No {} mapping to separate {}"
             _LOG.info(m.format(self.src_id, fragment_to_partition))
@@ -121,6 +123,8 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
             dest_tax_part_obj.do_partition(list_of_subdirname_and_roots)
         else:
             own_tp = self.taxon_partition
+            if not own_tp._populated:
+                own_tp._read_inputs(do_part_if_reading=False)
             assert dest_tax_part_obj is not None
             assert list_of_subdirname_and_roots is None
             assert own_tp
@@ -131,15 +135,17 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
                                      list_of_subdirname_and_roots=None,
                                      dest_tax_part_obj=dest_tax_part_obj)
 
-    def flush(self):
+    def _flush(self):
         if self._has_flushed:
             return
         _LOG.info("flushing VirtualTaxonomyToRootSlice for {}".format(self.fragment))
         if self._taxon_partition:
             tp = self._taxon_partition
             self._taxon_partition = None
-            tp.flush()
+            TAX_SLICE_CACHE.try_del((tp.__class__, self.src_id, tp.fragment))
         self._has_flushed = True
+
+    def remove_self_from_cache(self):
         TAX_SLICE_CACHE.try_del(self.cache_key)
 
 
@@ -187,7 +193,8 @@ def _general_dynamic_separation_from_obj(ott_res,
                                          fragment,
                                          sep_obj,
                                          sep_fn,
-                                         src_id=None):
+                                         src_id=None,
+                                         suppress_cache_flush=None):
     """Separtes all sources and handles the recursion. Delegates to do_new_separation_of_src
     
     :param ott_res: 
@@ -216,14 +223,16 @@ def _general_dynamic_separation_from_obj(ott_res,
                                                 fragment=fragment,
                                                 sep_obj=aug_sep_obj,
                                                 src_id=it_src_id,
-                                                sep_fn=sep_fn)
+                                                sep_fn=sep_fn,
+                                                suppress_cache_flush=suppress_cache_flush)
 
 
 def _gen_dyn_separation_from_obj_for_source(ott_res,
                                             fragment,
                                             sep_obj,
                                             src_id,
-                                            sep_fn):
+                                            sep_fn,
+                                            suppress_cache_flush=None):
     sep_id_to_fn = {}
     for sep_id, i in sep_obj.items():
         sep_id_to_fn[sep_id] = _escape_odd_char(i["uniqname"])
@@ -261,6 +270,8 @@ def _gen_dyn_separation_from_obj_for_source(ott_res,
                                                     fragment=next_frag,
                                                     sep_obj=next_sep_obj,
                                                     src_id=src_id,
-                                                    sep_fn=sep_fn)
+                                                    sep_fn=sep_fn,
+                                                    suppress_cache_flush=suppress_cache_flush)
     finally:
-        virt_taxon_slice.flush()
+        if not suppress_cache_flush:
+                virt_taxon_slice.remove_self_from_cache()
