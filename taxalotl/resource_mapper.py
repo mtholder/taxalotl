@@ -4,13 +4,14 @@ Imported by resource manager funtions.
 
 Holds mapping of base_id to class of wrapper to instantiate.
 """
-from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
-from taxalotl.ott import OTTaxonomyWrapper, OTTaxonomyIdListWrapper
-from taxalotl.silva import SilvaIdListWrapper, SilvaWrapper
 from taxalotl.col import CoLExternalTaxonomyWrapper
-from taxalotl.irmng import IRMNGWrapper
 from taxalotl.darwin_core import GBIFWrapper
+from taxalotl.irmng import IRMNGWrapper
 from taxalotl.ncbi import NCBIWrapper
+from taxalotl.ott import OTTaxonomyWrapper, OTTaxonomyIdListWrapper
+from taxalotl.plant_list import PlantListWrapper
+from taxalotl.silva import SilvaIdListWrapper, SilvaWrapper
+from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
 
 BASE_ID_TO_RES_TYPE = {
     'col': CoLExternalTaxonomyWrapper,
@@ -19,6 +20,7 @@ BASE_ID_TO_RES_TYPE = {
     'ncbi': NCBIWrapper,
     'ott': OTTaxonomyWrapper,
     'silva': SilvaWrapper,
+    'plantlist': PlantListWrapper,
 }
 
 wrapper_types = set()

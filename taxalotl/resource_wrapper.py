@@ -294,7 +294,9 @@ class ResourceWrapper(FromOTifacts):
 
     @property
     def is_abstract(self):
-        return self.format is None or self.url is None or self.schema is None
+        return self.format is None \
+               or (self.url is None and not self.url_list) \
+               or self.schema is None
 
     def has_been_downloaded(self):
         dfp = self.download_filepath

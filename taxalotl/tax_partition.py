@@ -13,6 +13,7 @@ ROOTS_FILENAME = 'roots.txt'
 
 _LOG = get_logger(__name__)
 
+
 def get_root_ids_for_subset(tax_dir):
     rf = os.path.join(tax_dir, ROOTS_FILENAME)
     idset = set()
@@ -22,6 +23,7 @@ def get_root_ids_for_subset(tax_dir):
     return idset
 
 
+# noinspection PyProtectedMember
 class TaxonomySliceCache(object):
     def __init__(self):
         self._ck_to_obj = {}
@@ -41,15 +43,15 @@ class TaxonomySliceCache(object):
         return self._ck_to_obj[ck]
 
     def __delitem__(self, ck):
-        #_LOG.debug("TAX_SLICE_CACHE __delitem__ for {}".format(ck))
+        # _LOG.debug("TAX_SLICE_CACHE __delitem__ for {}".format(ck))
         obj = self._ck_to_obj.get(ck)
         if obj:
             del self._ck_to_obj[ck]
-            #_LOG.debug("TAX_SLICE_CACHE call of flush for {}".format(ck))
+            # _LOG.debug("TAX_SLICE_CACHE call of flush for {}".format(ck))
             obj._flush()
 
     def try_del(self, ck):
-        #_LOG.debug("TAX_SLICE_CACHE try_del for {}".format(ck))
+        # _LOG.debug("TAX_SLICE_CACHE try_del for {}".format(ck))
         try:
             if ck in self._ck_to_obj:
                 self.__delitem__(ck)
@@ -59,13 +61,13 @@ class TaxonomySliceCache(object):
                 del self._ck_to_obj[ck]
 
     def flush(self):
-        #_LOG.debug("TAX_SLICE_CACHE flush")
+        # _LOG.debug("TAX_SLICE_CACHE flush")
         kv = [(k, v) for k, v in self._ck_to_obj.items()]
         self._ck_to_obj = {}
         _ex = None
         for k, v in kv:
             try:
-                #_LOG.debug("TAX_SLICE_CACHE calling flush for {}".format(k))
+                # _LOG.debug("TAX_SLICE_CACHE calling flush for {}".format(k))
                 v._flush()
             except Exception as x:
                 _LOG.exception('exception in flushing')
@@ -216,7 +218,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         self._roots_for_sub = set()
         self._root_to_lth = {}
         self._during_parse_root_to_par = {}
-        self._has_moved_taxa = False # true when taxa have been moved to another partition
+        self._has_moved_taxa = False  # true when taxa have been moved to another partition
 
     def read_taxon_line(self, uid, par_id, line):
         if par_id:
@@ -370,7 +372,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             if some_part_found:
                 do_part_if_reading = False
                 quant = 'All' if req_fulfilled else 'Some'
-                m = "{} subdir partitions found for {}. No more partitioning of parent will be done!"
+                m = "{} subdir partitions found for {}. No more partitioning will be done!"
                 _LOG.warn(m.format(quant, self.fragment))
         for subname, subroot in list_of_subdirname_and_roots:
             subfrag = os.path.join(self.fragment, subname)
@@ -467,7 +469,8 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             read_roots = get_root_ids_for_subset(os.path.join(tax_dir, ROOTS_FILENAME))
             self._roots.update(read_roots)
             m = "prepart {} taxa in {}"
-            _LOG.info(m.format(len(self._misc_part._id_to_line) + len(self._id_to_line), self.fragment))
+            _LOG.info(
+                m.format(len(self._misc_part._id_to_line) + len(self._id_to_line), self.fragment))
             self._read_from_fs
             if do_part_if_reading:
                 self._has_moved_taxa = True

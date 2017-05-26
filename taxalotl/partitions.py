@@ -192,7 +192,6 @@ def get_par_and_par_misc_taxdir(parts_dir, part_key, taxonomy_id):
     return par_part_key, pmtd
 
 
-
 def merge_and_write_taxon_partition_list(tp_list):
     if not tp_list:
         return
@@ -224,7 +223,7 @@ def do_partition(res,
     fragment = os.path.join(par_frag, part_name)
     mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
     _LOG.debug("do_partition of {} for {} using mapping {} extracted from {}".format(
-                res.id, part_name, mapping, master_map))
+        res.id, part_name, mapping, master_map))
     if not mapping:
         _LOG.info("No {} mapping for {}".format(res.id, part_name))
         return

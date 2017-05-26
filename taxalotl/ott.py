@@ -7,15 +7,14 @@ from peyotl import get_logger
 from peyotl.utility.str_util import StringIO
 
 from taxalotl.ott_schema import (read_taxonomy_to_get_single_taxon,
-                                 read_taxonomy_to_get_id_to_fields,
                                  )
 from taxalotl.partitions import (fill_empty_anc_of_mapping,
                                  get_fragment_from_part_name,
                                  MISC_DIRNAME,
                                  PREORDER_PART_LIST,
                                  PARTS_BY_NAME)
-from taxalotl.tax_partition import (get_taxon_partition, get_root_ids_for_subset, )
 from taxalotl.resource_wrapper import ResourceWrapper, ExternalTaxonomyWrapper
+from taxalotl.tax_partition import (get_taxon_partition, get_root_ids_for_subset, )
 
 _LOG = get_logger(__name__)
 
@@ -114,7 +113,9 @@ def ott_build_paritition_maps(res):
 
     return filled
 
+
 UNSTABLE_SRC_PREFIXES = frozenset(['h2007', 'study713', 'https', 'http'])
+
 
 class NewSeparator(object):
     def __init__(self, ott_taxon_obj):
@@ -204,6 +205,9 @@ def _add_nst_subtree_el_to_dict(rd, nst_el, par_to_child):
         next_el = par_to_child[c]
         _add_nst_subtree_el_to_dict(nd, next_el, par_to_child)
 
+NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
+                           'species group', 'species subgroup', 'varietas', 'variety', ])
+
 
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(ExternalTaxonomyWrapper):
@@ -213,8 +217,6 @@ class OTTaxonomyWrapper(ExternalTaxonomyWrapper):
         ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def diagnose_new_separators(self, current_partition_key):
-        NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
-                                   'species group', 'species subgroup', 'varietas', 'variety', ])
         fragment = get_fragment_from_part_name(current_partition_key)
         tax_part = get_taxon_partition(self, fragment)
         tax_part.read_inputs_for_read_only()

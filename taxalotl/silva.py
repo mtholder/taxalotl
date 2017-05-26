@@ -216,6 +216,9 @@ class SilvaIdListWrapper(ExternalTaxonomyWrapper):
 
 
 class SilvaWrapper(ExternalTaxonomyWrapper):
+    def __init__(self, obj, parent=None, refs=None):
+        ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
+
     def normalize(self):
         normalize_silva_taxonomy(self.unpacked_filepath, self.normalized_filepath, self)
 

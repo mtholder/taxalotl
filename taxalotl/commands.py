@@ -35,6 +35,7 @@ def download_resources(taxalotl_config, id_list):
         tag = '\n\nOther license or terms of use may apply if the OTifacts repository is not ' \
               'up-to-date.\nEnter y to continue downloading {} : '.format(rid)
         prompt += tag
+        _LOG.info(repr(prompt))
         try:
             # noinspection PyCompatibility
             resp = raw_input(prompt)

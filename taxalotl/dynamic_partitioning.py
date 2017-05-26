@@ -107,6 +107,7 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
             self._taxon_partition = tp
         return self._taxon_partition
 
+    # noinspection PyProtectedMember
     def separate(self,
                  fragment_to_partition,
                  list_of_subdirname_and_roots,

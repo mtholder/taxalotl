@@ -19,6 +19,7 @@ The code is based on parts of the
 
 Depends on:
   * `requests`
+  * `beautifulsoup4`
   * some utilities that are only on a dev branch of `peyotl`
 
 So, the easiest way to install right now is:
