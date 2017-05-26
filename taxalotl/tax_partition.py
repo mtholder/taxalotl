@@ -45,7 +45,7 @@ class TaxonomySliceCache(object):
         obj = self._ck_to_obj.get(ck)
         if obj:
             del self._ck_to_obj[ck]
-            _LOG.debug("TAX_SLICE_CACHE call of flush for {}".format(k))
+            _LOG.debug("TAX_SLICE_CACHE call of flush for {}".format(ck))
             obj.flush()
 
     def try_del(self, ck):
@@ -237,6 +237,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
             children), but taxa processed before their ancestors may have been missed.
         _id_to_child_list and _id_to_line are only filled for these
         """
+        _LOG.debug("_finish_partition_after_parse for {}".format(self.fragment))
         for tp in self.sub_tax_parts(include_misc=False):
             if tp._has_unread_tax_inp:
                 tp._read_inputs(False)
@@ -246,6 +247,8 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
             des_children_for_misc.append((uid, par_id, line))
         for uid, par_id in self._during_parse_root_to_par.items():
             match_el = self._root_to_lth[uid]
+            m = 'transferringtransferring taxon {} from "{}" to "{}"'
+            _LOG.debug(m.format(uid, self.fragment, match_el.fragment))
             match_el._roots.add(uid)
             if uid in self._id_to_child_set:
                 self._transfer_subtree(uid, match_el)
@@ -453,6 +456,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         try:
             # format-specific callback which will set headers and call
             #   add_synonym and read_taxon_line
+            _LOG.debug("About to parse taxa. Looking for root ids: {}".format(self._roots_for_sub))
             self.res.partition_parsing_fn(self)
             read_roots = get_root_ids_for_subset(os.path.join(tax_dir, ROOTS_FILENAME))
             self._roots.update(read_roots)

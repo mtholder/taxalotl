@@ -176,7 +176,7 @@ def _return_sep_obj_copy_with_ott_fields(sep_obj):
     for sep_id, i in sep_obj.items():
         cobj = copy.deepcopy(i)
         r[sep_id] = cobj
-        cobj['src_dict']["ott"] = [sep_id]
+        cobj['src_dict']["ott"] = [int(sep_id)]
         s = cobj.get("sub")
         if s:
             cobj["sub"] = _return_sep_obj_copy_with_ott_fields(s)
