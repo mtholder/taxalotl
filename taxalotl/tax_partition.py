@@ -251,7 +251,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
             des_children_for_misc.append((uid, par_id, line))
         for uid, par_id in self._during_parse_root_to_par.items():
             match_el = self._root_to_lth[uid]
-            m = 'transferringtransferring taxon {} from "{}" to "{}"'
+            m = 'transferring taxon {} from "{}" to "{}"'
             _LOG.debug(m.format(uid, self.fragment, match_el.fragment))
             match_el._roots.add(uid)
             if uid in self._id_to_child_set:
