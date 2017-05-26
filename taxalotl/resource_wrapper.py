@@ -179,6 +179,7 @@ _known_res_attr = frozenset(['aliases',
                              'source',
                              'stats',
                              'url',
+                             'url_list',
                              'version'
                              ])
 
@@ -209,6 +210,7 @@ class FromOTifacts(object):
         self.source = None
         self.stats = None
         self.url = None
+        self.url_list = None
         self.version = None
 
 
