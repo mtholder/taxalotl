@@ -11,7 +11,7 @@ import re
 from peyotl import (get_logger)
 
 from taxalotl.ott_schema import InterimTaxonomyData
-from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
+from taxalotl.resource_wrapper import TaxonomyWrapper
 
 _LOG = get_logger(__name__)
 
@@ -312,9 +312,9 @@ def normalize_irmng(source, destination, res_wrapper):
     itd.write_to_dir(destination)
 
 
-class IRMNGWrapper(ExternalTaxonomyWrapper):
+class IRMNGWrapper(TaxonomyWrapper):
     def __init__(self, obj, parent=None, refs=None):
-        ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
+        TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def normalize(self):
         normalize_irmng(self.unpacked_filepath, self.normalized_filepath, self)

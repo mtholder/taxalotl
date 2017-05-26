@@ -446,7 +446,7 @@ class ResourceWrapper(FromOTifacts):
 
 
 # noinspection PyAbstractClass
-class ExternalTaxonomyWrapper(ResourceWrapper):
+class TaxonomyWrapper(ResourceWrapper):
     resource_type = 'external taxonomy'
 
     def __init__(self, obj, parent=None, refs=None):

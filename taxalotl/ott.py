@@ -13,7 +13,7 @@ from taxalotl.partitions import (fill_empty_anc_of_mapping,
                                  MISC_DIRNAME,
                                  PREORDER_PART_LIST,
                                  PARTS_BY_NAME)
-from taxalotl.resource_wrapper import ResourceWrapper, ExternalTaxonomyWrapper
+from taxalotl.resource_wrapper import ResourceWrapper, TaxonomyWrapper
 from taxalotl.tax_partition import (get_taxon_partition, get_root_ids_for_subset, )
 
 _LOG = get_logger(__name__)
@@ -210,11 +210,11 @@ NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
 
 
 # noinspection PyAbstractClass
-class OTTaxonomyWrapper(ExternalTaxonomyWrapper):
+class OTTaxonomyWrapper(TaxonomyWrapper):
     resource_type = 'open tree taxonomy'
 
     def __init__(self, obj, parent=None, refs=None):
-        ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
+        TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def diagnose_new_separators(self, current_partition_key):
         fragment = get_fragment_from_part_name(current_partition_key)

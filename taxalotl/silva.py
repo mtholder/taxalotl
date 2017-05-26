@@ -16,7 +16,7 @@ from peyotl import (assure_dir_exists,
 from taxalotl.commands import unpack_resources
 from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.partitions import GEN_MAPPING_FILENAME
-from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
+from taxalotl.resource_wrapper import TaxonomyWrapper
 
 _LOG = get_logger(__name__)
 
@@ -211,13 +211,13 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
 
 
 # noinspection PyAbstractClass
-class SilvaIdListWrapper(ExternalTaxonomyWrapper):
+class SilvaIdListWrapper(TaxonomyWrapper):
     resource_type = 'id list'
 
 
-class SilvaWrapper(ExternalTaxonomyWrapper):
+class SilvaWrapper(TaxonomyWrapper):
     def __init__(self, obj, parent=None, refs=None):
-        ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
+        TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def normalize(self):
         normalize_silva_taxonomy(self.unpacked_filepath, self.normalized_filepath, self)

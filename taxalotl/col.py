@@ -4,7 +4,7 @@ import codecs
 
 from peyotl import (get_logger, shorter_fp_form)
 
-from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
+from taxalotl.resource_wrapper import TaxonomyWrapper
 
 _LOG = get_logger(__name__)
 
@@ -96,13 +96,13 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
 
 
 # noinspection PyAbstractClass
-class CoLExternalTaxonomyWrapper(ExternalTaxonomyWrapper):
+class CoLTaxonomyWrapper(TaxonomyWrapper):
     taxon_filename = 'taxa.txt'
     synonyms_filename = None
     partition_parsing_fn = staticmethod(partition_col_by_root_id)
 
     def __init__(self, obj, parent=None, refs=None):
-        ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
+        TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     @property
     def partition_source_dir(self):

@@ -15,7 +15,7 @@ from peyotl import (assure_dir_exists,
                     get_logger)
 
 from taxalotl.ott_schema import InterimTaxonomyData
-from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
+from taxalotl.resource_wrapper import TaxonomyWrapper
 
 _LOG = get_logger(__name__)
 
@@ -260,9 +260,9 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     itd.write_to_dir(destination)
 
 
-class GBIFWrapper(ExternalTaxonomyWrapper):
+class GBIFWrapper(TaxonomyWrapper):
     def __init__(self, obj, parent=None, refs=None):
-        ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
+        TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def normalize(self):
         normalize_darwin_core_taxonomy(self.unpacked_filepath, self.normalized_filepath, self)

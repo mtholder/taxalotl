@@ -8,14 +8,14 @@ import os
 from peyotl import (get_logger, download_large_file)
 
 from taxalotl.ott_schema import InterimTaxonomyData
-from taxalotl.resource_wrapper import ExternalTaxonomyWrapper
+from taxalotl.resource_wrapper import TaxonomyWrapper
 
 _LOG = get_logger(__name__)
 
 
-class PlantListWrapper(ExternalTaxonomyWrapper):
+class PlantListWrapper(TaxonomyWrapper):
     def __init__(self, obj, parent=None, refs=None):
-        ExternalTaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
+        TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def download(self):
         dd = self.unpacked_filepath
