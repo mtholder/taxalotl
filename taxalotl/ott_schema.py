@@ -69,7 +69,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
         for n, line in enumerate(iinp):
             ls = line.split('\t|\t')
             if n > 0 and n % 10000 == 0:
-                _LOG.debug(' read taxon {} from "{}" ...'.format(n, ptp))
+                _LOG.debug(' read taxon {:<7} from "{}" ...'.format(n, ptp))
             try:
                 uid, par_id = ls[0], ls[1]
                 try:
