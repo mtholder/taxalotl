@@ -3,20 +3,22 @@
 ###################################################################################################
 # Much of following code is from by JAR
 from __future__ import print_function
-import os
+
 import codecs
+import os
 import time
+
+from bs4 import BeautifulSoup as Soup
 from peyotl import (assure_dir_exists, get_logger, download_large_file)
 
-from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.resource_wrapper import TaxonomyWrapper
-import time
-from bs4 import BeautifulSoup as Soup
+
 _LOG = get_logger(__name__)
 DOMAIN = "http://www.theplantlist.org"
-THROTTLE_BREAK = 30
+THROTTLE_BREAK = 10
 
 _num_downloads_this_session = 0
+
 
 def download_csv_for_family(fam_dir, fam_html_fp, url_pref):
     global _num_downloads_this_session
@@ -24,17 +26,18 @@ def download_csv_for_family(fam_dir, fam_html_fp, url_pref):
     soup = Soup(fam_html_content, 'html.parser')
     csva = soup.find_all("a", attrs={"type": "text/csv"})
     if len(csva) != 1:
-        raise RuntimeError("Not just 1 CSV type links in {} : {}".format(fam_html_fp, csva))
+        raise RuntimeError(u"Not just 1 CSV type links in {} : {}".format(fam_html_fp, csva))
     csv_link = csva[0]
     csv_rel_url = csv_link['href']
-    template = '{}{}' if (url_pref.endswith('/') or csv_rel_url.startswith('/')) else '{}/{}'
+    template = u'{}{}' if (url_pref.endswith('/') or csv_rel_url.startswith('/')) else u'{}/{}'
     fam_url = template.format(url_pref, csv_rel_url)
     fam_dest = os.path.join(fam_dir, csv_rel_url)
     if not os.path.exists(fam_dest):
-        _LOG.debug("Starting download from url = {} to {}".format(fam_url, fam_dest))
+        _LOG.debug(u"Starting download from url = {} to {}".format(fam_url, fam_dest))
         download_large_file(fam_url, fam_dest)
         _num_downloads_this_session += 1
-        _LOG.debug("Download completed to .".format(fam_url, fam_dest))
+        _LOG.debug(u"Download completed to .".format(fam_url, fam_dest))
+
 
 def scrape_families_from_higher_group(out_dir, top_file):
     global _num_downloads_this_session
@@ -47,7 +50,7 @@ def scrape_families_from_higher_group(out_dir, top_file):
     _LOG.debug("will write to {}".format(dirname))
 
     for list_item in nametree_list:
-        if  _num_downloads_this_session != 0:
+        if _num_downloads_this_session != 0:
             m = "Sleeping for {} seconds to be polite to the server..."
             _LOG.debug(m.format(THROTTLE_BREAK))
             time.sleep(THROTTLE_BREAK)
@@ -57,17 +60,15 @@ def scrape_families_from_higher_group(out_dir, top_file):
         fam_link = fam_link[0]
         fam_rel_url = fam_link['href']
         fam_name = fam_link.string.strip()
-        url_pref = fam_name
         fam_dest = os.path.join(fam_dir, fam_name + '.html')
-        template = '{}{}' if fam_rel_url.startswith('/') else '{}/{}'
+        template = u'{}{}' if fam_rel_url.startswith('/') else u'{}/{}'
         fam_url = template.format(DOMAIN, fam_rel_url)
         if not os.path.exists(fam_dest):
-            _LOG.debug("Starting download from url = {} to {}".format(fam_url, fam_dest))
+            _LOG.debug(u"Starting download from url = {} to {}".format(fam_url, fam_dest))
             download_large_file(fam_url, fam_dest)
             _num_downloads_this_session += 1
-            _LOG.debug("Download completed to .".format(fam_url, fam_dest))
+            _LOG.debug(u"Download completed to .".format(fam_url, fam_dest))
         download_csv_for_family(fam_dir, fam_dest, fam_url)
-
 
 
 class PlantListWrapper(TaxonomyWrapper):
@@ -93,7 +94,11 @@ class PlantListWrapper(TaxonomyWrapper):
                 _LOG.debug("Download from {} to {} completed.".format(u, dfp))
         for dfp in top_files:
             scrape_families_from_higher_group(dd, dfp)
+        open(self.download_filepath, 'w')
 
     @property
     def download_filepath(self):
-        return os.path.join(self.unpacked_filepath, "download_complete.txt")
+        uf = self.unpacked_filepath
+        if uf is None:
+            return None
+        return os.path.join(uf, "download_complete.txt")

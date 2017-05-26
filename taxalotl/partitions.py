@@ -167,11 +167,24 @@ def fill_empty_anc_of_mapping(mapping):
 # Data above here, to be refactored at some point
 ####################################################################################################
 # Code below
+def iter_existing_tax_dirs(path_pref, res_id):
+    suffix = os.sep + os.path.join(INP_TAXONOMY_DIRNAME, res_id)
+    misc_suffix = os.sep + os.path.join(MISC_DIRNAME, INP_TAXONOMY_DIRNAME, res_id)
+    for df in PART_NAME_TO_DIRFRAG.values():
+        p = os.path.join(path_pref, df, suffix)
+        if os.path.exists(p):
+            yield p
+        p = os.path.join(path_pref, df, misc_suffix)
+        if os.path.exists(p):
+            yield p
 
+def has_any_partition_dirs(path_pref, res_id):
+    for p in iter_existing_tax_dirs(path_pref, res_id):
+        return True
+    return False
 
 def find_partition_dirs_for_taxonomy(path_pref, res_id):
-    suffix = os.sep + os.path.join('', INP_TAXONOMY_DIRNAME, res_id)
-    return [i for i, sd, fl in os.walk(path_pref) if i.endswith(suffix)]
+    return [i for i in iter_existing_tax_dirs(path_pref, res_id)]
 
 
 def get_fragment_from_part_name(parts_key):

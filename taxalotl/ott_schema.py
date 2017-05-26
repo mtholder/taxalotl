@@ -229,6 +229,7 @@ class OTTTaxon(object):
         return self.uniqname if self.uniqname else self.name
 
 
+# noinspection PyTypeChecker
 def read_taxonomy_to_get_id_to_fields(tax_dir):
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
     fields = ['uid', 'parent_uid', 'name', 'rank', 'sourceinfo', 'uniqname', 'flags', '\n']

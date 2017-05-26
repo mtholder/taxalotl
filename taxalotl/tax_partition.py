@@ -283,7 +283,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         for i in to_del:
             del self._misc_part._syn_by_id[i]
 
-    def _read_inputs(self):
+    def _read_inputs(self, do_part_if_reading=True):
         raise NotImplementedError("_read_input pure virtual in PartitioningLightTaxHolder")
 
     def move_from_misc_to_new_part(self, other):  # type: (PartitioningLightTaxHolder) -> None
@@ -443,7 +443,6 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         return id_to_obj
 
     def _read_inputs(self, do_part_if_reading=True):
-        self._read_from_fs = True
         self._has_unread_tax_inp = False
 
         if self._external_inp_fp:
@@ -471,7 +470,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             m = "prepart {} taxa in {}"
             _LOG.info(
                 m.format(len(self._misc_part._id_to_line) + len(self._id_to_line), self.fragment))
-            self._read_from_fs
+            self._read_from_fs = True
             if do_part_if_reading:
                 self._has_moved_taxa = True
                 self._finish_partition_after_parse()

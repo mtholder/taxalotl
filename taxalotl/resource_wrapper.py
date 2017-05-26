@@ -16,6 +16,7 @@ from taxalotl.ott_schema import (INP_OTT_SYNONYMS_HEADER,
                                  partition_ott_by_root_id)
 from taxalotl.newick import normalize_newick
 from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
+                                 has_any_partition_dirs,
                                  get_auto_gen_part_mapper,
                                  get_part_inp_taxdir,
                                  get_par_and_par_misc_taxdir,
@@ -313,7 +314,7 @@ class ResourceWrapper(FromOTifacts):
                 and os.path.exists(os.path.join(dfp, 'taxonomy.tsv')))
 
     def has_been_partitioned(self):
-        part_dir_list = find_partition_dirs_for_taxonomy(self.partitioned_filepath, self.id)
+        part_dir_list = has_any_partition_dirs(self.partitioned_filepath, self.id)
         return bool(part_dir_list)
 
     def remove_normalize_artifacts(self):
