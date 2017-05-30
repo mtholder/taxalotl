@@ -12,6 +12,7 @@ from taxalotl.ott import OTTaxonomyWrapper, OTTaxonomyIdListWrapper
 from taxalotl.plant_list import PlantListWrapper
 from taxalotl.silva import SilvaIdListWrapper, SilvaWrapper
 from taxalotl.resource_wrapper import TaxonomyWrapper
+from taxalotl.worms import WormsTaxonomyWrapper
 
 BASE_ID_TO_RES_TYPE = {
     'col': CoLTaxonomyWrapper,
@@ -21,6 +22,7 @@ BASE_ID_TO_RES_TYPE = {
     'ott': OTTaxonomyWrapper,
     'silva': SilvaWrapper,
     'plantlist': PlantListWrapper,
+    'worms': WormsTaxonomyWrapper,
 }
 
 wrapper_types = set()

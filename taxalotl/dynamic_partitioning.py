@@ -244,8 +244,9 @@ def _gen_dyn_separation_from_obj_for_source(ott_res,
     try:
         sep_dir_ids_list = []
         for sep_id, i in sep_obj.items():
-            t = (sep_id_to_fn[sep_id], i['src_dict'][src_id])
-            sep_dir_ids_list.append(t)
+            if src_id in i['src_dict']:
+                t = (sep_id_to_fn[sep_id], i['src_dict'][src_id])
+                sep_dir_ids_list.append(t)
         _LOG.info("frag {} sep_dir_ids_list={}".format(fragment, sep_dir_ids_list))
         virt_taxon_slice.separate(fragment, sep_dir_ids_list)
 

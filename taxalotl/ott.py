@@ -15,7 +15,7 @@ from taxalotl.partitions import (fill_empty_anc_of_mapping,
                                  PARTS_BY_NAME)
 from taxalotl.resource_wrapper import ResourceWrapper, TaxonomyWrapper
 from taxalotl.tax_partition import (get_taxon_partition, get_root_ids_for_subset, )
-
+from collections import defaultdict
 _LOG = get_logger(__name__)
 
 OTT_PARTMAP = {
@@ -230,7 +230,9 @@ NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
 def get_stable_source_keys(taxon):
     all_src_keys = taxon.src_dict.keys()
     filtered = [i for i in all_src_keys if not i.startswith('additions')]
-    return [i for i in filtered if i not in UNSTABLE_SRC_PREFIXES]
+    r = [i for i in filtered if i not in UNSTABLE_SRC_PREFIXES]
+    r.sort()
+    return r
 
 
 # noinspection PyAbstractClass
@@ -247,6 +249,8 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
         tax_forest = tax_part.get_taxa_as_forest()
         _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
         nns = NestedNewSeparator()
+        source_to_count = defaultdict(int)
+
         for tree in tax_forest.trees:
             leaf_set = set()
             src_prefix_set = set()
@@ -255,16 +259,26 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
                     leaf_set.add(v.id)
                 filtered = get_stable_source_keys(v)
                 src_prefix_set.update(filtered)
-            max_num_srcs = len(src_prefix_set)
-            _LOG.info("Relevant sources appear to be: {}".format(src_prefix_set))
-            assert max_num_srcs > 0
+                for src in filtered:
+                    source_to_count[src] += 1
+            # We'll define a "minor" source as one that is found in 5000 fold fewer taxa as
+            #   the most common source for a slice. This is arbitrary.
+            FOLD_DIFF = 5000
+            max_seen = max(source_to_count.values())
+            min_cutoff = 0 if max_seen < FOLD_DIFF else max_seen // FOLD_DIFF
+            ac_src = [k for k, v in source_to_count.items() if v >= min_cutoff]
+            ac_src.sort()
+            _LOG.info("Relevant sources appear to be: {}".format(ac_src))
+            ac_src = frozenset(ac_src)
+            assert ac_src
             nst = set()
             for i, obj in tree.id_to_taxon.items():
                 if obj is tree.root:
                     continue  # no point in partitioning at the root taxon
                 if i in leaf_set:
                     continue  # no point in partitioning leaves...
-                if len(get_stable_source_keys(obj)) == max_num_srcs:
+                sk_for_obj = set(get_stable_source_keys(obj))
+                if sk_for_obj.issuperset(ac_src):
                     if not obj.rank or (obj.rank not in NON_SEP_RANKS):
                         nst.add(i)
             nns.add_separtors_for_tree(tree, nst)

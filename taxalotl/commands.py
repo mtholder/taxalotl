@@ -216,7 +216,7 @@ def enforce_new_separators(taxalotl_config, id_list, level_list):
     if not ott_res.has_been_partitioned():
         partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
     if not id_list:
-        id_list = [None]
+        id_list = ["ott", "gbif", "irmng", "silva", "worms", "ncbi"]
     for src in id_list:
         if src is not None:
             res = taxalotl_config.get_terminalized_res_by_id(src, 'enforce-new-separators')
