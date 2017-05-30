@@ -120,10 +120,14 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
             _LOG.info(m.format(self.src_id, fragment_to_partition))
             return
         if fragment_to_partition == self.fragment:
+            m = 'separate called on own_tax_part for {}'
+            _LOG.info(m.format(self.fragment))
             assert dest_tax_part_obj is None
             dest_tax_part_obj = self.taxon_partition
             dest_tax_part_obj.do_partition(list_of_subdirname_and_roots)
         else:
+            m = 'separate called on fragment {} while own_tax_part is {}'
+            _LOG.info(m.format(fragment_to_partition, self.fragment))
             own_tp = self.taxon_partition
             if not own_tp._populated:
                 own_tp._read_inputs(do_part_if_reading=False)
@@ -133,6 +137,8 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
             assert own_tp is not dest_tax_part_obj
             own_tp.move_from_misc_to_new_part(dest_tax_part_obj)
         if self.misc_uncle is not None:
+            m = 'delegating separate call on fragment {} to uncle... {}'
+            _LOG.info(m.format(fragment_to_partition, self.misc_uncle.fragment))
             self.misc_uncle.separate(fragment_to_partition,
                                      list_of_subdirname_and_roots=None,
                                      dest_tax_part_obj=dest_tax_part_obj)
@@ -244,9 +250,9 @@ def _gen_dyn_separation_from_obj_for_source(ott_res,
     try:
         sep_dir_ids_list = []
         for sep_id, i in sep_obj.items():
-            if src_id in i['src_dict']:
-                t = (sep_id_to_fn[sep_id], i['src_dict'][src_id])
-                sep_dir_ids_list.append(t)
+            root_ids = i['src_dict'].get(src_id, [])
+            t = (sep_id_to_fn[sep_id], root_ids)
+            sep_dir_ids_list.append(t)
         _LOG.info("frag {} sep_dir_ids_list={}".format(fragment, sep_dir_ids_list))
         virt_taxon_slice.separate(fragment, sep_dir_ids_list)
 

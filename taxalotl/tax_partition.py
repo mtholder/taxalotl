@@ -195,9 +195,21 @@ class LightTaxonomyHolder(object):
         if other._has_unread_tax_inp:
             other._read_inputs(False)
         cids = set(self._id_to_child_set.keys())
+        _LOG.debug('{} cids = {}'.format(self.fragment, cids))
+        lth_frag_to_root_id_set = {}
+        for root_id, dest_tax_part in other._root_to_lth.items():
+            lth_frag_to_root_id_set.setdefault(dest_tax_part.fragment, set()).add(root_id)
+
         for dest_tax_part in other._root_to_lth.values():
-            tpids = dest_tax_part.contained_ids()
+            tpids = set(dest_tax_part.contained_ids())
+            tpids.update(lth_frag_to_root_id_set[dest_tax_part.fragment])
             common = cids.intersection(tpids)
+            _LOG.debug(
+                'Looked for ids from {} to move to {} if they are in {}. Found {}. len(cids) = {}'.format(self.fragment,
+                                                                                   dest_tax_part.fragment,
+                                                                                   tpids, common,
+                                                                                    len(cids)))
+
             if common:
                 if dest_tax_part._has_unread_tax_inp:
                     dest_tax_part._read_inputs(False)
@@ -299,10 +311,12 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
     def _read_inputs(self, do_part_if_reading=True):
         raise NotImplementedError("_read_input pure virtual in PartitioningLightTaxHolder")
 
-    def move_from_misc_to_new_part(self, other):  # type: (PartitioningLightTaxHolder) -> None
+    def move_from_misc_to_new_part(self, other):
         self._has_moved_taxa = True
         if not self._populated:
             self._read_inputs()
+        if not self._misc_part._populated:
+            self._move_data_to_empty_misc()
         return self._misc_part.move_from_self_to_new_part(other)
 
     def _move_data_to_empty_misc(self):
