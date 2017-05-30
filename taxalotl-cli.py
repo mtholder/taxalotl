@@ -5,12 +5,13 @@ import codecs
 import sys
 import os
 
-from peyotl import (get_logger)
+from peyotl import (get_logger, read_as_json)
 
 from taxalotl import TaxalotlConfig
 from taxalotl.commands import (build_partition_maps,
                                cache_separator_names,
                                clean_resources,
+                               compare_taxonomies,
                                diagnose_new_separators,
                                enforce_new_separators,
                                download_resources,
@@ -19,6 +20,7 @@ from taxalotl.commands import (build_partition_maps,
                                pull_otifacts,
                                status_of_resources,
                                unpack_resources,
+                               SEP_NAMES,
                                )
 from taxalotl.partitions import (PART_NAMES,
                                  PARTS_BY_NAME,
@@ -29,6 +31,7 @@ _LOG = get_logger(__name__)
 
 res_indep_cmds = ['build-partition-maps',
                   'cache-separator-names',
+                  'compare-taxonomies',
                   'diagnose-new-separators',
                   'pull-otifacts',
                   ]
@@ -57,6 +60,8 @@ def main_post_parse(args):
             clean_resources(taxalotl_config, args.action, args.resources)
         elif args.which == 'cache-separator-names':
             cache_separator_names(taxalotl_config)
+        elif args.which == 'compare-taxonomies':
+            compare_taxonomies(taxalotl_config, [args.level])
         elif args.which == 'download':
             download_resources(taxalotl_config, args.resources)
         elif args.which == 'status':
@@ -128,6 +133,15 @@ def main():
                           default=False,
                           help="Report only on the terminalized resource of each type.")
     status_p.set_defaults(which="status")
+    # CACHE-separator-names
+    compare_tax_p = subp.add_parser('compare-taxonomies',
+                              help="compare taxonomies for a separated dir")
+    compare_tax_p.add_argument("--level",
+                               default=None,
+                               required=True,
+                               help="The level of the taxonomy to compare")
+    compare_tax_p.set_defaults(which="compare-taxonomies")
+
     # CACHE-separator-names
     cache_p = subp.add_parser('cache-separator-names',
                               help="Accumulate a list of separator names for tab-completion")
@@ -211,7 +225,7 @@ def main():
                     comp_list.append(u)
             comp_list.extend(all_cmds)
         else:
-            if sel_cmd in res_dep_cmds:
+            if sel_cmd in res_dep_cmds or sel_cmd in ['compare-taxonomies']:
                 # From Ned Batchelder's answer on http://stackoverflow.com/a/14728477
                 class ArgumentParserError(Exception):
                     pass
@@ -226,11 +240,13 @@ def main():
                 fake_parser.add_argument("--config", type=str)
                 fake_parser.add_argument('blah', nargs="*")
                 comp_list = []
+                taxalotl_config = None
                 try:
                     fa, unk = fake_parser.parse_known_args()
                     resdir, config = fa.resources_dir, fa.config
                     taxalotl_config = TaxalotlConfig(filepath=config, resources_dir=resdir)
-                    comp_list = list(taxalotl_config.resources_mgr.resources.keys())
+                    if sel_cmd in res_dep_cmds:
+                        comp_list = list(taxalotl_config.resources_mgr.resources.keys())
                 except:
                     pass
 
@@ -256,6 +272,11 @@ def main():
                     all_cmds.remove('clean')
                     all_cmds.remove('status')
                     comp_list.extend(all_cmds)
+                elif sel_cmd in ['compare-taxonomies']:
+                    rw = taxalotl_config.get_terminalized_res_by_id("ott", '')
+                    outfn = os.path.join(rw.partitioned_filepath, SEP_NAMES)
+                    if os.path.exists(outfn):
+                        comp_list.extend(read_as_json(outfn))
 
         sys.stdout.write('{}\n'.format(' '.join(comp_list)))
     else:

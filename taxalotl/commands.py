@@ -6,6 +6,7 @@ import sys
 
 from peyotl import (get_logger,
                     read_all_otifacts,
+                    read_as_json,
                     filter_otifacts_by_type,
                     partition_otifacts_by_root_element,
                     write_as_json)
@@ -16,11 +17,12 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
                                  PART_NAMES,
                                  PREORDER_PART_LIST)
 from taxalotl.dynamic_partitioning import perform_dynamic_separation, TAX_SLICE_CACHE
-
+from taxalotl.compare import compare_taxonomies_in_dir
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
 
 SEP_NAMES = '__separator_names__.json'
+SEP_MAPPING = '__separator_names_to_dir__.json'
 
 def download_resources(taxalotl_config, id_list):
     for rid in id_list:
@@ -247,23 +249,47 @@ def build_partition_maps(taxalotl_config):
     write_as_json(nsd, mfp, indent=2)
     _LOG.info("Partitions maps written to {}".format(mfp))
 
-def accumulate_taxon_dir_names(top_dir, name_set):
+def accumulate_taxon_dir_names(top_dir, name_to_paths):
     for root, dirs, files in os.walk(top_dir):
         if root.endswith('__misc__'):
             continue
         if '__inputs__' in dirs or '__misc__' in dirs:
-            name_set.add(os.path.split(root)[-1])
+            name = os.path.split(root)[-1]
+            name_to_paths.setdefault(name, []).append(root)
+
 
 def cache_separator_names(taxalotl_config):
-    rw = taxalotl_config.get_terminalized_res_by_id("ott", 'partition')
-    x = set()
-    accumulate_taxon_dir_names(rw.partitioned_filepath, x)
-    xl = list(x)
+    rw = taxalotl_config.get_terminalized_res_by_id("ott", '')
+    n2p = {}
+    accumulate_taxon_dir_names(rw.partitioned_filepath, n2p)
+    xl = list(n2p.keys())
     xl.sort()
     outfn = os.path.join(rw.partitioned_filepath, SEP_NAMES)
     write_as_json(xl, outfn)
     _LOG.info("Separator dir names written to {}".format(outfn))
+    outfn = os.path.join(rw.partitioned_filepath, SEP_MAPPING)
+    for k, v in n2p.items():
+        if len(v) > 1:
+            _LOG.info("separator {} has multiple dirs: {}".format(k, v))
+    write_as_json(n2p, outfn)
+    _LOG.info("Separator name to dir mapping written to {}".format(outfn))
 
+def compare_taxonomies(taxalotl_config, levels):
+    assert levels != [None]
+    rw = taxalotl_config.get_terminalized_res_by_id("ott", '')
+    outfn = os.path.join(rw.partitioned_filepath, SEP_MAPPING)
+    if not os.path.exists(outfn):
+        cache_separator_names(taxalotl_config)
+    todir = read_as_json(outfn)
+    for level in levels:
+        try:
+            tax_dir_list = todir[level]
+        except KeyError:
+            raise ValueError('The level "{}" is not separator name'.format(level))
+        for tax_dir in tax_dir_list:
+            m = 'Will compare taxonomies for "{}" based on {}'
+            _LOG.info(m.format(level, tax_dir))
+            compare_taxonomies_in_dir(taxalotl_config, tax_dir)
 
 def clean_resources(taxalotl_config, action, id_list):
     if not id_list:
