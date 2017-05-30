@@ -165,13 +165,28 @@ class NewSeparator(object):
 
 
 class NestedNewSeparator(object):
-    def __init__(self, roots, par_to_child):
-        ret_dict = {}
-        for r in roots:
-            curr_el = par_to_child[r]
-            _add_nst_subtree_el_to_dict(ret_dict, curr_el, par_to_child)
-        assert ret_dict
-        self.separators = ret_dict
+    def __init__(self):
+        self.separators = {}
+
+    def __bool__(self):
+        return bool(self.separators)
+
+    def add_separtors_for_tree(self, tree, sep_ids):
+        self._add_separtors_for_descendants(self, tree.root, sep_ids, self.separators)
+
+    def _add_separtors_for_descendants(self, nd, sep_ids, par_dict):
+        child_refs = nd.children_refs
+        for child in child_refs:
+            if child.id in sep_ids:
+                if nd.id in sep_ids and len(child_refs) == 1:
+                    # suppress monotypic separators children as separators
+                    self._add_separtors_for_descendants(child, sep_ids, par_dict)
+                else:
+                    ns = NewSeparator(child)
+                    par_dict[child.id] = ns
+                    self._add_separtors_for_descendants(child, sep_ids, ns.sub_separators)
+            else:
+                self._add_separtors_for_descendants(child, sep_ids, par_dict)
 
     def __str__(self):
         out = StringIO()
@@ -209,6 +224,11 @@ NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
                            'species group', 'species subgroup', 'varietas', 'variety', ])
 
 
+def get_stable_source_keys(taxon):
+    all_src_keys = taxon.src_dict.keys()
+    filtered = [i for i in all_src_keys if not i.startswith('additions')]
+    return [i for i in filtered if i not in UNSTABLE_SRC_PREFIXES]
+
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(TaxonomyWrapper):
     resource_type = 'open tree taxonomy'
@@ -220,44 +240,36 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
         fragment = get_fragment_from_part_name(current_partition_key)
         tax_part = get_taxon_partition(self, fragment)
         tax_part.read_inputs_for_read_only()
-        rids = tax_part.get_root_ids()
-        id_to_obj = tax_part.get_id_to_ott_taxon()
-        _LOG.info('{} taxa read from {}'.format(len(id_to_obj), tax_part.tax_fp))
-        par_set = set()
-        src_prefix_set = set()
-        for v in id_to_obj.values():
-            par_set.add(v.par_id)
-            all_src_keys = v.src_dict.keys()
-            filtered = [i for i in all_src_keys if not i.startswith('additions')]
-            filtered = [i for i in filtered if i not in UNSTABLE_SRC_PREFIXES]
-            src_prefix_set.update(filtered)
-        max_num_srcs = len(src_prefix_set)
-        _LOG.info("Relevant sources appear to be: {}".format(src_prefix_set))
-        nst = []
-        _LOG.info("root ids for current partition ({}) are: {}".format(current_partition_key, rids))
-        for i, obj in id_to_obj.items():
-            if i in rids:
-                continue  # no point in partitioning at the root taxon
-            if i not in par_set:
-                continue  # no point in partitioning leaves...
-            if len(obj.src_dict) == max_num_srcs:
-                if not obj.rank or (obj.rank not in NON_SEP_RANKS):
-                    nst.append((i, obj))
+        tax_forest = tax_part.get_taxa_as_forest()
+        _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
+        nns = NestedNewSeparator()
+        for tree in tax_forest.trees:
+            leaf_set = set()
+            src_prefix_set = set()
+            for v in tree.id_to_taxon.values():
+                if v.children_refs is None:
+                    leaf_set.add(v.id)
+                filtered = get_stable_source_keys(v)
+                src_prefix_set.update(filtered)
+            max_num_srcs = len(src_prefix_set)
+            _LOG.info("Relevant sources appear to be: {}".format(src_prefix_set))
+            assert max_num_srcs > 0
+            nst = set
+            _LOG.info("root ids for current partition ({}) are: {}".format(current_partition_key, rids))
+            for i, obj in tree.id_to_taxon.items():
+                if obj is tree.root:
+                    continue  # no point in partitioning at the root taxon
+                if i in leaf_set:
+                    continue  # no point in partitioning leaves...
+                if len(get_stable_source_keys(obj)) == max_num_srcs:
+                    if not obj.rank or (obj.rank not in NON_SEP_RANKS):
+                        nst.add(i)
+            nns.add_separtors_for_tree(tree, nst)
         if not nst:
             _LOG.debug('No new separators found for "{}"'.format(current_partition_key))
             return None
-        par_to_child = {}
-        to_par = {}
-        for ott_id, obj in nst:
-            par = obj.par_id
-            to_par[ott_id] = par
-            par_to_child.setdefault(par, [None, []])[1].append(ott_id)
-            this_el = par_to_child.setdefault(ott_id, [None, []])
-            assert this_el[0] is None
-            this_el[0] = obj
-        roots = set(par_to_child.keys()) - set(to_par.keys())
         rel_dir_for_part = get_fragment_from_part_name(current_partition_key)
-        return {rel_dir_for_part: NestedNewSeparator(roots, par_to_child)}
+        return {rel_dir_for_part: nns}
 
     def build_paritition_maps(self):
         return ott_build_paritition_maps(self)

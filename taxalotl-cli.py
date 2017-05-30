@@ -68,7 +68,9 @@ def main_post_parse(args):
         elif args.which == 'pull-otifacts':
             pull_otifacts(taxalotl_config)
         elif args.which == 'diagnose-new-separators':
-            diagnose_new_separators(taxalotl_config)
+            if args.level is not None and args.level not in PARTS_BY_NAME:
+                raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
+            diagnose_new_separators(taxalotl_config, [args.level])
         elif args.which == 'enforce-new-separators':
             if args.level is not None and args.level not in PARTS_BY_NAME:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
@@ -149,8 +151,12 @@ def main():
     diag_sep_p = subp.add_parser('diagnose-new-separators',
                                  help="Uses the last OTT build to find taxa IDs that "
                                       "feature are common to the relevant inputs")
+    diag_sep_p.add_argument("--level",
+                           default=None,
+                           help="The partition that is the root of the separation (default all)")
+
     diag_sep_p.set_defaults(which="diagnose-new-separators")
-    # DIAGNOSE-NEW-SEPARATORS
+    # ENFORCE-NEW-SEPARATORS
     enf_sep_p = subp.add_parser('enforce-new-separators',
                                  help="Uses the __sep__.json files created by "
                                 "diagnose-new-separators to partition by unproblematic"
@@ -232,7 +238,7 @@ def main():
                         comp_list = list(NONTERMINAL_PART_NAMES)
                     elif '--level' not in a:
                         comp_list.extend(['--level'])
-                elif sel_cmd == 'enforce-new-separators':
+                elif sel_cmd in ('diagnose-new-separators', 'enforce-new-separators'):
                     # sys.stderr.write(str(a))
                     if '--level' == a[-1] or (len(a) > 1 and '--level' == a[-2]):
                         comp_list = list(TERMINAL_PART_NAMES)

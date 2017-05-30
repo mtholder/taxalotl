@@ -189,12 +189,15 @@ def pull_otifacts(taxalotl_config):
 NEW_SEP_FILENAME = '__sep__.json'
 
 
-def diagnose_new_separators(taxalotl_config):
+def diagnose_new_separators(taxalotl_config, level_list):
     rw = taxalotl_config.get_terminalized_res_by_id("ott", 'diagnose-new-separators')
     if not rw.has_been_partitioned():
         partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
     pd = rw.partitioned_filepath
-    for part_name in PART_NAMES:
+    if level_list == [None]:
+        level_list = PART_NAMES
+    import sys; sys.exit(str(level_list))
+    for part_name in level_list:
         nsd = rw.diagnose_new_separators(current_partition_key=part_name)
         if not nsd:
             _LOG.info("no new separtors in {}.".format(part_name))

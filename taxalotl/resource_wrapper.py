@@ -314,8 +314,7 @@ class ResourceWrapper(FromOTifacts):
                 and os.path.exists(os.path.join(dfp, 'taxonomy.tsv')))
 
     def has_been_partitioned(self):
-        part_dir_list = has_any_partition_dirs(self.partitioned_filepath, self.id)
-        return bool(part_dir_list)
+        return has_any_partition_dirs(self.partitioned_filepath, self.id)
 
     def remove_normalize_artifacts(self):
         self._remove_taxonomy_dir(self.normalized_filepath)

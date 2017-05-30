@@ -228,6 +228,46 @@ class OTTTaxon(object):
     def name_that_is_unique(self):
         return self.uniqname if self.uniqname else self.name
 
+class TaxonTree(object):
+    def __init__(self, root_id, id_to_children_ids, id_to_taxon):
+        self.root = id_to_taxon[root_id]
+        self.root.parent_ref = None
+        self.id_to_taxon = {}
+        to_process = set([root_id])
+        while to_process:
+            curr_nd_id = to_process.pop()
+            curr_taxon = id_to_taxon[curr_nd_id]
+            self.id_to_taxon[curr_nd_id] = curr_taxon
+            curr_children_ids = id_to_children_ids.get(curr_nd_id)
+            if curr_children_ids:
+                curr_taxon.children_refs = [id_to_taxon[i] for i in curr_children_ids]
+            else:
+                curr_taxon.children_refs = None
+            for ct in curr_taxon:
+                ct.parent_ref = curr_taxon
+            to_process.update(curr_children_ids)
+
+
+
+
+class TaxonForest(object):
+    def __init__(self, id_to_taxon):
+        id_to_par = {}
+        id_to_children = {}
+        for taxon_id, taxon in id_to_taxon.items():
+            id_to_par[taxon_id] = taxon.par_id
+            id_to_children.setdefault(taxon.par_id, set()).add(taxon_id)
+        roots = set(id_to_children.keys()) - set(id_to_par.keys())
+        assert len(roots) > 0
+        self.roots = {}
+        for r in roots:
+            self.roots[r] = TaxonTree(root_id=r,
+                                      id_to_children_ids=id_to_children,
+                                      id_to_taxon=id_to_taxon)
+    @property
+    def trees(self):
+        return tuple(self.roots.values())
+
 
 # noinspection PyTypeChecker
 def read_taxonomy_to_get_id_to_fields(tax_dir):

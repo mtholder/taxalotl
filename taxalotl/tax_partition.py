@@ -4,7 +4,7 @@ import codecs
 import os
 
 from peyotl import get_logger, assure_dir_exists
-from taxalotl.ott_schema import OTTTaxon
+from taxalotl.ott_schema import OTTTaxon, TaxonForest
 
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
@@ -449,6 +449,10 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             assert oid not in id_to_obj
             id_to_obj[oid] = obj
         return id_to_obj
+
+    def get_taxa_as_forest(self):
+        return TaxonForest(id_to_taxon=self.get_id_to_ott_taxon())
+
 
     def _read_inputs(self, do_part_if_reading=True):
         self._has_unread_tax_inp = False
