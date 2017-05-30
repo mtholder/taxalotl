@@ -196,7 +196,6 @@ def diagnose_new_separators(taxalotl_config, level_list):
     pd = rw.partitioned_filepath
     if level_list == [None]:
         level_list = PART_NAMES
-    import sys; sys.exit(str(level_list))
     for part_name in level_list:
         nsd = rw.diagnose_new_separators(current_partition_key=part_name)
         if not nsd:

@@ -172,10 +172,12 @@ class NestedNewSeparator(object):
         return bool(self.separators)
 
     def add_separtors_for_tree(self, tree, sep_ids):
-        self._add_separtors_for_descendants(self, tree.root, sep_ids, self.separators)
+        self._add_separtors_for_descendants(tree.root, sep_ids, self.separators)
 
     def _add_separtors_for_descendants(self, nd, sep_ids, par_dict):
         child_refs = nd.children_refs
+        if not child_refs:
+            return
         for child in child_refs:
             if child.id in sep_ids:
                 if nd.id in sep_ids and len(child_refs) == 1:
@@ -254,8 +256,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
             max_num_srcs = len(src_prefix_set)
             _LOG.info("Relevant sources appear to be: {}".format(src_prefix_set))
             assert max_num_srcs > 0
-            nst = set
-            _LOG.info("root ids for current partition ({}) are: {}".format(current_partition_key, rids))
+            nst = set()
             for i, obj in tree.id_to_taxon.items():
                 if obj is tree.root:
                     continue  # no point in partitioning at the root taxon

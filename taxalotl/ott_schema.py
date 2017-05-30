@@ -241,13 +241,11 @@ class TaxonTree(object):
             curr_children_ids = id_to_children_ids.get(curr_nd_id)
             if curr_children_ids:
                 curr_taxon.children_refs = [id_to_taxon[i] for i in curr_children_ids]
+                for ct in curr_taxon.children_refs:
+                    ct.parent_ref = curr_taxon
+                to_process.update(curr_children_ids)
             else:
                 curr_taxon.children_refs = None
-            for ct in curr_taxon:
-                ct.parent_ref = curr_taxon
-            to_process.update(curr_children_ids)
-
-
 
 
 class TaxonForest(object):
@@ -257,7 +255,10 @@ class TaxonForest(object):
         for taxon_id, taxon in id_to_taxon.items():
             id_to_par[taxon_id] = taxon.par_id
             id_to_children.setdefault(taxon.par_id, set()).add(taxon_id)
-        roots = set(id_to_children.keys()) - set(id_to_par.keys())
+        root_pars = set(id_to_children.keys()) - set(id_to_par.keys())
+        roots = set()
+        for rp in root_pars:
+            roots.update(id_to_children[rp])
         assert len(roots) > 0
         self.roots = {}
         for r in roots:

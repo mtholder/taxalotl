@@ -162,7 +162,7 @@ class LightTaxonomyHolder(object):
         assert self is not dest_part
         assert self.fragment != dest_part.fragment
         child_set = self._id_to_child_set[par_id]
-        _LOG.info("_transfer_subtree from {} to {} :  par_id {} -> child_list {}".format(self.fragment, dest_part.fragment, par_id, child_set))
+        #_LOG.info("_transfer_subtree from {} to {} :  par_id {} -> child_list {}".format(self.fragment, dest_part.fragment, par_id, child_set))
         self._id_to_el[par_id] = dest_part
         line = self._id_to_line.get(par_id)
         if line is not None:
@@ -407,9 +407,9 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             raise ValueError(m.format(self.fragment, self.contained_ids()))
         self._has_moved_taxa = True
         for sub_tp, subroot in self._subdirname_to_tp_roots.values():
-            _LOG.info("subroot {} for \"{}\"".format(subroot, sub_tp.fragment))
+            #_LOG.info("subroot {} for \"{}\"".format(subroot, sub_tp.fragment))
             if sub_tp._has_unread_tax_inp:
-                _LOG.info("triggering a delayed read of FS for {}".format(sub_tp.fragment))
+                #_LOG.info("triggering a delayed read of FS for {}".format(sub_tp.fragment))
                 sub_tp._read_inputs(False)
             x = self._id_to_child_set
             # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
@@ -417,15 +417,15 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             #    #_LOG.info(" self._id_to_line = {}".format(self._id_to_line))
             for r in subroot:
                 if r in x:
-                    _LOG.info(" subroot {} in _id_to_child_set".format(repr(r)))
+                    #_LOG.info(" subroot {} in _id_to_child_set".format(repr(r)))
                     self._transfer_subtree(r, sub_tp)
                     sub_tp._roots.add(r)
                 elif r in self._id_to_line:
-                    _LOG.info(" subroot {} in _id_to_line".format(repr(r)))
+                    #_LOG.info(" subroot {} in _id_to_line".format(repr(r)))
                     sub_tp._id_to_line[r] = self._id_to_line[r]
                     sub_tp._roots.add(r)
                 else:
-                    _LOG.info(" subroot {} not stored".format(r))
+                    pass #_LOG.info(" subroot {} not stored".format(r))
 
             self.move_matched_synonyms(sub_tp)
             self._copy_shared_fields(sub_tp)
