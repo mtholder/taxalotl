@@ -228,12 +228,13 @@ class OTTTaxon(object):
     def name_that_is_unique(self):
         return self.uniqname if self.uniqname else self.name
 
+
 class TaxonTree(object):
     def __init__(self, root_id, id_to_children_ids, id_to_taxon):
         self.root = id_to_taxon[root_id]
         self.root.parent_ref = None
         self.id_to_taxon = {}
-        to_process = set([root_id])
+        to_process = {root_id}
         while to_process:
             curr_nd_id = to_process.pop()
             curr_taxon = id_to_taxon[curr_nd_id]
@@ -259,12 +260,12 @@ class TaxonForest(object):
         roots = set()
         for rp in root_pars:
             roots.update(id_to_children[rp])
-        assert len(roots) > 0
         self.roots = {}
         for r in roots:
             self.roots[r] = TaxonTree(root_id=r,
                                       id_to_children_ids=id_to_children,
                                       id_to_taxon=id_to_taxon)
+
     @property
     def trees(self):
         return tuple(self.roots.values())

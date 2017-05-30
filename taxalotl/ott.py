@@ -222,6 +222,7 @@ def _add_nst_subtree_el_to_dict(rd, nst_el, par_to_child):
         next_el = par_to_child[c]
         _add_nst_subtree_el_to_dict(nd, next_el, par_to_child)
 
+
 NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
                            'species group', 'species subgroup', 'varietas', 'variety', ])
 
@@ -230,6 +231,7 @@ def get_stable_source_keys(taxon):
     all_src_keys = taxon.src_dict.keys()
     filtered = [i for i in all_src_keys if not i.startswith('additions')]
     return [i for i in filtered if i not in UNSTABLE_SRC_PREFIXES]
+
 
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(TaxonomyWrapper):
@@ -266,7 +268,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
                     if not obj.rank or (obj.rank not in NON_SEP_RANKS):
                         nst.add(i)
             nns.add_separtors_for_tree(tree, nst)
-        if not nst:
+        if len(nns.separators) == 0:
             _LOG.debug('No new separators found for "{}"'.format(current_partition_key))
             return None
         rel_dir_for_part = get_fragment_from_part_name(current_partition_key)

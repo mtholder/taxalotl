@@ -179,11 +179,13 @@ def iter_existing_tax_dirs(path_pref, res_id):
         if os.path.exists(p):
             yield p
 
+
 def has_any_partition_dirs(path_pref, res_id):
     assert path_pref
     for p in iter_existing_tax_dirs(path_pref, res_id):
         return True
     return False
+
 
 def find_partition_dirs_for_taxonomy(path_pref, res_id):
     return [i for i in iter_existing_tax_dirs(path_pref, res_id)]

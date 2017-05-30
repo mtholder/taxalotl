@@ -81,8 +81,9 @@ def _gen_line(ls):
         old = u'", "'.join(ls)
         new = '", "'.join(conv)
         _LOG.warn(m.format(old, new))
-        #import sys; sys.exit('{}\n{}'.format(repr(conv), repr(ls)))
+        # import sys; sys.exit('{}\n{}'.format(repr(conv), repr(ls)))
         return '{}\n'.format('\t|\t'.join(conv))
+
 
 pl_rank_to_ott_rank = {'f.': "form",
                        'var.': "variety",
@@ -90,12 +91,12 @@ pl_rank_to_ott_rank = {'f.': "form",
                        }
 AGI = 'auto-generated-pl-id'
 
+
 def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
     _LOG.info(u'{} to {}'.format(inp_fp, out_dir))
     fam_name = unidecode(family)
-    id_to_line = {}
-    id_to_line[fam_name] = [fam_name, maj_group_id, fam_name, 'family', AGI]
-    legit_ids = {fam_name,}
+    id_to_line = {fam_name: [fam_name, maj_group_id, fam_name, 'family', AGI]}
+    legit_ids = {fam_name, }
     illegit_ids = set()
     name_to_id = {}
     with codecs.open(inp_fp, 'rb') as csvfile:
@@ -107,7 +108,7 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
             row = [unicode(i, 'utf-8') for i in raw_row]
             taxon_id = row[0]
             fam = row[2]
-            if family != family:
+            if fam != family:
                 raise RuntimeError("Unexpected family in taxon {} of {}: {}".format(n, family, row))
             genus = row[4]
             assert genus
@@ -145,11 +146,11 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
             else:
                 illegit_ids.add(taxon_id)
             _LOG.info(u'taxon_id={} "{}" "{}" "{}" rank={} tax_stat={}'.format(taxon_id,
-                                                     genus,
-                                                     sp_epithet,
-                                                     infr_epi,
-                                                     rank,
-                                                     tax_stat))
+                                                                               genus,
+                                                                               sp_epithet,
+                                                                               infr_epi,
+                                                                               rank,
+                                                                               tax_stat))
     # uid	|	parent_uid	|	name	|	rank	|	flags	|
     legit_gen, legit_sp, legit_infr = [], [], []
     for vid in legit_ids:
@@ -203,6 +204,7 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
             tout = [line_el[0]] + line_el[2:]
             outp.write(_gen_line(tout))
 
+
 class PlantListWrapper(TaxonomyWrapper):
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
@@ -247,10 +249,10 @@ class PlantListWrapper(TaxonomyWrapper):
             _LOG.info('csvf = {}'.format(stem))
 
         _LOG.info("dd = {} dn = {}".format(dd, subdirs))
+
     @property
     def download_filepath(self):
         uf = self.unpacked_filepath
         if uf is None:
             return None
         return os.path.join(uf, "download_complete.txt")
-
