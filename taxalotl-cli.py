@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import codecs
 import sys
+import os
 
 from peyotl import (get_logger)
 
@@ -41,6 +43,10 @@ all_cmds = res_dep_cmds + res_indep_cmds
 
 def main_post_parse(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
+    hist_file = os.path.expanduser("~/.taxalotl_history")
+    if os.path.isfile(hist_file):
+        with codecs.open(hist_file, 'a', encoding='utf-8') as hout:
+            hout.write('"{}"\n'.format('" "'.join(sys.argv)))
     try:
         if args.which == 'clean':
             if args.action not in all_cmds:
