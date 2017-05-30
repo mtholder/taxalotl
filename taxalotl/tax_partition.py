@@ -195,7 +195,7 @@ class LightTaxonomyHolder(object):
         if other._has_unread_tax_inp:
             other._read_inputs(False)
         cids = set(self._id_to_child_set.keys())
-        _LOG.debug('{} cids = {}'.format(self.fragment, cids))
+        #_LOG.debug('{} cids = {}'.format(self.fragment, cids))
         lth_frag_to_root_id_set = {}
         for root_id, dest_tax_part in other._root_to_lth.items():
             lth_frag_to_root_id_set.setdefault(dest_tax_part.fragment, set()).add(root_id)
@@ -204,12 +204,12 @@ class LightTaxonomyHolder(object):
             tpids = set(dest_tax_part.contained_ids())
             tpids.update(lth_frag_to_root_id_set[dest_tax_part.fragment])
             common = cids.intersection(tpids)
-            _LOG.debug(
-                'Looked for ids from {} to move to {} if they are in {}. Found {}. len(cids) = {}'.format(self.fragment,
-                                                                                   dest_tax_part.fragment,
-                                                                                   tpids, common,
-                                                                                    len(cids)))
-
+            #_LOG.debug(
+            #    'Looked for ids from {} to move to {} if they are in {}. Found {}. len(cids) = {}'.format(self.fragment,
+            #                                                                       dest_tax_part.fragment,
+            #                                                                       tpids, common,
+            #                                                                        len(cids)))
+            #
             if common:
                 if dest_tax_part._has_unread_tax_inp:
                     dest_tax_part._read_inputs(False)
