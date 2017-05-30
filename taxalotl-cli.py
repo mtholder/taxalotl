@@ -9,6 +9,7 @@ from peyotl import (get_logger)
 
 from taxalotl import TaxalotlConfig
 from taxalotl.commands import (build_partition_maps,
+                               cache_separator_names,
                                clean_resources,
                                diagnose_new_separators,
                                enforce_new_separators,
@@ -27,6 +28,7 @@ from taxalotl.partitions import (PART_NAMES,
 _LOG = get_logger(__name__)
 
 res_indep_cmds = ['build-partition-maps',
+                  'cache-separator-names',
                   'diagnose-new-separators',
                   'pull-otifacts',
                   ]
@@ -53,6 +55,8 @@ def main_post_parse(args):
                 m = "Expecting clean action to be one of: {}"
                 raise ValueError(m.format(', '.join(all_cmds)))
             clean_resources(taxalotl_config, args.action, args.resources)
+        elif args.which == 'cache-separator-names':
+            cache_separator_names(taxalotl_config)
         elif args.which == 'download':
             download_resources(taxalotl_config, args.resources)
         elif args.which == 'status':
@@ -124,6 +128,10 @@ def main():
                           default=False,
                           help="Report only on the terminalized resource of each type.")
     status_p.set_defaults(which="status")
+    # CACHE-separator-names
+    cache_p = subp.add_parser('cache-separator-names',
+                              help="Accumulate a list of separator names for tab-completion")
+    cache_p.set_defaults(which="cache-separator-names")
     # DOWNLOAD
     download_p = subp.add_parser('download', help="download an artifact to your local filesystem")
     download_p.add_argument('resources', nargs="+", help="IDs of the resources to download")

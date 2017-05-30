@@ -20,6 +20,7 @@ from taxalotl.dynamic_partitioning import perform_dynamic_separation, TAX_SLICE_
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
 
+SEP_NAMES = '__separator_names__.json'
 
 def download_resources(taxalotl_config, id_list):
     for rid in id_list:
@@ -245,6 +246,23 @@ def build_partition_maps(taxalotl_config):
     mfp = os.path.join(pd, GEN_MAPPING_FILENAME)
     write_as_json(nsd, mfp, indent=2)
     _LOG.info("Partitions maps written to {}".format(mfp))
+
+def accumulate_taxon_dir_names(top_dir, name_set):
+    for root, dirs, files in os.walk(top_dir):
+        if root.endswith('__misc__'):
+            continue
+        if '__inputs__' in dirs or '__misc__' in dirs:
+            name_set.add(os.path.split(root)[-1])
+
+def cache_separator_names(taxalotl_config):
+    rw = taxalotl_config.get_terminalized_res_by_id("ott", 'partition')
+    x = set()
+    accumulate_taxon_dir_names(rw.partitioned_filepath, x)
+    xl = list(x)
+    xl.sort()
+    outfn = os.path.join(rw.partitioned_filepath, SEP_NAMES)
+    write_as_json(xl, outfn)
+    _LOG.info("Separator dir names written to {}".format(outfn))
 
 
 def clean_resources(taxalotl_config, action, id_list):
