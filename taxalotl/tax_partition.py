@@ -18,8 +18,16 @@ def get_root_ids_for_subset(tax_dir):
     rf = os.path.join(tax_dir, ROOTS_FILENAME)
     idset = set()
     if os.path.exists(rf):
-        content = [int(i.strip()) for i in open(rf, 'r') if i.strip()]
-        idset.update(content)
+        with codecs.open(rf, 'r', encoding='utf-8') as inp:
+            for i in inp:
+                ls = i.strip()
+                if not ls:
+                    continue
+                try:
+                    ls = int(ls)
+                except:
+                    pass
+                idset.add(ls)
     return idset
 
 
@@ -151,9 +159,10 @@ class LightTaxonomyHolder(object):
         return c
 
     def _transfer_subtree(self, par_id, dest_part):  # type (int, LightTaxonomyHolder) -> None
+        assert self is not dest_part
+        assert self.fragment != dest_part.fragment
         child_set = self._id_to_child_set[par_id]
-        # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
-        #    _LOG.info("par_id {} -> child_list {}".format(par_id, child_set))
+        _LOG.info("_transfer_subtree from {} to {} :  par_id {} -> child_list {}".format(self.fragment, dest_part.fragment, par_id, child_set))
         self._id_to_el[par_id] = dest_part
         line = self._id_to_line.get(par_id)
         if line is not None:
@@ -212,6 +221,9 @@ class LightTaxonomyHolder(object):
 # noinspection PyProtectedMember
 class PartitioningLightTaxHolder(LightTaxonomyHolder):
     def __init__(self, fragment):
+        ls = fragment.split('/')
+        if len(ls) > 1:
+            assert ls[-2] != ls[-1]
         LightTaxonomyHolder.__init__(self, fragment)
         self._subdirname_to_tp_roots = {}
         self._misc_part = LightTaxonomyHolder(os.path.join(fragment, MISC_DIRNAME))
@@ -397,27 +409,23 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         for sub_tp, subroot in self._subdirname_to_tp_roots.values():
             _LOG.info("subroot {} for \"{}\"".format(subroot, sub_tp.fragment))
             if sub_tp._has_unread_tax_inp:
+                _LOG.info("triggering a delayed read of FS for {}".format(sub_tp.fragment))
                 sub_tp._read_inputs(False)
             x = self._id_to_child_set
             # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
             #    _LOG.info(" self._id_to_child_set = {}".format(repr(x)))
             #    #_LOG.info(" self._id_to_line = {}".format(self._id_to_line))
             for r in subroot:
-                # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
-                #     _LOG.info(" checking subroot {}".format(repr(r)))
                 if r in x:
-                    # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
-                    #     _LOG.info(" {} in _id_to_child_set".format(repr(r)))
+                    _LOG.info(" subroot {} in _id_to_child_set".format(repr(r)))
                     self._transfer_subtree(r, sub_tp)
                     sub_tp._roots.add(r)
                 elif r in self._id_to_line:
-                    # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
-                    #     _LOG.info(" {} in _id_to_line".format(repr(r)))
+                    _LOG.info(" subroot {} in _id_to_line".format(repr(r)))
                     sub_tp._id_to_line[r] = self._id_to_line[r]
                     sub_tp._roots.add(r)
-                    # else:
-                    #     if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
-                    #         _LOG.info(" not stored".format(r))
+                else:
+                    _LOG.info(" subroot {} not stored".format(r))
 
             self.move_matched_synonyms(sub_tp)
             self._copy_shared_fields(sub_tp)
@@ -463,9 +471,10 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         try:
             # format-specific callback which will set headers and call
             #   add_synonym and read_taxon_line
-            _LOG.debug("About to parse taxa. Looking for root ids: {}".format(self._roots_for_sub))
+            _LOG.debug("About to parse taxa in {}".format(self.tax_fp))
             self.res.partition_parsing_fn(self)
-            read_roots = get_root_ids_for_subset(os.path.join(tax_dir, ROOTS_FILENAME))
+            read_roots = get_root_ids_for_subset(tax_dir)
+            _LOG.debug("Read root set {} from roots file in {}".format(read_roots, tax_dir))
             self._roots.update(read_roots)
             m = "prepart {} taxa in {}"
             _LOG.info(

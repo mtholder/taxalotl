@@ -234,8 +234,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
         max_num_srcs = len(src_prefix_set)
         _LOG.info("Relevant sources appear to be: {}".format(src_prefix_set))
         nst = []
-        if len(rids) > 1:
-            rids = set()
+        _LOG.info("root ids for current partition ({}) are: {}".format(current_partition_key, rids))
         for i, obj in id_to_obj.items():
             if i in rids:
                 continue  # no point in partitioning at the root taxon
