@@ -15,8 +15,9 @@ _LOG = get_logger(__name__)
 
 INP_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n"
 INP_FLAGGED_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\t|\t\n"
+INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\n"
 INP_OTT_SYNONYMS_HEADER = "uid\t|\tname\t|\ttype\t|\t\n"
-
+FULL_OTT_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tsourceinfo\t|\tuniqname\t|\tflags\t|\t\n"
 
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     syn_fp = tax_part.syn_fp
@@ -196,38 +197,87 @@ def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
     return ncbi_to_name
 
 
-class OTTTaxon(object):
-    def __init__(self, interim_taxonomy_format_line, line_num='<unknown>'):
-        self.line_num = line_num
-        line = interim_taxonomy_format_line
+def full_ott_line_parser(taxon, line):
+    try:
+        ls = line.split('\t|\t')
+        assert ls[-1] == '\n'
+    except:
+        _LOG.exception("Error reading line {}:\n{}".format(taxon.line_num, line))
+        raise
+    taxon.id = int(ls[0])
+    if ls[1]:
+        taxon.par_id = int(ls[1])
+    else:
+        taxon.par_id = None
+    taxon.name = ls[2]
+    taxon.rank, taxon.src_dict, taxon.uniqname, taxon.flags = '', {}, None, None
+    if len(ls) <= 4:
+        return
+    taxon.rank = ls[3]
+    if len(ls) == 5:
+        return
+    sel = ls[4].split(',')
+    d = {}
+    for el in sel:
+        src, sid = el.split(':')
         try:
-            ls = line.split('\t|\t')
-            assert len(ls) == 8 and ls[-1] == '\n'
+            sid = int(sid)
         except:
-            _LOG.exception("Error reading line {}:\n{}".format(line_num, line))
-            raise
-        self.id = int(ls[0])
-        if ls[1]:
-            self.par_id = int(ls[1])
+            pass
+        d.setdefault(src, set()).add(sid)
+    taxon.src_dict = d
+    if len(ls) == 6:
+        return
+    taxon.uniqname = ls[5]
+    if len(ls) > 7:
+        taxon.flags = set(ls[6].split(','))
+
+def flag_after_rank_parser(taxon, line):
+    try:
+        ls = line.split('\t|\t')
+        if len(ls) == 5:
+            assert ls[4].endswith('\n')
+            ls[4] = ls[4].strip()
         else:
-            self.par_id = None
-        self.name, self.rank, self.uniqname = ls[2], ls[3], ls[5]
-        self.flags = set(ls[6].split(','))
-        sel = ls[4].split(',')
-        d = {}
-        for el in sel:
-            src, sid = el.split(':')
-            try:
-                sid = int(sid)
-            except:
-                pass
-            d.setdefault(src, set()).add(sid)
-        self.src_dict = d
+            assert len(ls) == 6 and ls[-1] == '\n'
+    except:
+        _LOG.exception("Error reading line {}:\n{}".format(taxon.line_num, line))
+        raise
+    taxon.id = int(ls[0])
+    if ls[1]:
+        taxon.par_id = int(ls[1])
+    else:
+        taxon.par_id = None
+    taxon.name = ls[2]
+    taxon.src_dict, taxon.uniqname = {}, None
+    taxon.rank = ls[3]
+    taxon.flags = set(ls[4].split(','))
+
+
+HEADER_TO_LINE_PARSER = {FULL_OTT_HEADER: full_ott_line_parser,
+                         INP_OTT_TAXONOMY_HEADER: full_ott_line_parser,
+                         INP_FLAGGED_OTT_TAXONOMY_HEADER: flag_after_rank_parser,
+                         INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER: flag_after_rank_parser,
+                        }
+
+_LOG.info('repr(HEADER_TO_LINE_PARSER) = {}'.format(repr(HEADER_TO_LINE_PARSER)))
+
+class OTTTaxon(object):
+    def __init__(self, line, line_num='<unknown>', line_parser=full_ott_line_parser):
+        self.line_num = line_num
+        line_parser(self, line)
 
     @property
     def name_that_is_unique(self):
         return self.uniqname if self.uniqname else self.name
 
+def write_indented_subtree(out, node, indent_level):
+    out.write('{}{} (id={})\n'.format('  '*indent_level,
+                                      node.name_that_is_unique,
+                                      node.id))
+    if node.children_refs:
+        for c in node.children_refs:
+            write_indented_subtree(out, c, indent_level=1 + indent_level)
 
 class TaxonTree(object):
     def __init__(self, root_id, id_to_children_ids, id_to_taxon):
@@ -249,6 +299,7 @@ class TaxonTree(object):
                 curr_taxon.children_refs = None
 
 
+
 class TaxonForest(object):
     def __init__(self, id_to_taxon):
         id_to_par = {}
@@ -265,7 +316,9 @@ class TaxonForest(object):
             self.roots[r] = TaxonTree(root_id=r,
                                       id_to_children_ids=id_to_children,
                                       id_to_taxon=id_to_taxon)
-
+    def write_indented(self, out):
+        for r in self.roots.values():
+            write_indented_subtree(out, r.root, indent_level=0)
     @property
     def trees(self):
         return tuple(self.roots.values())

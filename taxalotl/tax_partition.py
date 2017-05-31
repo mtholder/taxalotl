@@ -4,7 +4,7 @@ import codecs
 import os
 
 from peyotl import get_logger, assure_dir_exists
-from taxalotl.ott_schema import OTTTaxon, TaxonForest
+from taxalotl.ott_schema import OTTTaxon, TaxonForest, HEADER_TO_LINE_PARSER
 
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
@@ -459,8 +459,9 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
 
     def get_id_to_ott_taxon(self):
         id_to_obj = {}
+        lp = HEADER_TO_LINE_PARSER[self.taxon_header]
         for line in self._id_to_line.values():
-            obj = OTTTaxon(line)
+            obj = OTTTaxon(line, line_parser=lp)
             oid = obj.id
             assert oid not in id_to_obj
             id_to_obj[oid] = obj
