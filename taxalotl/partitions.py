@@ -125,7 +125,7 @@ def _fill_parts_indices(d, par_frag):
         if subd:
             NONTERMINAL_PART_NAMES.append(k)
             _fill_parts_indices(subd, cf)
-        else:
+        elif k != MISC_DIRNAME:
             TERMINAL_PART_NAMES.append(k)
 
 

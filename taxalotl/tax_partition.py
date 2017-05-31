@@ -14,20 +14,21 @@ ROOTS_FILENAME = 'roots.txt'
 _LOG = get_logger(__name__)
 
 
-def get_root_ids_for_subset(tax_dir):
-    rf = os.path.join(tax_dir, ROOTS_FILENAME)
+def get_root_ids_for_subset(tax_dir, misc_tax_dir):
     idset = set()
-    if os.path.exists(rf):
-        with codecs.open(rf, 'r', encoding='utf-8') as inp:
-            for i in inp:
-                ls = i.strip()
-                if not ls:
-                    continue
-                try:
-                    ls = int(ls)
-                except:
-                    pass
-                idset.add(ls)
+    for td in [tax_dir, misc_tax_dir]:
+        rf = os.path.join(td, ROOTS_FILENAME)
+        if os.path.exists(rf):
+            with codecs.open(rf, 'r', encoding='utf-8') as inp:
+                for i in inp:
+                    ls = i.strip()
+                    if not ls:
+                        continue
+                    try:
+                        ls = int(ls)
+                    except:
+                        pass
+                    idset.add(ls)
     return idset
 
 
@@ -491,7 +492,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             #   add_synonym and read_taxon_line
             _LOG.debug("About to parse taxa in {}".format(self.tax_fp))
             self.res.partition_parsing_fn(self)
-            read_roots = get_root_ids_for_subset(tax_dir)
+            read_roots = get_root_ids_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
             _LOG.debug("Read root set {} from roots file in {}".format(read_roots, tax_dir))
             self._roots.update(read_roots)
             m = "prepart {} taxa in {}"

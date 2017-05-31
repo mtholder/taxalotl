@@ -15,7 +15,8 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
                                  PART_FRAG_BY_NAME,
                                  PARTS_BY_NAME,
                                  PART_NAMES,
-                                 PREORDER_PART_LIST)
+                                 PREORDER_PART_LIST,
+                                 TERMINAL_PART_NAMES)
 from taxalotl.dynamic_partitioning import perform_dynamic_separation, TAX_SLICE_CACHE
 from taxalotl.compare import compare_taxonomies_in_dir
 _LOG = get_logger(__name__)
@@ -214,7 +215,7 @@ def diagnose_new_separators(taxalotl_config, level_list):
 
 def enforce_new_separators(taxalotl_config, id_list, level_list):
     if level_list == [None]:
-        level_list = PART_NAMES
+        level_list = list(PREORDER_PART_LIST) + list(TERMINAL_PART_NAMES)
     ott_res = taxalotl_config.get_terminalized_res_by_id("ott", 'enforce-new-separators')
     if not ott_res.has_been_partitioned():
         partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
