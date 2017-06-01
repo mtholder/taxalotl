@@ -162,6 +162,8 @@ def partition_resources(taxalotl_config, id_list, level_list):
         level_list = PREORDER_PART_LIST
     for rid in id_list:
         res = taxalotl_config.get_terminalized_res_by_id(rid, 'partition')
+        if not res.has_been_normalized():
+            normalize_resources(taxalotl_config, [rid])
         for part_name_to_split in level_list:
             if not NAME_TO_PARTS_SUBSETS[part_name_to_split]:
                 _LOG.info('"{}" is a terminal group in the primary partition map'.format(part_name_to_split))

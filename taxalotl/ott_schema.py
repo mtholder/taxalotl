@@ -20,7 +20,7 @@ INP_OTT_SYNONYMS_HEADER = "uid\t|\tname\t|\ttype\t|\t\n"
 FULL_OTT_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tsourceinfo\t|\tuniqname\t|\tflags\t|\t\n"
 
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
-    syn_fp = tax_part.syn_fp
+    syn_fp = tax_part.input_synonyms_filepath
     tax_part.syn_header = ''
     if not os.path.exists(syn_fp):
         return

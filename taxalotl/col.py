@@ -59,7 +59,7 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
     
     """
     complete_taxon_fp = tax_part.tax_fp
-    syn_fp = tax_part.syn_fp
+    syn_fp = tax_part.input_synonyms_filepath
     assert not syn_fp
     syn_by_id = tax_part.syn_by_id
     ptp = shorter_fp_form(complete_taxon_fp)

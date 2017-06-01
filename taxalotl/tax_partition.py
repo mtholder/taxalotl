@@ -2,17 +2,17 @@
 # from __future__ import print_function
 import codecs
 import os
+from contextlib import contextmanager
 
 from peyotl import get_logger, assure_dir_exists, read_as_json, write_as_json
+
 from taxalotl.ott_schema import OTTTaxon, TaxonForest, HEADER_TO_LINE_PARSER
-from contextlib import contextmanager
 
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
 GEN_MAPPING_FILENAME = '__mapping__.json'
 ROOTS_FILENAME = 'roots.txt'
 ACCUM_DES_FILENAME = '__accum_des__.json'
-PASS_THROUGH_DES_FILENAME = '__pass_through_des__.json'
 
 _LOG = get_logger(__name__)
 
@@ -33,6 +33,15 @@ def get_root_ids_for_subset(tax_dir, misc_tax_dir):
                         pass
                     idset.add(ls)
     return idset
+
+
+def get_accum_des_for_subset(tax_dir, misc_tax_dir):
+    ad = {}
+    for td in [tax_dir, misc_tax_dir]:
+        rf = os.path.join(td, ACCUM_DES_FILENAME)
+        if os.path.exists(rf):
+            ad.update(read_as_json(rf))
+    return ad
 
 
 # noinspection PyProtectedMember
@@ -85,7 +94,9 @@ class TaxonomySliceCache(object):
     def get_taxon_partition(self, res, fragment):
         return get_taxon_partition(res, fragment)
 
+
 TAX_SLICE_CACHE = TaxonomySliceCache()
+
 
 @contextmanager
 def use_tax_partitions():
@@ -103,12 +114,27 @@ class PartitionedTaxDirBase(object):
         self.tax_fp_misc = res.get_misc_taxon_filepath_for_part(fragment)
         self.tax_dir_unpartitioned = res.get_taxon_dir_for_part(fragment)
         self.tax_dir_misc = res.get_misc_taxon_dir_for_part(fragment)
-        sf = self.res.synonyms_filename
-        self.syn_fp = os.path.join(self.tax_dir_unpartitioned, sf) if sf else None
-        self.syn_fp_misc = os.path.join(self.tax_dir_misc, sf) if sf else None
+        self.synonyms_filename = self.res.synonyms_filename
         self.cache_key = (self.__class__, self.src_id, self.fragment)
         assert TAX_SLICE_CACHE.get(self.cache_key) is None
         TAX_SLICE_CACHE[self.cache_key] = self
+
+    @property
+    def input_taxdir(self):
+        return os.path.split(self.tax_fp)[0]
+
+    @property
+    def input_synonyms_filepath(self):
+        if self.synonyms_filename:
+            return os.path.join(self.input_taxdir, self.synonyms_filename)
+        return None
+
+    @property
+    def output_synonyms_filepath(self):
+        if not self.synonyms_filename:
+            return None
+        pd = self.tax_dir_misc if self._subdirname_to_tp_roots else self.tax_dir_unpartitioned
+        return os.path.join(pd, self.synonyms_filename)
 
     def scaffold_tax_subdir_names(self):
         """Returns a list of subdirectory names for self.scaffold_dir with __misc__ suppressed"""
@@ -125,16 +151,24 @@ class PartitionedTaxDirBase(object):
 
 # noinspection PyProtectedMember
 class LightTaxonomyHolder(object):
-    _DATT = ['_id_order', '_id_to_line', '_id_to_child_set', '_syn_by_id', '_id_to_el', '_roots']
+    _DATT = ['_des_in_other_slices',
+             '_id_order',
+             '_id_to_child_set',
+             '_id_to_el',
+             '_id_to_line',
+             '_syn_by_id',
+             '_roots',
+             ]
 
     def __init__(self, fragment):
         self.fragment = fragment
         self._id_order = []
         self._id_to_line = {}  # id -> line
         self._id_to_child_set = {}  # id -> set of child IDs
-        self._syn_by_id = {}  # accepted_id -> list of synonym lines
         self._id_to_el = {}
         self._roots = set()
+        self._des_in_other_slices = {}
+        self._syn_by_id = {}  # accepted_id -> list of synonym lines
         self.taxon_header = None
         self.syn_header = None
         self.treat_syn_as_taxa = False
@@ -153,7 +187,6 @@ class LightTaxonomyHolder(object):
         self._id_order.append(uid)
         self._id_to_child_set.setdefault(par_id, set()).add(uid)
 
-    add_moved_taxon = add_taxon
     add_taxon_from_higher_tax_part = add_taxon
 
     def contained_ids(self):
@@ -165,11 +198,14 @@ class LightTaxonomyHolder(object):
         return c
 
     def _transfer_subtree(self, par_id, dest_part):  # type (int, LightTaxonomyHolder) -> None
+        self._has_moved_taxa = True
+        self._des_in_other_slices[par_id] = (dest_part.fragment, self._id_to_line.get(par_id, ''))
+        self._transfer_subtree_rec(par_id, dest_part)
+
+    def _transfer_subtree_rec(self, par_id, dest_part):  # type (int, LightTaxonomyHolder) -> None
         assert self is not dest_part
         assert self.fragment != dest_part.fragment
         child_set = self._id_to_child_set[par_id]
-        # _LOG.info("_transfer_subtree from {} to {} :  par_id {} -> child_list {}"
-        #       .format(self.fragment, dest_part.fragment, par_id, child_set))
         self._id_to_el[par_id] = dest_part
         line = self._id_to_line.get(par_id)
         if line is not None:
@@ -180,7 +216,7 @@ class LightTaxonomyHolder(object):
         for child_id in child_set:
             self._id_to_el[child_id] = dest_part
             if child_id in self._id_to_child_set:
-                self._transfer_subtree(child_id, dest_part)
+                self._transfer_subtree_rec(child_id, dest_part)
             else:
                 line = self._id_to_line.get(child_id)
                 if line:
@@ -270,13 +306,8 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         for tp in self.sub_tax_parts(include_misc=False):
             if tp._has_unread_tax_inp:
                 tp._read_inputs(False)
-        des_children_for_misc = []
-        for uid, par_id in self._during_parse_root_to_par.items():
-            line = self._id_to_line[uid]
-            des_children_for_misc.append((uid, par_id, line))
         for uid, par_id in self._during_parse_root_to_par.items():
             match_el = self._root_to_lth[uid]
-            m = 'transferring taxon {} from "{}" to "{}"'
             match_el._roots.add(uid)
             if uid in self._id_to_child_set:
                 self._transfer_subtree(uid, match_el)
@@ -292,8 +323,6 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         assert not self._misc_part._id_to_el
         # Move all data to misc, but make a copy of th id to el that we'l
         self._move_data_to_empty_misc()
-        for el in des_children_for_misc:
-            self._misc_part.add_moved_taxon(el[0], el[1], el[2])
         # _partition_synonyms that have now moved to the misc part
         to_del = set()
         for accept_id, i_l_list in self._misc_part._syn_by_id.items():
@@ -336,7 +365,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     def __init__(self, res, fragment):
         PartitioningLightTaxHolder.__init__(self, fragment)
         PartitionedTaxDirBase.__init__(self, res, fragment)
-        self.treat_syn_as_taxa = self.syn_fp is None
+        self.treat_syn_as_taxa = self.synonyms_filename is None
         self._read_from_fs = False
         self._read_from_partitioning_scratch = False
         self._read_from_misc = False
@@ -370,7 +399,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             raise ValueError("do_partition called twice for {}".format(self.fragment))
         if not self._populated:
             self._diagnose_state_of_fs()
-            if self._fs_is_partitioned is None:
+            if (self._fs_is_partitioned is None) and (not self._external_inp_fp):
                 m = "Taxa files not found for {} and TaxonPartition is empty"
                 _LOG.info(m.format(self.fragment))
         cur_sub_names = self.scaffold_tax_subdir_names()
@@ -419,26 +448,18 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             raise ValueError(m.format(self.fragment, self.contained_ids()))
         self._has_moved_taxa = True
         for sub_tp, subroot in self._subdirname_to_tp_roots.values():
-            # _LOG.info("subroot {} for \"{}\"".format(subroot, sub_tp.fragment))
             if sub_tp._has_unread_tax_inp:
-                # _LOG.info("triggering a delayed read of FS for {}".format(sub_tp.fragment))
                 sub_tp._read_inputs(False)
             x = self._id_to_child_set
-            # if self.fragment.startswith('Life/Archaea/Euryarchaeota'):
-            #    _LOG.info(" self._id_to_child_set = {}".format(repr(x)))
-            #    #_LOG.info(" self._id_to_line = {}".format(self._id_to_line))
             for r in subroot:
                 if r in x:
-                    # _LOG.info(" subroot {} in _id_to_child_set".format(repr(r)))
                     self._transfer_subtree(r, sub_tp)
                     sub_tp._roots.add(r)
                 elif r in self._id_to_line:
-                    # _LOG.info(" subroot {} in _id_to_line".format(repr(r)))
                     sub_tp._id_to_line[r] = self._id_to_line[r]
                     sub_tp._roots.add(r)
                 else:
-                    pass  # _LOG.info(" subroot {} not stored".format(r))
-
+                    pass
             self.move_matched_synonyms(sub_tp)
             self._copy_shared_fields(sub_tp)
             sub_tp._populated = True
@@ -466,43 +487,6 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     def get_taxa_as_forest(self):
         return TaxonForest(id_to_taxon=self.get_id_to_ott_taxon())
 
-    def read_acccumulated_des(self):
-        td = self.active_tax_dir()
-        acc_des_fp = os.path.join(td, ACCUM_DES_FILENAME)
-        if os.path.exists(acc_des_fp):
-            return read_as_json(acc_des_fp)
-        return None
-
-    def register_accumulated_des(self, accum_list):
-        if not self._populated:
-            self.read_inputs_for_read_only()
-        id_to_obj = self.get_id_to_ott_taxon()
-        ad, pt = [], []
-        for tup in accum_list:
-            par_id = tup[1]
-            dd = ad if par_id in id_to_obj else pt
-            dd.append(tup)
-        td = self.active_tax_dir()
-        if ad:
-            rad = self.read_acccumulated_des()
-            if not rad:
-                rad = []
-            rad.extend([i for i in ad if list(i) not in rad])
-            write_as_json(rad, os.path.join(td, ACCUM_DES_FILENAME))
-        if pt:
-            rad = self.read_pass_through_des()
-            if not rad:
-                rad = []
-            rad.extend([i for i in pt if list(i) not in rad])
-            write_as_json(rad, os.path.join(td, PASS_THROUGH_DES_FILENAME))
-
-    def read_pass_through_des(self):
-        td = self.active_tax_dir()
-        acc_des_fp = os.path.join(td, PASS_THROUGH_DES_FILENAME)
-        if os.path.exists(acc_des_fp):
-            return read_as_json(acc_des_fp)
-        return None
-
     def active_tax_dir(self):
         if self._populated:
             return os.path.split(self.tax_fp)[0]
@@ -514,22 +498,20 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         if self._external_inp_fp:
             self._read_from_partitioning_scratch = True
             self.tax_fp = self._external_inp_fp
-            tax_dir = os.path.split(self.tax_fp)[0]
         else:
             if os.path.exists(self.tax_fp_misc):
                 self._read_from_partitioning_scratch = True
                 self.tax_fp = self.tax_fp_misc
-                tax_dir = self.tax_dir_misc
                 self._read_from_misc = True
             else:
                 self._read_from_partitioning_scratch = True
                 self.tax_fp = self.tax_fp_unpartitioned
                 self._read_from_misc = False
-                tax_dir = self.tax_dir_unpartitioned
         try:
             self.res.partition_parsing_fn(self)
-            read_roots = get_root_ids_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
+            read_roots = self._read_root_ids()
             self._roots.update(read_roots)
+            self._des_in_other_slices.update(self.read_acccumulated_des())
             self._read_from_fs = True
             if do_part_if_reading:
                 self._has_moved_taxa = True
@@ -544,6 +526,12 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             self._read_from_partitioning_scratch = False
             raise
 
+    def _read_root_ids(self):
+        return get_root_ids_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
+
+    def read_acccumulated_des(self):
+        return get_accum_des_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
+
     def _flush(self):
         if self._has_flushed:
             _LOG.info("duplicate flush of TaxonPartition for {} ignored.".format(self.fragment))
@@ -556,8 +544,9 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         self.write_if_needed()
         if self._read_from_misc is False and self._read_from_partitioning_scratch:
             tr = [self.tax_fp_unpartitioned]
-            if self.syn_fp:
-                tr.append(self.syn_fp)
+            if self.output_synonyms_filepath:
+                tr.append(self.output_synonyms_filepath)
+            tr.append(os.path.join(self.tax_dir_unpartitioned, ACCUM_DES_FILENAME))
             for f in tr:
                 if os.path.exists(f):
                     _LOG.info("removing pre-partitioned file at {}".format(f))
@@ -577,13 +566,11 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             # _LOG.debug("write from misc for {}".format(self.fragment))
             dh = self._misc_part
             dest = self.tax_fp_misc
-            syndest = self.syn_fp_misc
             roots_file = os.path.join(self.tax_dir_misc, ROOTS_FILENAME)
         else:
             # _LOG.debug("write from self for {}".format(self.fragment))
             dh = self
             dest = self.tax_fp_unpartitioned
-            syndest = self.syn_fp
             roots_file = os.path.join(self.tax_dir_unpartitioned, ROOTS_FILENAME)
         if not dh._id_to_line:
             _LOG.debug("write not needed for {} no records".format(self.fragment))
@@ -597,9 +584,11 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             assure_dir_exists(pd)
             with codecs.open(roots_file, 'w', encoding='utf-8') as outp:
                 outp.write('\n'.join([str(i) for i in dh._roots]))
-        if syndest is None:
-            return
-        _write_syn_d_as_tsv(self.syn_header, dh._syn_by_id, syn_id_order, syndest)
+        syndest = self.output_synonyms_filepath
+        if syndest is not None:
+            _write_syn_d_as_tsv(self.syn_header, dh._syn_by_id, syn_id_order, syndest)
+        if self._des_in_other_slices:
+            write_as_json(self._des_in_other_slices, os.path.join(dh, ACCUM_DES_FILENAME))
         return True
 
 
@@ -655,24 +644,3 @@ def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
         outp.write(header)
         for l in ltw:
             outp.write(l)
-
-
-'''
-def _write_taxon_list(header, record_list, dest_path):
-    _LOG.info('Writing header to "{}"'.format(dest_path))
-    pd = os.path.split(dest_path)[0]
-    assure_dir_exists(pd)
-    with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
-        outp.write(header)
-    _append_taxon_list(record_list, dest_path)
-
-
-def _append_taxon_list(record_list, dest_path):
-    if not record_list:
-        _LOG.info('No records need to be appended to "{}"'.format(dest_path))
-        return
-    _LOG.info('Appending {} records to "{}"'.format(len(record_list), dest_path))
-    with codecs.open(dest_path, 'a', encoding='utf-8') as outp:
-        for line in record_list:
-            outp.write(line)
-'''
