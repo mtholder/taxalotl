@@ -574,7 +574,6 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             roots_file = os.path.join(self.tax_dir_unpartitioned, ROOTS_FILENAME)
         if not dh._id_to_line:
             _LOG.debug("write not needed for {} no records".format(self.fragment))
-            return False
         syn_id_order = _write_d_as_tsv(self.taxon_header, dh._id_to_line, dh._id_order, dest)
         if not dh._roots:
             _LOG.debug('No root ids need to be written to "{}"'.format(roots_file))
