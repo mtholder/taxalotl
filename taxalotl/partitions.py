@@ -175,7 +175,6 @@ def iter_existing_tax_dirs(path_pref, res_id):
         if os.path.exists(p):
             yield p
         p = os.path.join(path_pref, df, misc_suffix)
-        _LOG.debug('checking for {}'.format(p))
         if os.path.exists(p):
             yield p
 
@@ -234,13 +233,9 @@ def do_partition(res,
     :param par_frag:
     :return:
     """
-    _LOG.debug("do_partition of {} using part_name={} part_keys={} par_frag={}".format(
-        res.id, part_name, part_keys, par_frag))
     master_map = res.get_primary_partition_map()
     fragment = os.path.join(par_frag, part_name)
     mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
-    _LOG.debug("do_partition of {} for {} using mapping {} extracted from {}".format(
-        res.id, part_name, mapping, master_map))
     if not mapping:
         _LOG.info("No {} mapping for {}".format(res.id, part_name))
         return

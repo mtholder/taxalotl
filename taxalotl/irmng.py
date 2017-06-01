@@ -245,7 +245,6 @@ def fix_irmng(itd):
     ids_reg = to_par.keys()
     for irmng_id in ids_reg:
         if not to_tsta_nstat_keep[irmng_id][2]:
-            _LOG.debug('keep=false for {}. Removing...'.format(irmng_id))
             par_id = to_par[irmng_id]
             if par_id:
                 pc = id_to_children.get(par_id)

@@ -24,6 +24,7 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     tax_part.syn_header = ''
     if not os.path.exists(syn_fp):
         return
+    _LOG.debug('parsing synonyms from "{}" ...'.format(syn_fp))
     with codecs.open(syn_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         try:
@@ -41,7 +42,7 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
         for n, line in enumerate(iinp):
             ls = line.split('\t|\t')
             if n > 0 and n % 1000 == 0:
-                _LOG.debug(' read synonym {}'.format(n))
+                _LOG.debug(' read synonym {:7}'.format(n))
             try:
                 accept_id = ls[uid_ind]
                 try:

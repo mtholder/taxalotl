@@ -283,7 +283,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
                         nst.add(i)
             nns.add_separtors_for_tree(tree, nst)
         if len(nns.separators) == 0:
-            _LOG.debug('No new separators found for "{}"'.format(current_partition_key))
+            _LOG.info('No new separators found for "{}"'.format(current_partition_key))
             return None
         rel_dir_for_part = get_fragment_from_part_name(current_partition_key)
         return {rel_dir_for_part: nns}

@@ -54,15 +54,12 @@ class TaxonomySliceCache(object):
         return self._ck_to_obj[ck]
 
     def __delitem__(self, ck):
-        # _LOG.debug("TAX_SLICE_CACHE __delitem__ for {}".format(ck))
         obj = self._ck_to_obj.get(ck)
         if obj:
             del self._ck_to_obj[ck]
-            # _LOG.debug("TAX_SLICE_CACHE call of flush for {}".format(ck))
             obj._flush()
 
     def try_del(self, ck):
-        # _LOG.debug("TAX_SLICE_CACHE try_del for {}".format(ck))
         try:
             if ck in self._ck_to_obj:
                 self.__delitem__(ck)
@@ -72,13 +69,11 @@ class TaxonomySliceCache(object):
                 del self._ck_to_obj[ck]
 
     def flush(self):
-        # _LOG.debug("TAX_SLICE_CACHE flush")
         kv = [(k, v) for k, v in self._ck_to_obj.items()]
         self._ck_to_obj = {}
         _ex = None
         for k, v in kv:
             try:
-                # _LOG.debug("TAX_SLICE_CACHE calling flush for {}".format(k))
                 v._flush()
             except Exception as x:
                 _LOG.exception('exception in flushing')
@@ -198,7 +193,6 @@ class LightTaxonomyHolder(object):
         if other._has_unread_tax_inp:
             other._read_inputs(False)
         cids = set(self._id_to_child_set.keys())
-        #_LOG.debug('{} cids = {}'.format(self.fragment, cids))
         lth_frag_to_root_id_set = {}
         for root_id, dest_tax_part in other._root_to_lth.items():
             lth_frag_to_root_id_set.setdefault(dest_tax_part.fragment, set()).add(root_id)
@@ -207,12 +201,6 @@ class LightTaxonomyHolder(object):
             tpids = set(dest_tax_part.contained_ids())
             tpids.update(lth_frag_to_root_id_set[dest_tax_part.fragment])
             common = cids.intersection(tpids)
-            #_LOG.debug(
-            #    'Looked for ids from {} to move to {} if they are in {}. Found {}. len(cids) = {}'.format(self.fragment,
-            #                                                                       dest_tax_part.fragment,
-            #                                                                       tpids, common,
-            #                                                                        len(cids)))
-            #
             if common:
                 if dest_tax_part._has_unread_tax_inp:
                     dest_tax_part._read_inputs(False)
@@ -271,7 +259,6 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
             children), but taxa processed before their ancestors may have been missed.
         _id_to_child_list and _id_to_line are only filled for these
         """
-        _LOG.debug("_finish_partition_after_parse for {}".format(self.fragment))
         for tp in self.sub_tax_parts(include_misc=False):
             if tp._has_unread_tax_inp:
                 tp._read_inputs(False)
@@ -282,7 +269,6 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         for uid, par_id in self._during_parse_root_to_par.items():
             match_el = self._root_to_lth[uid]
             m = 'transferring taxon {} from "{}" to "{}"'
-            _LOG.debug(m.format(uid, self.fragment, match_el.fragment))
             match_el._roots.add(uid)
             if uid in self._id_to_child_set:
                 self._transfer_subtree(uid, match_el)
@@ -533,16 +519,9 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                 self._read_from_misc = False
                 tax_dir = self.tax_dir_unpartitioned
         try:
-            # format-specific callback which will set headers and call
-            #   add_synonym and read_taxon_line
-            # _LOG.debug("About to parse taxa in {}".format(self.tax_fp))
             self.res.partition_parsing_fn(self)
             read_roots = get_root_ids_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
-            # _LOG.debug("Read root set {} from roots file in {}".format(read_roots, tax_dir))
             self._roots.update(read_roots)
-            # m = "prepart {} taxa in {}"
-            # _LOG.info(
-            #     m.format(len(self._misc_part._id_to_line) + len(self._id_to_line), self.fragment))
             self._read_from_fs = True
             if do_part_if_reading:
                 self._has_moved_taxa = True
