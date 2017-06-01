@@ -8,7 +8,8 @@ import os
 from peyotl import (get_logger, read_as_json)
 
 from taxalotl import TaxalotlConfig
-from taxalotl.commands import (build_partition_maps,
+from taxalotl.commands import (accumulate_separated_descendants,
+                               build_partition_maps,
                                cache_separator_names,
                                clean_resources,
                                compare_taxonomies,
@@ -35,7 +36,8 @@ res_indep_cmds = ['build-partition-maps',
                   'diagnose-new-separators',
                   'pull-otifacts',
                   ]
-res_dep_cmds = ['clean',
+res_dep_cmds = ['accumulate-separated-descendants',
+                'clean',
                 'download',
                 'enforce-new-separators',
                 'normalize',
@@ -74,6 +76,8 @@ def main_post_parse(args):
             unpack_resources(taxalotl_config, args.resources)
         elif args.which == 'normalize':
             normalize_resources(taxalotl_config, args.resources)
+        elif args.which == 'accumulate-separated-descendants':
+            accumulate_separated_descendants(taxalotl_config, args.resources)
         elif args.which == 'pull-otifacts':
             pull_otifacts(taxalotl_config)
         elif args.which == 'diagnose-new-separators':
@@ -188,6 +192,11 @@ def main():
                              default=None,
                              help="The partition that is the root of the separation (default all)")
     enf_sep_p.set_defaults(which="enforce-new-separators")
+    # NORMALIZE
+    accum_sep_des_p = subp.add_parser('accumulate-separated-descendants',
+                                  help="Should be run after enforce-separators and before compare-taxonomie")
+    accum_sep_des_p.add_argument('resources', nargs="*", help="IDs of the resources")
+    accum_sep_des_p.set_defaults(which="accumulate-separated-descendants")
 
     # BUILD-PARTITION-MAPS
     build_partition_maps_p = subp.add_parser('build-partition-maps',

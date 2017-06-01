@@ -3,13 +3,15 @@
 import codecs
 import os
 
-from peyotl import get_logger, assure_dir_exists
+from peyotl import get_logger, assure_dir_exists, read_as_json, write_as_json
 from taxalotl.ott_schema import OTTTaxon, TaxonForest, HEADER_TO_LINE_PARSER
 
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
 GEN_MAPPING_FILENAME = '__mapping__.json'
 ROOTS_FILENAME = 'roots.txt'
+ACCUM_DES_FILENAME = '__accum_des__.json'
+PASS_THROUGH_DES_FILENAME = '__pass_through_des__.json'
 
 _LOG = get_logger(__name__)
 
@@ -469,6 +471,48 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
 
     def get_taxa_as_forest(self):
         return TaxonForest(id_to_taxon=self.get_id_to_ott_taxon())
+
+    def read_acccumulated_des(self):
+        td = self.active_tax_dir()
+        acc_des_fp = os.path.join(td, ACCUM_DES_FILENAME)
+        if os.path.exists(acc_des_fp):
+            return read_as_json(acc_des_fp)
+        return None
+
+    def register_accumulated_des(self, accum_list):
+        if not self._populated:
+            self.read_inputs_for_read_only()
+        id_to_obj = self.get_id_to_ott_taxon()
+        ad, pt = [], []
+        for tup in accum_list:
+            par_id = tup[1]
+            dd = ad if par_id in id_to_obj else pt
+            dd.append(tup)
+        td = self.active_tax_dir()
+        if ad:
+            rad = self.read_acccumulated_des()
+            if not rad:
+                rad = []
+            rad.extend([i for i in ad if list(i) not in rad])
+            write_as_json(rad, os.path.join(td, ACCUM_DES_FILENAME))
+        if pt:
+            rad = self.read_pass_through_des()
+            if not rad:
+                rad = []
+            rad.extend([i for i in pt if list(i) not in rad])
+            write_as_json(rad, os.path.join(td, PASS_THROUGH_DES_FILENAME))
+
+    def read_pass_through_des(self):
+        td = self.active_tax_dir()
+        acc_des_fp = os.path.join(td, PASS_THROUGH_DES_FILENAME)
+        if os.path.exists(acc_des_fp):
+            return read_as_json(acc_des_fp)
+        return None
+
+    def active_tax_dir(self):
+        if self._populated:
+            return os.path.split(self.tax_fp)[0]
+        raise NotImplementedError('active_tax_dir on unpopulated')
 
     def _read_inputs(self, do_part_if_reading=True):
         self._has_unread_tax_inp = False

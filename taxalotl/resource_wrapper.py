@@ -22,7 +22,9 @@ from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_par_and_par_misc_taxdir,
                                  get_inp_taxdir,
                                  get_misc_inp_taxdir,
-                                 do_partition)
+                                 get_taxon_partition,
+                                 do_partition,
+                                 TAX_SLICE_CACHE)
 
 _LOG = get_logger(__name__)
 
@@ -444,6 +446,9 @@ class ResourceWrapper(FromOTifacts):
     def get_primary_partition_map(self):
         return get_auto_gen_part_mapper(self)
 
+    def has_part_tax_for_frag(self, fragment):
+        return os.path.exists(self.get_taxon_filepath_for_part(fragment)) or \
+               os.path.exists(self.get_misc_taxon_filepath_for_part(fragment))
 
 # noinspection PyAbstractClass
 class TaxonomyWrapper(ResourceWrapper):
@@ -458,3 +463,41 @@ class TaxonomyWrapper(ResourceWrapper):
                      part_name,
                      part_keys,
                      par_frag)
+
+    def accumulate_separated_descendants(self, scaffold_dir):
+        scaffold_anc = os.path.split(scaffold_dir)[0]
+        pd = self.partitioned_filepath
+        #_LOG.debug('comparing "{}" and "{}"'.format(pd, scaffold_anc))
+        if scaffold_anc == pd:
+            return
+        pd = '{}/'.format(pd)
+        assert scaffold_anc.startswith(pd)
+        frag = scaffold_dir[len(pd):]
+        _LOG.info('frag = {}'.format(frag))
+        tax_part = get_taxon_partition(self, fragment=frag)
+        tax_part.read_inputs_for_read_only()
+        root_ids = tax_part.get_root_ids()
+        forest = tax_part.get_taxa_as_forest()
+        des_accum = tax_part.read_acccumulated_des()
+        if des_accum:
+            for des_id, par_id, line in des_accum:
+                assert forest.get_taxon(par_id) is not None
+        accum_list = []
+        pass_through = tax_part.read_pass_through_des()
+        if pass_through:
+            accum_list.extend(pass_through)
+        crs = set()
+        for tree in forest.trees:
+            root = tree.root
+            crs.add(root.id)
+            accum_list.append((root.id, root.par_id, root.line))
+        _LOG.info('accum_list: "{}"'.format(accum_list))
+        anc_frag = os.path.split(frag)[0]
+        while not self.has_part_tax_for_frag(anc_frag):
+            if not anc_frag:
+                assert False
+                return
+            anc_frag = os.path.split(anc_frag)[0]
+        anc_tax_part = get_taxon_partition(self, anc_frag)
+        anc_tax_part.register_accumulated_des(accum_list)
+        TAX_SLICE_CACHE.flush()

@@ -320,3 +320,27 @@ def clean_resources(taxalotl_config, action, id_list):
                 _LOG.info("{} had not been normalized. Skipping clean step...".format(rid))
         else:
             raise NotImplementedError("clean of {} not yet implemented".format(action))
+
+
+
+def accumulate_separated_descendants(taxalotl_config, id_list):
+
+    rw = taxalotl_config.get_terminalized_res_by_id("ott", '')
+    outfn = os.path.join(rw.partitioned_filepath, SEP_MAPPING)
+    if not os.path.exists(outfn):
+        cache_separator_names(taxalotl_config)
+    assert os.path.exists(outfn)
+    part_to_dir = read_as_json(outfn)
+    # created a post-order list by using the length of the directory...
+    dir_tuple_list = []
+    for d in part_to_dir.values():
+        for ds in d:
+            dir_tuple_list.append((len(ds), ds))
+    dir_tuple_list.sort(reverse=True)
+    postorder = [i[1] for i in dir_tuple_list]
+    for i in id_list:
+        _LOG.info('accumulate_separated_descendants for {}'.format(i))
+        res = taxalotl_config.get_terminalized_res_by_id(i, '')
+        for dir in postorder:
+            res.accumulate_separated_descendants(dir)
+            raise NotImplementedError("looping not implemented")

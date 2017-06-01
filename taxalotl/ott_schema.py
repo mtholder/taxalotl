@@ -260,11 +260,10 @@ HEADER_TO_LINE_PARSER = {FULL_OTT_HEADER: full_ott_line_parser,
                          INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER: flag_after_rank_parser,
                         }
 
-_LOG.info('repr(HEADER_TO_LINE_PARSER) = {}'.format(repr(HEADER_TO_LINE_PARSER)))
-
 class OTTTaxon(object):
     def __init__(self, line, line_num='<unknown>', line_parser=full_ott_line_parser):
         self.line_num = line_num
+        self.line = line
         line_parser(self, line)
 
     @property
@@ -297,7 +296,8 @@ class TaxonTree(object):
                 to_process.update(curr_children_ids)
             else:
                 curr_taxon.children_refs = None
-
+    def get_taxon(self, uid):
+        return self.id_to_taxon.get(uid)
 
 
 class TaxonForest(object):
@@ -319,9 +319,17 @@ class TaxonForest(object):
     def write_indented(self, out):
         for r in self.roots.values():
             write_indented_subtree(out, r.root, indent_level=0)
+
     @property
     def trees(self):
         return tuple(self.roots.values())
+
+    def get_taxon(self, uid):
+        for v in self.roots.values():
+            t = v.get_taxon(uid)
+            if t is not None:
+                return t
+        return None
 
 
 # noinspection PyTypeChecker
