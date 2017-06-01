@@ -12,7 +12,7 @@ from taxalotl.partitions import (fill_empty_anc_of_mapping,
                                  get_fragment_from_part_name,
                                  MISC_DIRNAME,
                                  PREORDER_PART_LIST,
-                                 PARTS_BY_NAME)
+                                 NAME_TO_PARTS_SUBSETS)
 from taxalotl.resource_wrapper import ResourceWrapper, TaxonomyWrapper
 from taxalotl.tax_partition import (get_taxon_partition, get_root_ids_for_subset, )
 from collections import defaultdict
@@ -77,7 +77,7 @@ def ott_build_paritition_maps(res):
     for part_key in PREORDER_PART_LIST:
         if part_key != 'Life':
             all_part_keys.add(part_key)
-        all_part_keys.update(PARTS_BY_NAME[part_key])
+        all_part_keys.update(NAME_TO_PARTS_SUBSETS[part_key])
     for pk in all_part_keys:
         if pk == MISC_DIRNAME:
             continue

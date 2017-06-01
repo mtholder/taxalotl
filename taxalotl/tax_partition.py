@@ -5,6 +5,7 @@ import os
 
 from peyotl import get_logger, assure_dir_exists, read_as_json, write_as_json
 from taxalotl.ott_schema import OTTTaxon, TaxonForest, HEADER_TO_LINE_PARSER
+from contextlib import contextmanager
 
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
@@ -81,8 +82,15 @@ class TaxonomySliceCache(object):
         if _ex is not None:
             raise _ex
 
+    def get_taxon_partition(self, res, fragment):
+        return get_taxon_partition(res, fragment)
 
 TAX_SLICE_CACHE = TaxonomySliceCache()
+
+@contextmanager
+def use_tax_partitions():
+    yield TAX_SLICE_CACHE
+    TAX_SLICE_CACHE.flush()
 
 
 class PartitionedTaxDirBase(object):

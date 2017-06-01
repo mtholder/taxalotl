@@ -23,7 +23,6 @@ from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_inp_taxdir,
                                  get_misc_inp_taxdir,
                                  get_taxon_partition,
-                                 do_partition,
                                  TAX_SLICE_CACHE)
 
 _LOG = get_logger(__name__)
@@ -386,9 +385,6 @@ class ResourceWrapper(FromOTifacts):
             raise NotImplementedError(m.format(self.base_id))
         norm_fn(self.unpacked_filepath, self.normalized_filepath, self)
 
-    def partition(self, part_name, part_keys, par_frag):
-        raise NotImplementedError('Partition not implemented for base ResourceWrapper')
-
     def write_status(self, out, indent='', list_all_artifacts=False):
         dfp = self.download_filepath
         if dfp is None:
@@ -446,7 +442,7 @@ class ResourceWrapper(FromOTifacts):
     def get_primary_partition_map(self):
         return get_auto_gen_part_mapper(self)
 
-    def has_part_tax_for_frag(self, fragment):
+    def has_partitioned_for_fragment(self, fragment):
         return os.path.exists(self.get_taxon_filepath_for_part(fragment)) or \
                os.path.exists(self.get_misc_taxon_filepath_for_part(fragment))
 
@@ -457,12 +453,6 @@ class TaxonomyWrapper(ResourceWrapper):
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
         # print("ET obj = {}".format(obj))
-
-    def partition(self, part_name, part_keys, par_frag):
-        do_partition(self,
-                     part_name,
-                     part_keys,
-                     par_frag)
 
     def accumulate_separated_descendants(self, scaffold_dir):
         scaffold_anc = os.path.split(scaffold_dir)[0]
@@ -493,7 +483,7 @@ class TaxonomyWrapper(ResourceWrapper):
             accum_list.append((root.id, root.par_id, root.line))
         #_LOG.info('accum_list: "{}"'.format(accum_list))
         anc_frag = os.path.split(frag)[0]
-        while not self.has_part_tax_for_frag(anc_frag):
+        while not self.has_partitioned_for_fragment(anc_frag):
             if not anc_frag:
                 assert False
                 return

@@ -12,12 +12,13 @@ from peyotl import (get_logger,
                     write_as_json)
 
 from taxalotl.partitions import (GEN_MAPPING_FILENAME,
-                                 PART_FRAG_BY_NAME,
-                                 PARTS_BY_NAME,
+                                 do_partition,
+                                 NAME_TO_PARTS_SUBSETS,
                                  PART_NAMES,
                                  PREORDER_PART_LIST,
                                  TERMINAL_PART_NAMES)
-from taxalotl.dynamic_partitioning import perform_dynamic_separation, TAX_SLICE_CACHE
+from taxalotl.tax_partition import use_tax_partitions
+from taxalotl.dynamic_partitioning import perform_dynamic_separation
 from taxalotl.compare import compare_taxonomies_in_dir
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -160,17 +161,13 @@ def partition_resources(taxalotl_config, id_list, level_list):
     if level_list == [None]:
         level_list = PREORDER_PART_LIST
     for rid in id_list:
-        rw = taxalotl_config.get_terminalized_res_by_id(rid, 'partition')
-        if not rw.has_been_unpacked():
-            m = "{} will be unpacked first..."
-            _LOG.info(m.format(rw.id))
-            unpack_resources(taxalotl_config, [rw.id])
-        for level in level_list:
-            part_keys = PARTS_BY_NAME[level]
-            if not part_keys:
-                _LOG.info('"{}" is a terminal group in the primary partition map'.format(level))
+        res = taxalotl_config.get_terminalized_res_by_id(rid, 'partition')
+        for part_name_to_split in level_list:
+            if not NAME_TO_PARTS_SUBSETS[part_name_to_split]:
+                _LOG.info('"{}" is a terminal group in the primary partition map'.format(part_name_to_split))
                 continue
-            rw.partition(level, part_keys, PART_FRAG_BY_NAME[level])
+            with use_tax_partitions() as tax_cache:
+                do_partition(res, part_name_to_split)
 
 
 def pull_otifacts(taxalotl_config):
@@ -226,16 +223,13 @@ def enforce_new_separators(taxalotl_config, id_list, level_list):
             res = taxalotl_config.get_terminalized_res_by_id(src, 'enforce-new-separators')
             if not res.has_been_partitioned():
                 partition_resources(taxalotl_config, [src], PREORDER_PART_LIST)
-        TAX_SLICE_CACHE.flush()
-        try:
+        with use_tax_partitions() as cache:
             for part_name in level_list:
                 perform_dynamic_separation(ott_res,
                                            src_id=src,
                                            part_key=part_name,
                                            sep_fn=NEW_SEP_FILENAME,
                                            suppress_cache_flush=True)
-        finally:
-            TAX_SLICE_CACHE.flush()
 
 
 def build_partition_maps(taxalotl_config):

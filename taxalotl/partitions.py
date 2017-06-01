@@ -60,11 +60,11 @@ _x = {
 }
 BASE_PARTITIONS_DICT = {_LIFE: _x}
 del _x
-PARTS_BY_NAME = {}
-PART_FRAG_BY_NAME = {}
+NAME_TO_PARTS_SUBSETS = {}
+NAME_TO_PARENT_FRAGMENT = {}
 NONTERMINAL_PART_NAMES = []
 TERMINAL_PART_NAMES = []
-PART_NAME_TO_DIRFRAG = {}
+PART_NAME_TO_FRAGMENT = {}
 
 
 def get_inp_taxdir(parts_dir, frag, taxonomy_id):
@@ -113,15 +113,15 @@ def get_auto_gen_part_mapper(res):
 
 
 def _fill_parts_indices(d, par_frag):
-    global PARTS_BY_NAME, PART_FRAG_BY_NAME, NONTERMINAL_PART_NAMES
+    global NAME_TO_PARTS_SUBSETS, NAME_TO_PARENT_FRAGMENT, NONTERMINAL_PART_NAMES
     for k, subd in d.items():
-        PARTS_BY_NAME[k] = tuple(subd.keys())
-        PART_FRAG_BY_NAME[k] = par_frag
+        NAME_TO_PARTS_SUBSETS[k] = tuple(subd.keys())
+        NAME_TO_PARENT_FRAGMENT[k] = par_frag
         if par_frag:
             cf = os.path.join(par_frag, k)
         else:
             cf = k
-        PART_NAME_TO_DIRFRAG[k] = cf
+        PART_NAME_TO_FRAGMENT[k] = cf
         if subd:
             NONTERMINAL_PART_NAMES.append(k)
             _fill_parts_indices(subd, cf)
@@ -130,7 +130,7 @@ def _fill_parts_indices(d, par_frag):
 
 
 _fill_parts_indices(BASE_PARTITIONS_DICT, '')
-PART_NAMES = list(PARTS_BY_NAME.keys())
+PART_NAMES = list(NAME_TO_PARTS_SUBSETS.keys())
 PART_NAMES.sort()
 PART_NAMES = tuple(PART_NAMES)
 PREORDER_PART_LIST = tuple(NONTERMINAL_PART_NAMES)
@@ -170,7 +170,7 @@ def fill_empty_anc_of_mapping(mapping):
 def iter_existing_tax_dirs(path_pref, res_id):
     suffix = os.path.join(INP_TAXONOMY_DIRNAME, res_id)
     misc_suffix = os.path.join(MISC_DIRNAME, INP_TAXONOMY_DIRNAME, res_id)
-    for df in PART_NAME_TO_DIRFRAG.values():
+    for df in PART_NAME_TO_FRAGMENT.values():
         p = os.path.join(path_pref, df, suffix)
         if os.path.exists(p):
             yield p
@@ -191,7 +191,7 @@ def find_partition_dirs_for_taxonomy(path_pref, res_id):
 
 
 def get_fragment_from_part_name(parts_key):
-    return PART_NAME_TO_DIRFRAG[parts_key]
+    return PART_NAME_TO_FRAGMENT[parts_key]
 
 
 def get_part_inp_taxdir(parts_dir, part_key, taxonomy_id):
@@ -221,35 +221,50 @@ def merge_and_write_taxon_partition_list(tp_list):
             fp_set.add(fp)
 
 
-def do_partition(res,
-                 part_name,
-                 part_keys,
-                 par_frag):
+def do_partition(res, part_name_to_split):
     """Partition a parent taxon into descendants and garbagebin (__misc__) dir
 
     :param res: a wrapper around the resource. Used for id, part_source_filepath, 
-    :param part_name:
-    :param part_keys:
-    :param par_frag:
-    :return:
+    :param part_name_to_split must be one of the hard-coded keys in NAME_TO_PARENT_FRAGMENT
     """
+    _LOG.debug('part_name_to_split = {}'.format(part_name_to_split))
+    par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
+    _LOG.debug('par_frag = {}'.format(par_frag))
+    if par_frag and not res.has_partitioned_for_fragment(par_frag):
+        par_name = os.path.split(par_frag)[-1]
+        do_partition(res, par_name)
+    part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
     master_map = res.get_primary_partition_map()
-    fragment = os.path.join(par_frag, part_name)
     mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
     if not mapping:
-        _LOG.info("No {} mapping for {}".format(res.id, part_name))
+        _LOG.info("No {} mapping for {}".format(res.id, part_name_to_split))
         return
-    TAX_SLICE_CACHE.flush()
-    try:
-        tp = get_taxon_partition(res, fragment)
-        life_fp = res.get_misc_taxon_filepath_for_part(_LIFE)
-        life_misc_fp = res.get_misc_taxon_filepath_for_part(_LIFE)
-        if (not os.path.exists(life_misc_fp)) and (not os.path.exists(life_fp)):
-            tp.external_input_fp = os.path.join(res.partition_source_dir, res.taxon_filename)
-        tp.do_partition(mapping)
-    finally:
-        TAX_SLICE_CACHE.flush()
+    fragment = os.path.join(par_frag, part_name_to_split) if par_frag else part_name_to_split
+    if res.has_partitioned_for_fragment(fragment):
+        _LOG.info("Partition for fragment {} has already been done.".format(fragment))
+        return
+    tp = get_taxon_partition(res, fragment)
+    if not par_frag:
+        tp.external_input_fp = os.path.join(res.partition_source_dir, res.taxon_filename)
+    tp.do_partition(mapping)
 
+def verify_partitioning(res, part_name_to_split, unpartitioned):
+    par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
+    part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
+    master_map = res.get_primary_partition_map()
+    fragment = os.path.join(par_frag, part_name_to_split) if par_frag else part_name_to_split
+    if not res.has_partitioned_for_fragment(fragment):
+        _LOG.info("Partition for fragment {} has not been done.".format(fragment))
+        return True
+    pop_subdirs = [k for k in part_keys if k in master_map]
+    if not pop_subdirs:
+        _LOG.info("No {} mapping for {}".format(res.id, part_name_to_split))
+        return True
+    subs = [get_taxon_partition(res, os.path.join(fragment, k)) for k in pop_subdirs]
+    check_partition_union(fragment, subs, unpartitioned)
+
+def check_partition_union(fragment, subs, unpartitioned):
+    raise NotImplementedError("check_partition_union")
 
 def get_inverse_misc_non_misc_dir_for_tax(inp_dir, tax_id):
     """ If given an unpartitioned dir, return (misc, False) otherwise (canonical, True)

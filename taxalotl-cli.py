@@ -24,7 +24,7 @@ from taxalotl.commands import (accumulate_separated_descendants,
                                SEP_NAMES,
                                )
 from taxalotl.partitions import (PART_NAMES,
-                                 PARTS_BY_NAME,
+                                 NAME_TO_PARTS_SUBSETS,
                                  NONTERMINAL_PART_NAMES,
                                  TERMINAL_PART_NAMES, )
 
@@ -81,17 +81,17 @@ def main_post_parse(args):
         elif args.which == 'pull-otifacts':
             pull_otifacts(taxalotl_config)
         elif args.which == 'diagnose-new-separators':
-            if args.level is not None and args.level not in PARTS_BY_NAME:
+            if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
             diagnose_new_separators(taxalotl_config, [args.level])
         elif args.which == 'enforce-new-separators':
-            if args.level is not None and args.level not in PARTS_BY_NAME:
+            if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
             enforce_new_separators(taxalotl_config, args.resources, [args.level])
         elif args.which == 'build-partition-maps':
             build_partition_maps(taxalotl_config)
         elif args.which == 'partition':
-            if args.level is not None and args.level not in PARTS_BY_NAME:
+            if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
             partition_resources(taxalotl_config, args.resources, [args.level])
         else:
