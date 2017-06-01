@@ -14,7 +14,7 @@ from taxalotl.partitions import (fill_empty_anc_of_mapping,
                                  PREORDER_PART_LIST,
                                  NAME_TO_PARTS_SUBSETS)
 from taxalotl.resource_wrapper import ResourceWrapper, TaxonomyWrapper
-from taxalotl.tax_partition import (get_taxon_partition, get_root_ids_for_subset, )
+from taxalotl.tax_partition import (get_taxon_partition, get_roots_for_subset, )
 from collections import defaultdict
 _LOG = get_logger(__name__)
 
@@ -82,13 +82,12 @@ def ott_build_paritition_maps(res):
         if pk == MISC_DIRNAME:
             continue
         tax_dir = res.get_taxdir_for_part(pk)
-        rids = get_root_ids_for_subset(tax_dir)
+        roots = get_roots_for_subset(tax_dir)
         _LOG.info("{} -> {} roots = {}".format(pk, tax_dir, rids))
         if not rids:
             continue
-        assert len(rids) == 1
-        root_id = rids.pop()
-        taxon = ott_fetch_root_taxon_for_partition(res, pk, root_id)
+        assert len(roots) == 1
+        root_id, taxon = roots.popitem()
         _LOG.info('root for {} has sources: {}'.format(pk, taxon.src_dict))
         for src_pre, src_ids in taxon.src_dict.items():
             src_pre_to_map.setdefault(src_pre, {})[pk] = src_ids

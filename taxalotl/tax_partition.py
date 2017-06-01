@@ -11,28 +11,19 @@ from taxalotl.ott_schema import OTTTaxon, TaxonForest, HEADER_TO_LINE_PARSER
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
 GEN_MAPPING_FILENAME = '__mapping__.json'
-ROOTS_FILENAME = 'roots.txt'
+ROOTS_FILENAME = '__roots__.json'
 ACCUM_DES_FILENAME = '__accum_des__.json'
 
 _LOG = get_logger(__name__)
 
 
-def get_root_ids_for_subset(tax_dir, misc_tax_dir):
-    idset = set()
+def get_roots_for_subset(tax_dir, misc_tax_dir):
+    r = {}
     for td in [tax_dir, misc_tax_dir]:
         rf = os.path.join(td, ROOTS_FILENAME)
         if os.path.exists(rf):
-            with codecs.open(rf, 'r', encoding='utf-8') as inp:
-                for i in inp:
-                    ls = i.strip()
-                    if not ls:
-                        continue
-                    try:
-                        ls = int(ls)
-                    except:
-                        pass
-                    idset.add(ls)
-    return idset
+            r.update(read_as_json(rf))
+    return r
 
 
 def get_accum_des_for_subset(tax_dir, misc_tax_dir):
@@ -166,7 +157,7 @@ class LightTaxonomyHolder(object):
         self._id_to_line = {}  # id -> line
         self._id_to_child_set = {}  # id -> set of child IDs
         self._id_to_el = {}
-        self._roots = set()
+        self._roots = {}
         self._des_in_other_slices = {}
         self._syn_by_id = {}  # accepted_id -> list of synonym lines
         self.taxon_header = None
@@ -174,6 +165,8 @@ class LightTaxonomyHolder(object):
         self.treat_syn_as_taxa = False
         self._populated = False
         self._has_unread_tax_inp = False
+        self._has_moved_taxa = False  # true when taxa have been moved to another partition
+
 
     def _del_data(self):
         for el in LightTaxonomyHolder._DATT:
@@ -197,8 +190,24 @@ class LightTaxonomyHolder(object):
             c.update(self._id_to_line.keys())
         return c
 
-    def _transfer_subtree(self, par_id, dest_part):  # type (int, LightTaxonomyHolder) -> None
+    def _add_root(self, uid, taxon):
+        self._roots[uid] = taxon
+
+    def line_to_taxon(self, line):
+        return OTTTaxon(line, line_parser=HEADER_TO_LINE_PARSER[self.taxon_header])
+
+    def _transfer_line(self, uid, dest_par, as_root=False):  # type (int, LightTaxonomyHolder, bool) -> None
+        line = self._id_to_line[uid]
+        if as_root:
+            dest_part._add_root(uid, self.line_to_taxon(line))
+        self._des_in_other_slices[uid] = (dest_part.fragment, self._id_to_line.get(par_id, ''))
+        dest_part._id_to_line[uid] = line
+        del self._id_to_line[uid]
+
+    def _transfer_subtree(self, par_id, dest_part, as_root=False):  # type (int, LightTaxonomyHolder) -> None
         self._has_moved_taxa = True
+        if as_root:
+            dest_part._add_root(par_id, self.line_to_taxon(self._id_to_line.get(par_id)))
         self._des_in_other_slices[par_id] = (dest_part.fragment, self._id_to_line.get(par_id, ''))
         self._transfer_subtree_rec(par_id, dest_part)
 
@@ -278,7 +287,6 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         self._roots_for_sub = set()
         self._root_to_lth = {}
         self._during_parse_root_to_par = {}
-        self._has_moved_taxa = False  # true when taxa have been moved to another partition
 
     def read_taxon_line(self, uid, par_id, line):
         if par_id:
@@ -310,10 +318,9 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
             match_el = self._root_to_lth[uid]
             match_el._roots.add(uid)
             if uid in self._id_to_child_set:
-                self._transfer_subtree(uid, match_el)
+                self._transfer_subtree(uid, match_el, as_root=True)
             elif uid in self._id_to_line:
-                match_el._id_to_line[uid] = self._id_to_line[uid]
-                del self._id_to_line[uid]
+                self._transfer_line(uid, match_el, as_root=True)
             pc = self._id_to_child_set.get(par_id)
             if pc:
                 pc.remove(uid)
@@ -453,11 +460,10 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             x = self._id_to_child_set
             for r in subroot:
                 if r in x:
-                    self._transfer_subtree(r, sub_tp)
+                    self._transfer_subtree(r, sub_tp, as_root=True)
                     sub_tp._roots.add(r)
                 elif r in self._id_to_line:
-                    sub_tp._id_to_line[r] = self._id_to_line[r]
-                    sub_tp._roots.add(r)
+                    self._transfer_line(r, sub_tp, as_root=True)
                 else:
                     pass
             self.move_matched_synonyms(sub_tp)
@@ -472,7 +478,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             self._read_inputs(do_part_if_reading=False)
 
     def get_root_ids(self):
-        return set(self._roots)
+        return set(self._roots.keys())
 
     def get_id_to_ott_taxon(self):
         id_to_obj = {}
@@ -509,7 +515,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                 self._read_from_misc = False
         try:
             self.res.partition_parsing_fn(self)
-            read_roots = self._read_root_ids()
+            read_roots = self._read_roots()
             self._roots.update(read_roots)
             self._des_in_other_slices.update(self.read_acccumulated_des())
             self._read_from_fs = True
@@ -526,8 +532,8 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             self._read_from_partitioning_scratch = False
             raise
 
-    def _read_root_ids(self):
-        return get_root_ids_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
+    def _read_roots(self):
+        return get_roots_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
 
     def read_acccumulated_des(self):
         return get_accum_des_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
@@ -582,14 +588,14 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             _LOG.debug('No root ids need to be written to "{}"'.format(roots_file))
         else:
             _LOG.debug('Writing {} root_ids to "{}"'.format(len(dh._roots), roots_file))
-            pd = os.path.split(roots_file)[0]
-            assure_dir_exists(pd)
-            with codecs.open(roots_file, 'w', encoding='utf-8') as outp:
-                outp.write('\n'.join([str(i) for i in dh._roots]))
+            assure_dir_exists(out_dir)
+            df = os.path.join(out_dir, ROOTS_FILENAME)
+            write_as_json(dh._roots, df, indent=2)
         syndest = self.output_synonyms_filepath
         if syndest is not None:
             _write_syn_d_as_tsv(self.syn_header, dh._syn_by_id, syn_id_order, syndest)
         if dh._des_in_other_slices:
+            assure_dir_exists(out_dir)
             df = os.path.join(out_dir, ACCUM_DES_FILENAME)
             write_as_json(dh._des_in_other_slices, df, indent=2)
         return True
