@@ -491,7 +491,7 @@ class TaxonomyWrapper(ResourceWrapper):
             root = tree.root
             crs.add(root.id)
             accum_list.append((root.id, root.par_id, root.line))
-        _LOG.info('accum_list: "{}"'.format(accum_list))
+        #_LOG.info('accum_list: "{}"'.format(accum_list))
         anc_frag = os.path.split(frag)[0]
         while not self.has_part_tax_for_frag(anc_frag):
             if not anc_frag:
@@ -500,4 +500,4 @@ class TaxonomyWrapper(ResourceWrapper):
             anc_frag = os.path.split(anc_frag)[0]
         anc_tax_part = get_taxon_partition(self, anc_frag)
         anc_tax_part.register_accumulated_des(accum_list)
-        TAX_SLICE_CACHE.flush()
+        TAX_SLICE_CACHE.try_del(tax_part.cache_key)

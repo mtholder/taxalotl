@@ -452,9 +452,9 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
 
     def read_inputs_for_read_only(self):
         # Only to be used for accessors
-        assert not self._read_from_fs
-        assert not self._populated
-        self._read_inputs(do_part_if_reading=False)
+        if not self._read_from_fs:
+            assert not self._populated
+            self._read_inputs(do_part_if_reading=False)
 
     def get_root_ids(self):
         return set(self._roots)
@@ -535,14 +535,14 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         try:
             # format-specific callback which will set headers and call
             #   add_synonym and read_taxon_line
-            _LOG.debug("About to parse taxa in {}".format(self.tax_fp))
+            # _LOG.debug("About to parse taxa in {}".format(self.tax_fp))
             self.res.partition_parsing_fn(self)
             read_roots = get_root_ids_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
-            _LOG.debug("Read root set {} from roots file in {}".format(read_roots, tax_dir))
+            # _LOG.debug("Read root set {} from roots file in {}".format(read_roots, tax_dir))
             self._roots.update(read_roots)
-            m = "prepart {} taxa in {}"
-            _LOG.info(
-                m.format(len(self._misc_part._id_to_line) + len(self._id_to_line), self.fragment))
+            # m = "prepart {} taxa in {}"
+            # _LOG.info(
+            #     m.format(len(self._misc_part._id_to_line) + len(self._id_to_line), self.fragment))
             self._read_from_fs = True
             if do_part_if_reading:
                 self._has_moved_taxa = True

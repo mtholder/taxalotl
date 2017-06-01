@@ -342,5 +342,5 @@ def accumulate_separated_descendants(taxalotl_config, id_list):
         _LOG.info('accumulate_separated_descendants for {}'.format(i))
         res = taxalotl_config.get_terminalized_res_by_id(i, '')
         for dir in postorder:
+            _LOG.info('accumulate_separated_descendants for {}'.format(dir))
             res.accumulate_separated_descendants(dir)
-            raise NotImplementedError("looping not implemented")
