@@ -22,8 +22,8 @@ from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_par_and_par_misc_taxdir,
                                  get_inp_taxdir,
                                  get_misc_inp_taxdir,
-                                 get_taxon_partition,
-                                 TAX_SLICE_CACHE)
+                                 get_taxon_partition,)
+from taxalotl.tax_partition import TAX_SLICE_CACHE
 
 _LOG = get_logger(__name__)
 

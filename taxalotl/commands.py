@@ -12,6 +12,7 @@ from peyotl import (get_logger,
                     write_as_json)
 
 from taxalotl.partitions import (GEN_MAPPING_FILENAME,
+                                 check_partition,
                                  do_partition,
                                  NAME_TO_PARTS_SUBSETS,
                                  PART_NAMES,
@@ -171,6 +172,19 @@ def partition_resources(taxalotl_config, id_list, level_list):
             with use_tax_partitions() as tax_cache:
                 do_partition(res, part_name_to_split)
 
+def check_partition_resources(taxalotl_config, id_list, level_list):
+    if level_list == [None]:
+        level_list = PREORDER_PART_LIST
+    for rid in id_list:
+        res = taxalotl_config.get_terminalized_res_by_id(rid, 'partition')
+        if not res.has_been_normalized():
+            normalize_resources(taxalotl_config, [rid])
+        for part_name_to_split in level_list:
+            if not NAME_TO_PARTS_SUBSETS[part_name_to_split]:
+                _LOG.info('"{}" is a terminal group in the primary partition map'.format(part_name_to_split))
+                continue
+            with use_tax_partitions() as tax_cache:
+                check_partition(res, part_name_to_split)
 
 def pull_otifacts(taxalotl_config):
     dest_dir = taxalotl_config.resources_dir

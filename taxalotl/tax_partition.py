@@ -18,21 +18,24 @@ _LOG = get_logger(__name__)
 
 
 def get_roots_for_subset(tax_dir, misc_tax_dir):
-    r = {}
-    for td in [tax_dir, misc_tax_dir]:
-        rf = os.path.join(td, ROOTS_FILENAME)
-        if os.path.exists(rf):
-            r.update(read_as_json(rf))
-    return r
-
+    return _read_json_and_coerce_int_keys(tax_dir, misc_tax_dir, ROOTS_FILENAME)
 
 def get_accum_des_for_subset(tax_dir, misc_tax_dir):
-    ad = {}
+    return _read_json_and_coerce_int_keys(tax_dir, misc_tax_dir, ACCUM_DES_FILENAME)
+
+def _read_json_and_coerce_int_keys(tax_dir, misc_tax_dir, fn):
+    r = {}
     for td in [tax_dir, misc_tax_dir]:
-        rf = os.path.join(td, ACCUM_DES_FILENAME)
+        rf = os.path.join(td, fn)
         if os.path.exists(rf):
-            ad.update(read_as_json(rf))
-    return ad
+            rd = read_as_json(rf)
+            for k, v in rd.items():
+                try:
+                    k = int(k)
+                except:
+                    pass
+                r[k] = v
+    return r
 
 
 # noinspection PyProtectedMember
@@ -85,6 +88,9 @@ class TaxonomySliceCache(object):
     def get_taxon_partition(self, res, fragment):
         return get_taxon_partition(res, fragment)
 
+    def clear_without_flush(self, ck):
+        if ck in self._ck_to_obj:
+            del self._ck_to_obj[ck]
 
 TAX_SLICE_CACHE = TaxonomySliceCache()
 
@@ -191,24 +197,32 @@ class LightTaxonomyHolder(object):
         return c
 
     def _add_root(self, uid, taxon):
-        self._roots[uid] = taxon
+        self._roots[uid] = taxon.to_serializable_dict()
 
-    def line_to_taxon(self, line):
+    def line_to_taxon(self, line=None, uid=None):
+        if line is None:
+            line = self._id_to_line[uid]
         return OTTTaxon(line, line_parser=HEADER_TO_LINE_PARSER[self.taxon_header])
 
-    def _transfer_line(self, uid, dest_par, as_root=False):  # type (int, LightTaxonomyHolder, bool) -> None
+    def _transfer_line(self, uid, dest_part, as_root=False):  # type (int, LightTaxonomyHolder, bool) -> None
         line = self._id_to_line[uid]
+        taxon = self.line_to_taxon(line)
         if as_root:
-            dest_part._add_root(uid, self.line_to_taxon(line))
-        self._des_in_other_slices[uid] = (dest_part.fragment, self._id_to_line.get(par_id, ''))
+            dest_part._add_root(uid, taxon)
+        d = taxon.to_serializable_dict()
+        d['fragment'] = dest_part.fragment
+        self._des_in_other_slices[uid] = d
         dest_part._id_to_line[uid] = line
         del self._id_to_line[uid]
 
     def _transfer_subtree(self, par_id, dest_part, as_root=False):  # type (int, LightTaxonomyHolder) -> None
         self._has_moved_taxa = True
+        taxon = self.line_to_taxon(uid=par_id)
         if as_root:
-            dest_part._add_root(par_id, self.line_to_taxon(self._id_to_line.get(par_id)))
-        self._des_in_other_slices[par_id] = (dest_part.fragment, self._id_to_line.get(par_id, ''))
+            dest_part._add_root(par_id, taxon)
+        d = taxon.to_serializable_dict()
+        d['fragment'] = dest_part.fragment
+        self._des_in_other_slices[par_id] = d
         self._transfer_subtree_rec(par_id, dest_part)
 
     def _transfer_subtree_rec(self, par_id, dest_part):  # type (int, LightTaxonomyHolder) -> None
@@ -295,6 +309,8 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
             except:
                 pass
         self._id_to_child_set.setdefault(par_id, set()).add(uid)
+        if uid in self._id_to_line:
+            raise ValueError("Repeated uid {} in line {}".format(uid, line))
         self._id_to_line[uid] = line
         if uid in self._roots_for_sub:
             self._during_parse_root_to_par[uid] = par_id
@@ -316,7 +332,6 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
                 tp._read_inputs(False)
         for uid, par_id in self._during_parse_root_to_par.items():
             match_el = self._root_to_lth[uid]
-            match_el._roots.add(uid)
             if uid in self._id_to_child_set:
                 self._transfer_subtree(uid, match_el, as_root=True)
             elif uid in self._id_to_line:
@@ -461,7 +476,6 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             for r in subroot:
                 if r in x:
                     self._transfer_subtree(r, sub_tp, as_root=True)
-                    sub_tp._roots.add(r)
                 elif r in self._id_to_line:
                     self._transfer_line(r, sub_tp, as_root=True)
                 else:
@@ -470,6 +484,50 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             self._copy_shared_fields(sub_tp)
             sub_tp._populated = True
         self._move_data_to_empty_misc()
+
+    def _debug_validity_check(self):
+        self.read_inputs_for_read_only()
+        id_to_par = {}
+        errs = []
+        warnings = []
+        for par_id, cs in self._id_to_child_set.items():
+            for c in cs:
+                id_to_par[c] = par_id
+        for uid in self._id_to_line.keys():
+            par_id = id_to_par.get(uid)
+            if par_id is None:
+                if uid not in self.roots:
+                    errs.append('ID {} does not have a parent in this slices, but is not listed in the roots')
+        _LOG.debug('{} elements in self._id_to_line'.format(len(self._id_to_line)))
+        for uid in self._syn_by_id.keys():
+            if uid not in self._id_to_line:
+                m = 'synonyms ID for {}, but {} not in id_to_line'.format(uid)
+                errs.append(m)
+        for k in self._roots.keys():
+            if k not in self._id_to_line:
+                m = 'root ID {}, but {} not in id_to_line'.format(k)
+                errs.append(m)
+        for k, v in self._des_in_other_slices.items():
+            if k in self._id_to_line:
+                m = 'ID {} flagged as being in another slice, but it is still in id_to_line'.format(k)
+                errs.append(m)
+            if v.get('par_id'):
+                if v.get('par_id') not in self._id_to_line:
+                    m = 'slice does not hold parent {} of id {} which is flagged as being in another slice'
+                    m = m.format(v.get('par_id'), k)
+                    warnings.append(m)
+        if warnings:
+            m = '{} warning(s): {}'.format(len(warnings), '\n'.join(warnings))
+            _LOG.warn(m)
+        if errs:
+            m = '{} error(s): {}'.format(len(errs), '\n'.join(errs))
+            if self.fragment == 'Life':
+                _LOG.warn(m)
+            else:
+                raise ValueError(m)
+        return True
+
+
 
     def read_inputs_for_read_only(self):
         # Only to be used for accessors
@@ -589,15 +647,15 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         else:
             _LOG.debug('Writing {} root_ids to "{}"'.format(len(dh._roots), roots_file))
             assure_dir_exists(out_dir)
-            df = os.path.join(out_dir, ROOTS_FILENAME)
-            write_as_json(dh._roots, df, indent=2)
+            #_LOG.info("serializing roots {}".format(repr(dh._roots)))
+            write_as_json(dh._roots, roots_file, separators=(',',": "), indent=1)
         syndest = self.output_synonyms_filepath
         if syndest is not None:
             _write_syn_d_as_tsv(self.syn_header, dh._syn_by_id, syn_id_order, syndest)
         if dh._des_in_other_slices:
             assure_dir_exists(out_dir)
             df = os.path.join(out_dir, ACCUM_DES_FILENAME)
-            write_as_json(dh._des_in_other_slices, df, indent=2)
+            write_as_json(dh._des_in_other_slices, df, separators=(',',": "), indent=1)
         return True
 
 

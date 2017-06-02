@@ -10,7 +10,7 @@ from taxalotl.tax_partition import (INP_TAXONOMY_DIRNAME,
                                     MISC_DIRNAME,
                                     GEN_MAPPING_FILENAME,
                                     get_taxon_partition,
-                                    TAX_SLICE_CACHE)
+                                    use_tax_partitions)
 
 _LOG = get_logger(__name__)
 _LIFE = 'Life'
@@ -248,7 +248,9 @@ def do_partition(res, part_name_to_split):
         tp.external_input_fp = os.path.join(res.partition_source_dir, res.taxon_filename)
     tp.do_partition(mapping)
 
-def verify_partitioning(res, part_name_to_split, unpartitioned):
+
+
+def check_partition(res, part_name_to_split):
     par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
     part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
     master_map = res.get_primary_partition_map()
@@ -260,11 +262,19 @@ def verify_partitioning(res, part_name_to_split, unpartitioned):
     if not pop_subdirs:
         _LOG.info("No {} mapping for {}".format(res.id, part_name_to_split))
         return True
-    subs = [get_taxon_partition(res, os.path.join(fragment, k)) for k in pop_subdirs]
-    check_partition_union(fragment, subs, unpartitioned)
+    with use_tax_partitions() as cache:
+        subs = [get_taxon_partition(res, fragment)]
+        cache.clear_without_flush(subs[0].cache_key)
+        subs.extend([get_taxon_partition(res, os.path.join(fragment, k)) for k in pop_subdirs])
+        unpart = get_taxon_partition(res, _LIFE)
+        unpart.external_input_fp = os.path.join(res.partition_source_dir, res.taxon_filename)
+        check_partition_union(fragment, subs, unpart)
 
 def check_partition_union(fragment, subs, unpartitioned):
-    raise NotImplementedError("check_partition_union")
+    for p in subs:
+        p._debug_validity_check()
+        return
+
 
 def get_inverse_misc_non_misc_dir_for_tax(inp_dir, tax_id):
     """ If given an unpartitioned dir, return (misc, False) otherwise (canonical, True)

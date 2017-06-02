@@ -42,7 +42,7 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
         for n, line in enumerate(iinp):
             ls = line.split('\t|\t')
             if n > 0 and n % 1000 == 0:
-                _LOG.debug(' read synonym {:7}'.format(n))
+                _LOG.debug(' read synonym {:7} from "{}"'.format(n, syn_fp))
             try:
                 accept_id = ls[uid_ind]
                 try:
@@ -211,27 +211,31 @@ def full_ott_line_parser(taxon, line):
     else:
         taxon.par_id = None
     taxon.name = ls[2]
-    taxon.rank, taxon.src_dict, taxon.uniqname, taxon.flags = '', {}, None, None
     if len(ls) <= 4:
         return
-    taxon.rank = ls[3]
+    if ls[3]:
+        taxon.rank = ls[3]
     if len(ls) == 5:
         return
-    sel = ls[4].split(',')
-    d = {}
-    for el in sel:
-        src, sid = el.split(':')
-        try:
-            sid = int(sid)
-        except:
-            pass
-        d.setdefault(src, set()).add(sid)
-    taxon.src_dict = d
+    if ls[4]:
+        sel = ls[4].split(',')
+        d = {}
+        for el in sel:
+            src, sid = el.split(':')
+            try:
+                sid = int(sid)
+            except:
+                pass
+            d.setdefault(src, set()).add(sid)
+        if d:
+            taxon.src_dict = d
     if len(ls) == 6:
         return
-    taxon.uniqname = ls[5]
+    if ls[5]:
+        taxon.uniqname = ls[5]
     if len(ls) > 7:
-        taxon.flags = set(ls[6].split(','))
+        if ls[6]:
+            taxon.flags = set(ls[6].split(','))
 
 def flag_after_rank_parser(taxon, line):
     try:
@@ -250,9 +254,10 @@ def flag_after_rank_parser(taxon, line):
     else:
         taxon.par_id = None
     taxon.name = ls[2]
-    taxon.src_dict, taxon.uniqname = {}, None
-    taxon.rank = ls[3]
-    taxon.flags = set(ls[4].split(','))
+    if ls[3]:
+        taxon.rank = ls[3]
+    if ls[4]:
+        taxon.flags = set(ls[4].split(','))
 
 
 HEADER_TO_LINE_PARSER = {FULL_OTT_HEADER: full_ott_line_parser,
@@ -262,7 +267,10 @@ HEADER_TO_LINE_PARSER = {FULL_OTT_HEADER: full_ott_line_parser,
                         }
 
 class OTTTaxon(object):
+    _DATT = ('id', 'par_id', 'name', 'rank', 'src_dict', 'flags', 'uniqname')
     def __init__(self, line, line_num='<unknown>', line_parser=full_ott_line_parser):
+        self.id, self.par_id, self.name, self.rank = None, None, None, None
+        self.src_dict, self.flags, self.uniqname = None, None, None
         self.line_num = line_num
         self.line = line
         line_parser(self, line)
@@ -270,6 +278,29 @@ class OTTTaxon(object):
     @property
     def name_that_is_unique(self):
         return self.uniqname if self.uniqname else self.name
+
+    def to_serializable_dict(self):
+        d = {}
+        for k in OTTTaxon._DATT:
+            v = getattr(self, k, None)
+            if v is not None:
+                if k == 'id' or k == 'par_id':
+                    d[k] = v
+                elif v:
+                    if k == 'flags':
+                        if len(v):
+                            d[k] = list(v)
+                            d[k].sort()
+                    elif k == 'src_dict':
+                        ds = {}
+                        for sk, ss in v.items():
+                            sl = list(ss)
+                            sl.sort()
+                            ds[sk] = sl
+                        d[k] = ds
+                    else:
+                        d[k] = v
+        return d
 
 def write_indented_subtree(out, node, indent_level):
     out.write('{}{} (id={})\n'.format('  '*indent_level,

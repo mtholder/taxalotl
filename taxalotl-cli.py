@@ -11,6 +11,7 @@ from taxalotl import TaxalotlConfig
 from taxalotl.commands import (accumulate_separated_descendants,
                                build_partition_maps,
                                cache_separator_names,
+                               check_partition_resources,
                                clean_resources,
                                compare_taxonomies,
                                diagnose_new_separators,
@@ -37,6 +38,7 @@ res_indep_cmds = ['build-partition-maps',
                   'pull-otifacts',
                   ]
 res_dep_cmds = ['accumulate-separated-descendants',
+                'check-partition',
                 'clean',
                 'download',
                 'enforce-new-separators',
@@ -94,6 +96,10 @@ def main_post_parse(args):
             if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
             partition_resources(taxalotl_config, args.resources, [args.level])
+        elif args.which == 'check-partition':
+            if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
+                raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
+            check_partition_resources(taxalotl_config, args.resources, [args.level])
         else:
             raise NotImplementedError('"{}" action not implemented yet'.format(args.which))
     except Exception as x:
@@ -173,6 +179,16 @@ def main():
                              help="The level of the taxonomy to partition")
 
     partition_p.set_defaults(which="partition")
+    # PARTITION
+    partition_p = subp.add_parser('check-partition',
+                                  help="Check that a partitioning of a resource taxon")
+    partition_p.add_argument('resources', nargs="+", help="IDs of the resources to partitition")
+    partition_p.add_argument("--level",
+                             default=None,
+                             help="The level of the taxonomy to check partition")
+
+    partition_p.set_defaults(which="check-partition")
+
     # DIAGNOSE-NEW-SEPARATORS
     diag_sep_p = subp.add_parser('diagnose-new-separators',
                                  help="Uses the last OTT build to find taxa IDs that "
