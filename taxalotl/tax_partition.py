@@ -493,16 +493,24 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         for par_id, cs in self._id_to_child_set.items():
             for c in cs:
                 id_to_par[c] = par_id
+        known_id_set = set(self._id_to_line.keys())
+        roots_set = set(self._roots.keys())
         for uid in self._id_to_line.keys():
             par_id = id_to_par.get(uid)
-            if par_id is None:
-                if uid not in self.roots:
-                    errs.append('ID {} does not have a parent in this slices, but is not listed in the roots')
+            if not par_id:
+                if uid not in self._roots:
+                    m = 'ID {} does not have a parent in this slice, but is not listed in the roots'
+                    if self.fragment == 'Life':
+                        warnings.append(m.format(uid))
+                    else:
+                        errors.append(m.format(uid))
+                        roots_set.add(uid)
         _LOG.debug('{} elements in self._id_to_line'.format(len(self._id_to_line)))
         for uid in self._syn_by_id.keys():
             if uid not in self._id_to_line:
                 m = 'synonyms ID for {}, but {} not in id_to_line'.format(uid)
                 errs.append(m)
+        known_id_set.update(self._roots.keys())
         for k in self._roots.keys():
             if k not in self._id_to_line:
                 m = 'root ID {}, but {} not in id_to_line'.format(k)
@@ -521,12 +529,8 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             _LOG.warn(m)
         if errs:
             m = '{} error(s): {}'.format(len(errs), '\n'.join(errs))
-            if self.fragment == 'Life':
-                _LOG.warn(m)
-            else:
-                raise ValueError(m)
-        return True
-
+            raise ValueError(m)
+        return roots_set, known_id_set
 
 
     def read_inputs_for_read_only(self):

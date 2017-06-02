@@ -263,18 +263,18 @@ def check_partition(res, part_name_to_split):
         _LOG.info("No {} mapping for {}".format(res.id, part_name_to_split))
         return True
     with use_tax_partitions() as cache:
-        subs = [get_taxon_partition(res, fragment)]
-        cache.clear_without_flush(subs[0].cache_key)
-        subs.extend([get_taxon_partition(res, os.path.join(fragment, k)) for k in pop_subdirs])
+        misc = get_taxon_partition(res, fragment)
+        cache.clear_without_flush(misc.cache_key)
+        subs = [get_taxon_partition(res, os.path.join(fragment, k)) for k in pop_subdirs]
         unpart = get_taxon_partition(res, _LIFE)
         unpart.external_input_fp = os.path.join(res.partition_source_dir, res.taxon_filename)
-        check_partition_union(fragment, subs, unpart)
+        check_partition_union(fragment, misc, subs, unpart)
 
-def check_partition_union(fragment, subs, unpartitioned):
+def check_partition_union(fragment, misc, subs, unpartitioned):
+    mr, mids = misc._debug_validity_check()
     for p in subs:
         p._debug_validity_check()
-        return
-
+    return
 
 def get_inverse_misc_non_misc_dir_for_tax(inp_dir, tax_id):
     """ If given an unpartitioned dir, return (misc, False) otherwise (canonical, True)
