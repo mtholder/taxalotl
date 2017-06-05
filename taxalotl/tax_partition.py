@@ -487,6 +487,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
 
     def _debug_validity_check(self):
         self.read_inputs_for_read_only()
+        _LOG.debug('{} roots = {}'.format(self.fragment, self._roots))
         id_to_par = {}
         errs = []
         warnings = []
@@ -503,8 +504,8 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                     if self.fragment == 'Life':
                         warnings.append(m.format(uid))
                     else:
-                        errors.append(m.format(uid))
-                        roots_set.add(uid)
+                        errs.append(m.format(uid))
+                    roots_set.add(uid)
         _LOG.debug('{} elements in self._id_to_line'.format(len(self._id_to_line)))
         for uid in self._syn_by_id.keys():
             if uid not in self._id_to_line:
@@ -532,6 +533,50 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             raise ValueError(m)
         return roots_set, known_id_set
 
+    def _debug_check_subtree_ids(self, root_id_set, all_id_set):
+        self.read_inputs_for_read_only()
+        self_ids_set = set()
+        to_deal_with = set(root_id_set)
+        unrecognized_set = set()
+        while to_deal_with:
+            ntdw = set()
+            for r in to_deal_with:
+                cs = self._id_to_child_set.get(r)
+                if cs is None:
+                    if r not in self._id_to_line:
+                        unrecognized_set.add(r)
+                elif cs:
+                    self_ids_set.add(r)
+                    self_ids_set.update(cs)
+                    ntdw.update(cs)
+            to_deal_with = ntdw
+        missed_ids = self_ids_set - all_id_set
+        extra_ids = all_id_set - self_ids_set
+        errs = []
+        # _LOG.debug('root_id_set = {}'.format(root_id_set))
+        # _LOG.debug('len(self._id_to_child_set) = {} len(self_ids_set) = {} '.format(
+        #     len(self._id_to_child_set), len(self_ids_set)))
+        if unrecognized_set:
+            l = list(unrecognized_set)
+            l.sort()
+            mind = len(l) if len(l) < 100 else 100
+            m = 'IDs not known to {} read from {}: {}'
+            errs.append(m.format(self.fragment, self.tax_fp, l[:mind]))
+        if missed_ids:
+            l = list(missed_ids)
+            l.sort()
+            mind = len(l) if len(l) < 100 else 100
+            m = 'IDs expected in subtree according to {} read from {}, but not found: {}'
+            errs.append(m.format(self.fragment, self.tax_fp, l[:mind]))
+        if extra_ids:
+            l = list(extra_ids)
+            l.sort()
+            mind = len(l) if len(l) < 100 else 100
+            m = 'IDs included in subtree, but not expected by {} read from {}: {}'
+            errs.append(m.format(self.fragment, self.tax_fp, l[:mind]))
+        if errs:
+            m = '{} error(s): {}'.format(len(errs), '\n'.join(errs))
+            raise ValueError(m)
 
     def read_inputs_for_read_only(self):
         # Only to be used for accessors

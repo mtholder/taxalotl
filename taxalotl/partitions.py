@@ -271,10 +271,15 @@ def check_partition(res, part_name_to_split):
         check_partition_union(fragment, misc, subs, unpart)
 
 def check_partition_union(fragment, misc, subs, unpartitioned):
-    mr, mids = misc._debug_validity_check()
+    slice_roots, slice_ids = misc._debug_validity_check()
     for p in subs:
-        p._debug_validity_check()
-    return
+        p_ids = p._debug_validity_check()[1]
+        slice_ids.update(p_ids)
+        for p_root_id, root_obj in p._roots.items():
+            pr = root_obj['par_id']
+            if pr not in slice_ids:
+                slice_roots.add(p_root_id)
+    unpartitioned._debug_check_subtree_ids(slice_roots, slice_ids)
 
 def get_inverse_misc_non_misc_dir_for_tax(inp_dir, tax_id):
     """ If given an unpartitioned dir, return (misc, False) otherwise (canonical, True)
