@@ -230,7 +230,7 @@ def do_partition(res, part_name_to_split):
     _LOG.debug('part_name_to_split = {}'.format(part_name_to_split))
     par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
     _LOG.debug('par_frag = {}'.format(par_frag))
-    if par_frag and not res.has_partitioned_for_fragment(par_frag):
+    if par_frag and not res.has_been_partitioned_for_fragment(par_frag):
         par_name = os.path.split(par_frag)[-1]
         do_partition(res, par_name)
     part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
@@ -240,7 +240,7 @@ def do_partition(res, part_name_to_split):
         _LOG.info("No {} mapping for {}".format(res.id, part_name_to_split))
         return
     fragment = os.path.join(par_frag, part_name_to_split) if par_frag else part_name_to_split
-    if res.has_partitioned_for_fragment(fragment):
+    if res.has_been_partitioned_for_fragment(fragment):
         _LOG.info("Partition for fragment {} has already been done.".format(fragment))
         return
     tp = get_taxon_partition(res, fragment)
@@ -255,7 +255,7 @@ def check_partition(res, part_name_to_split):
     part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
     master_map = res.get_primary_partition_map()
     fragment = os.path.join(par_frag, part_name_to_split) if par_frag else part_name_to_split
-    if not res.has_partitioned_for_fragment(fragment):
+    if not res.has_been_partitioned_for_fragment(fragment):
         _LOG.info("Partition for fragment {} has not been done.".format(fragment))
         return True
     pop_subdirs = [k for k in part_keys if k in master_map]

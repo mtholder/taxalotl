@@ -442,9 +442,8 @@ class ResourceWrapper(FromOTifacts):
     def get_primary_partition_map(self):
         return get_auto_gen_part_mapper(self)
 
-    def has_partitioned_for_fragment(self, fragment):
-        return os.path.exists(self.get_taxon_filepath_for_part(fragment)) or \
-               os.path.exists(self.get_misc_taxon_filepath_for_part(fragment))
+    def has_been_partitioned_for_fragment(self, fragment):
+        return os.path.exists(self.get_misc_taxon_filepath_for_part(fragment))
 
 # noinspection PyAbstractClass
 class TaxonomyWrapper(ResourceWrapper):
@@ -483,7 +482,7 @@ class TaxonomyWrapper(ResourceWrapper):
             accum_list.append((root.id, root.par_id, root.line))
         #_LOG.info('accum_list: "{}"'.format(accum_list))
         anc_frag = os.path.split(frag)[0]
-        while not self.has_partitioned_for_fragment(anc_frag):
+        while not self.has_been_partitioned_for_fragment(anc_frag):
             if not anc_frag:
                 assert False
                 return

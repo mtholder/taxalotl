@@ -18,12 +18,12 @@ _LOG = get_logger(__name__)
 
 
 def get_roots_for_subset(tax_dir, misc_tax_dir):
-    return _read_json_and_coerce_int_keys(tax_dir, misc_tax_dir, ROOTS_FILENAME)
+    return _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, ROOTS_FILENAME)
 
 def get_accum_des_for_subset(tax_dir, misc_tax_dir):
-    return _read_json_and_coerce_int_keys(tax_dir, misc_tax_dir, ACCUM_DES_FILENAME)
+    return _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, ACCUM_DES_FILENAME)
 
-def _read_json_and_coerce_int_keys(tax_dir, misc_tax_dir, fn):
+def _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, fn):
     r = {}
     for td in [tax_dir, misc_tax_dir]:
         rf = os.path.join(td, fn)
@@ -34,7 +34,7 @@ def _read_json_and_coerce_int_keys(tax_dir, misc_tax_dir, fn):
                     k = int(k)
                 except:
                     pass
-                r[k] = v
+                r[k] = OTTTaxon(d=v)
     return r
 
 
@@ -695,18 +695,25 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             _LOG.debug('No root ids need to be written to "{}"'.format(roots_file))
         else:
             _LOG.debug('Writing {} root_ids to "{}"'.format(len(dh._roots), roots_file))
-            assure_dir_exists(out_dir)
-            #_LOG.info("serializing roots {}".format(repr(dh._roots)))
-            write_as_json(dh._roots, roots_file, separators=(',',": "), indent=1)
+            write_taxon_json(dh._roots, roots_file)
         syndest = self.output_synonyms_filepath
         if syndest is not None:
             _write_syn_d_as_tsv(self.syn_header, dh._syn_by_id, syn_id_order, syndest)
         if dh._des_in_other_slices:
-            assure_dir_exists(out_dir)
-            df = os.path.join(out_dir, ACCUM_DES_FILENAME)
-            write_as_json(dh._des_in_other_slices, df, separators=(',',": "), indent=1)
+            write_taxon_json(dh._des_in_other_slices, os.path.join(out_dir, ACCUM_DES_FILENAME))
         return True
 
+def write_taxon_json(obj, filepath):
+    out_dir = os.path.split(filepath)[0]
+    if out_dir:
+        assure_dir_exists(out_dir)
+    dtw = {}
+    for k, v in obj.items():
+        if isinstance(v, OTTTaxon):
+            dtw[k] = v.to_serializable_dict()
+        else:
+            dtw[k] = v
+    write_as_json(dtw, filepath, separators=(',', ": "), indent=1)
 
 def get_taxon_partition(res, fragment):
     ck = (TaxonPartition, res.id, fragment)

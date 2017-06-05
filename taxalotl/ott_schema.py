@@ -268,16 +268,27 @@ HEADER_TO_LINE_PARSER = {FULL_OTT_HEADER: full_ott_line_parser,
 
 class OTTTaxon(object):
     _DATT = ('id', 'par_id', 'name', 'rank', 'src_dict', 'flags', 'uniqname')
-    def __init__(self, line, line_num='<unknown>', line_parser=full_ott_line_parser):
+    def __init__(self, line=None, line_num='<unknown>', line_parser=full_ott_line_parser, d=None):
         self.id, self.par_id, self.name, self.rank = None, None, None, None
         self.src_dict, self.flags, self.uniqname = None, None, None
-        self.line_num = line_num
-        self.line = line
-        line_parser(self, line)
+        if d is not None:
+            self.from_serializable_dict(d)
+        else:
+            self.line_num = line_num
+            self.line = line
+            line_parser(self, line)
 
     @property
     def name_that_is_unique(self):
         return self.uniqname if self.uniqname else self.name
+
+    def from_serializable_dict(self, d):
+        for k, v in d.items():
+            if k == 'flags':
+                v = set(v)
+            elif k == 'src_dict':
+                v = {sk: set(sv) for sk, sv in v.items()}
+            setattr(self, k, v)
 
     def to_serializable_dict(self):
         d = {}

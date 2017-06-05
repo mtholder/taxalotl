@@ -82,9 +82,9 @@ def ott_build_paritition_maps(res):
         if pk == MISC_DIRNAME:
             continue
         tax_dir = res.get_taxdir_for_part(pk)
-        roots = get_roots_for_subset(tax_dir)
-        _LOG.info("{} -> {} roots = {}".format(pk, tax_dir, rids))
-        if not rids:
+        roots = get_roots_for_subset(tax_dir, res.get_misc_taxon_dir_for_part(pk))
+        _LOG.info("{} -> {} roots = {}".format(pk, tax_dir, roots))
+        if not roots:
             continue
         assert len(roots) == 1
         root_id, taxon = roots.popitem()
