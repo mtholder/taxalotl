@@ -245,6 +245,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
         fragment = get_fragment_from_part_name(current_partition_key)
         tax_part = get_taxon_partition(self, fragment)
         tax_part.read_inputs_for_read_only()
+        _LOG.info('converting taxonomy from {} to a tree'.format(tax_part.tax_fp))
         tax_forest = tax_part.get_taxa_as_forest()
         _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
         nns = NestedNewSeparator()
