@@ -31,7 +31,6 @@ import sys
 from setuptools import find_packages, setup, Command
 
 
-
 class UploadCommand(Command):
     """Support setup.py upload."""
 
@@ -63,6 +62,7 @@ class UploadCommand(Command):
         os.system('git tag v{0}'.format(about['__version__']))
         os.system('git push --tags')
         sys.exit()
+
 
 # Package meta-data.
 NAME = 'taxalotl'

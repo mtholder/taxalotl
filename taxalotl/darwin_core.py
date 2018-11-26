@@ -32,7 +32,7 @@ _upper = u"A-ZÄÁÅÁÁÇČÐĎĐÉÉÎİŁŘŠŚŞȘÔØÖÔÓÜÚŽ"
 _epithet = u" +[%s0-9.-]+" % _lower
 
 # Matches a canonical name
-_canon_re = u"[A-ZÖ{l}-]+(|{e}|{e}{e}|{e}{e}{e})".format(l=_lower, e=_epithet)
+_canon_re = u"[A-ZÖ{x}-]+(|{e}|{e}{e}|{e}{e}{e})".format(x=_lower, e=_epithet)
 _auth_re = u" +(d'|von |van |de |dem |der |da |del |di |le |f\\. |[{}(])(..|\\.).*".format(_upper)
 _trimmer = re.compile(u"({})({})".format(_canon_re, _auth_re))
 _year_re = re.compile(u".*, [12][0-9][0-9][0-9?]\\)?")
@@ -206,9 +206,9 @@ def find_orphaned(itd):
         if pid and (pid not in to_name):
             orphaned.add(taxon_id)
     _LOG.info("orphans to be pruned: {}".format(len(orphaned)))
-    l = list(orphaned)
-    l.sort()
-    itd.details_log["orphans_pruned"] = l
+    x = list(orphaned)
+    x.sort()
+    itd.details_log["orphans_pruned"] = x
     return orphaned
 
 

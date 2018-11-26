@@ -60,7 +60,7 @@ def read_irmng_file(irmng_file_name):
             raise RuntimeError(m)
         for raw_row in csvreader:
             # noinspection PyCompatibility
-            row = [unicode(i, 'utf-8') for i in raw_row]
+            row = [str(i, 'utf-8') for i in raw_row]
             taxon_id = int(row[0])
             long_name = row[1]
             auth = row[2]

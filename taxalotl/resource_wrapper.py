@@ -22,7 +22,7 @@ from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_par_and_par_misc_taxdir,
                                  get_inp_taxdir,
                                  get_misc_inp_taxdir,
-                                 get_taxon_partition,)
+                                 get_taxon_partition, )
 from taxalotl.tax_partition import TAX_SLICE_CACHE
 
 _LOG = get_logger(__name__)
@@ -366,7 +366,9 @@ class ResourceWrapper(FromOTifacts):
             raise RuntimeError(m.format(self.id))
         if self.url.startswith("ftp://"):
             _LOG.debug("Starting FTP download from {} to {}".format(self.url, dfp))
-            urllib.urlretrieve(self.url, dfp)
+            with urllib.request.Request(self.url) as req:
+                with codecs.open(dfp, 'w', 'utf-8') as outp:
+                    outp.write(req.read())
             _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
         else:
             _LOG.debug("Starting download from {} to {}".format(self.url, dfp))
@@ -445,6 +447,7 @@ class ResourceWrapper(FromOTifacts):
     def has_been_partitioned_for_fragment(self, fragment):
         return os.path.exists(self.get_misc_taxon_filepath_for_part(fragment))
 
+
 # noinspection PyAbstractClass
 class TaxonomyWrapper(ResourceWrapper):
     resource_type = 'external taxonomy'
@@ -456,7 +459,7 @@ class TaxonomyWrapper(ResourceWrapper):
     def accumulate_separated_descendants(self, scaffold_dir):
         scaffold_anc = os.path.split(scaffold_dir)[0]
         pd = self.partitioned_filepath
-        #_LOG.debug('comparing "{}" and "{}"'.format(pd, scaffold_anc))
+        # _LOG.debug('comparing "{}" and "{}"'.format(pd, scaffold_anc))
         if scaffold_anc == pd:
             return
         pd = '{}/'.format(pd)
@@ -480,7 +483,7 @@ class TaxonomyWrapper(ResourceWrapper):
             root = tree.root
             crs.add(root.id)
             accum_list.append((root.id, root.par_id, root.line))
-        #_LOG.info('accum_list: "{}"'.format(accum_list))
+        # _LOG.info('accum_list: "{}"'.format(accum_list))
         anc_frag = os.path.split(frag)[0]
         while not self.has_been_partitioned_for_fragment(anc_frag):
             if not anc_frag:

@@ -46,7 +46,7 @@ res_dep_cmds = ['accumulate-separated-descendants',
                 'partition',
                 'status',
                 'unpack',
-               ]
+                ]
 all_cmds = res_dep_cmds + res_indep_cmds
 
 
@@ -145,7 +145,7 @@ def main():
     status_p.set_defaults(which="status")
     # CACHE-separator-names
     compare_tax_p = subp.add_parser('compare-taxonomies',
-                              help="compare taxonomies for a separated dir")
+                                    help="compare taxonomies for a separated dir")
     compare_tax_p.add_argument("--level",
                                default=None,
                                required=True,
@@ -194,23 +194,23 @@ def main():
                                  help="Uses the last OTT build to find taxa IDs that "
                                       "feature are common to the relevant inputs")
     diag_sep_p.add_argument("--level",
-                           default=None,
-                           help="The partition that is the root of the separation (default all)")
+                            default=None,
+                            help="The partition that is the root of the separation (default all)")
 
     diag_sep_p.set_defaults(which="diagnose-new-separators")
     # ENFORCE-NEW-SEPARATORS
     enf_sep_p = subp.add_parser('enforce-new-separators',
-                                 help="Uses the __sep__.json files created by "
-                                "diagnose-new-separators to partition by unproblematic"
-                                "taxa")
+                                help="Uses the __sep__.json files created by "
+                                     "diagnose-new-separators to partition by unproblematic"
+                                     "taxa")
     enf_sep_p.add_argument('resources', nargs="*", help="IDs of the resources to separate")
     enf_sep_p.add_argument("--level",
-                             default=None,
-                             help="The partition that is the root of the separation (default all)")
+                           default=None,
+                           help="The partition that is the root of the separation (default all)")
     enf_sep_p.set_defaults(which="enforce-new-separators")
     # NORMALIZE
     accum_sep_des_p = subp.add_parser('accumulate-separated-descendants',
-                                  help="Should be run after enforce-separators and before compare-taxonomie")
+                                      help="Should be run after enforce-separators and before compare-taxonomie")
     accum_sep_des_p.add_argument('resources', nargs="*", help="IDs of the resources")
     accum_sep_des_p.set_defaults(which="accumulate-separated-descendants")
 

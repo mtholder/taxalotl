@@ -105,7 +105,7 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
         _LOG.info(u'header = {}'.format(header))
         for n, raw_row in enumerate(csvreader):
             # noinspection PyCompatibility
-            row = [unicode(i, 'utf-8') for i in raw_row]
+            row = [str(i, 'utf-8') for i in raw_row]
             taxon_id = row[0]
             fam = row[2]
             if fam != family:

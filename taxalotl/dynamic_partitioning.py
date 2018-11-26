@@ -18,13 +18,13 @@ _norm_char_pat = re.compile(r'[-a-zA-Z0-9._]')
 
 
 def _escape_odd_char(s):
-    l = []
+    x = []
     for i in s:
         if _norm_char_pat.match(i):
-            l.append(i)
+            x.append(i)
         else:
-            l.append('_')
-    return ''.join(l)
+            x.append('_')
+    return ''.join(x)
 
 
 def perform_dynamic_separation(ott_res, part_key, sep_fn, suppress_cache_flush=False, src_id=None):

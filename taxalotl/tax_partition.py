@@ -20,8 +20,10 @@ _LOG = get_logger(__name__)
 def get_roots_for_subset(tax_dir, misc_tax_dir):
     return _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, ROOTS_FILENAME)
 
+
 def get_accum_des_for_subset(tax_dir, misc_tax_dir):
     return _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, ACCUM_DES_FILENAME)
+
 
 def _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, fn):
     r = {}
@@ -85,12 +87,14 @@ class TaxonomySliceCache(object):
         if _ex is not None:
             raise _ex
 
+    # noinspection PyMethodMayBeStatic
     def get_taxon_partition(self, res, fragment):
         return get_taxon_partition(res, fragment)
 
     def clear_without_flush(self, ck):
         if ck in self._ck_to_obj:
             del self._ck_to_obj[ck]
+
 
 TAX_SLICE_CACHE = TaxonomySliceCache()
 
@@ -173,7 +177,6 @@ class LightTaxonomyHolder(object):
         self._has_unread_tax_inp = False
         self._has_moved_taxa = False  # true when taxa have been moved to another partition
 
-
     def _del_data(self):
         for el in LightTaxonomyHolder._DATT:
             setattr(self, el, None)
@@ -204,7 +207,8 @@ class LightTaxonomyHolder(object):
             line = self._id_to_line[uid]
         return OTTTaxon(line, line_parser=HEADER_TO_LINE_PARSER[self.taxon_header])
 
-    def _transfer_line(self, uid, dest_part, as_root=False):  # type (int, LightTaxonomyHolder, bool) -> None
+    def _transfer_line(self, uid, dest_part,
+                       as_root=False):  # type (int, LightTaxonomyHolder, bool) -> None
         line = self._id_to_line[uid]
         taxon = self.line_to_taxon(line)
         if as_root:
@@ -215,7 +219,8 @@ class LightTaxonomyHolder(object):
         dest_part._id_to_line[uid] = line
         del self._id_to_line[uid]
 
-    def _transfer_subtree(self, par_id, dest_part, as_root=False):  # type (int, LightTaxonomyHolder) -> None
+    def _transfer_subtree(self, par_id, dest_part,
+                          as_root=False):  # type (int, LightTaxonomyHolder) -> None
         self._has_moved_taxa = True
         taxon = self.line_to_taxon(uid=par_id)
         if as_root:
@@ -509,16 +514,17 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         _LOG.debug('{} elements in self._id_to_line'.format(len(self._id_to_line)))
         for uid in self._syn_by_id.keys():
             if uid not in self._id_to_line:
-                m = 'synonyms ID for {}, but {} not in id_to_line'.format(uid)
+                m = 'synonyms ID for {}, in syn_by_id but not in id_to_line'.format(uid)
                 errs.append(m)
         known_id_set.update(self._roots.keys())
         for k in self._roots.keys():
             if k not in self._id_to_line:
-                m = 'root ID {}, but {} not in id_to_line'.format(k)
+                m = 'root ID {}, but roots not in id_to_line'.format(k)
                 errs.append(m)
         for k, v in self._des_in_other_slices.items():
             if k in self._id_to_line:
-                m = 'ID {} flagged as being in another slice, but it is still in id_to_line'.format(k)
+                m = 'ID {} flagged as being in another slice, but it is still in id_to_line'.format(
+                    k)
                 errs.append(m)
             if v.get('par_id'):
                 if v.get('par_id') not in self._id_to_line:
@@ -557,23 +563,23 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         # _LOG.debug('len(self._id_to_child_set) = {} len(self_ids_set) = {} '.format(
         #     len(self._id_to_child_set), len(self_ids_set)))
         if unrecognized_set:
-            l = list(unrecognized_set)
-            l.sort()
-            mind = len(l) if len(l) < 100 else 100
+            x = list(unrecognized_set)
+            x.sort()
+            mind = len(x) if len(x) < 100 else 100
             m = 'IDs not known to {} read from {}: {}'
-            errs.append(m.format(self.fragment, self.tax_fp, l[:mind]))
+            errs.append(m.format(self.fragment, self.tax_fp, x[:mind]))
         if missed_ids:
-            l = list(missed_ids)
-            l.sort()
-            mind = len(l) if len(l) < 100 else 100
+            x = list(missed_ids)
+            x.sort()
+            mind = len(x) if len(x) < 100 else 100
             m = 'IDs expected in subtree according to {} read from {}, but not found: {}'
-            errs.append(m.format(self.fragment, self.tax_fp, l[:mind]))
+            errs.append(m.format(self.fragment, self.tax_fp, x[:mind]))
         if extra_ids:
-            l = list(extra_ids)
-            l.sort()
-            mind = len(l) if len(l) < 100 else 100
+            x = list(extra_ids)
+            x.sort()
+            mind = len(x) if len(x) < 100 else 100
             m = 'IDs included in subtree, but not expected by {} read from {}: {}'
-            errs.append(m.format(self.fragment, self.tax_fp, l[:mind]))
+            errs.append(m.format(self.fragment, self.tax_fp, x[:mind]))
         if errs:
             m = '{} error(s): {}'.format(len(errs), '\n'.join(errs))
             raise ValueError(m)
@@ -703,6 +709,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             write_taxon_json(dh._des_in_other_slices, os.path.join(out_dir, ACCUM_DES_FILENAME))
         return True
 
+
 def write_taxon_json(obj, filepath):
     out_dir = os.path.split(filepath)[0]
     if out_dir:
@@ -714,6 +721,7 @@ def write_taxon_json(obj, filepath):
         else:
             dtw[k] = v
     write_as_json(dtw, filepath, separators=(',', ": "), indent=1)
+
 
 def get_taxon_partition(res, fragment):
     ck = (TaxonPartition, res.id, fragment)

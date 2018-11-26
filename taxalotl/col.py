@@ -65,7 +65,7 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
     ptp = shorter_fp_form(complete_taxon_fp)
     with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
-        tax_part.taxon_header = iinp.next()
+        tax_part.taxon_header = next(iinp)
         prev_line = None
         # vt = unicode('\x0b') # Do some lines have vertical tabs? Of course they do....
         # istwo = unicode('\x1e')
@@ -90,7 +90,7 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
                     syn_by_id.setdefault(accept_id, []).append((col_id, line))
                 else:
                     tax_part.read_taxon_line(col_id, par_id, line)
-            except:
+            except Exception:
                 _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                 raise
 

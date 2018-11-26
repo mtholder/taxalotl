@@ -249,7 +249,6 @@ def do_partition(res, part_name_to_split):
     tp.do_partition(mapping)
 
 
-
 def check_partition(res, part_name_to_split):
     par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
     part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
@@ -270,6 +269,7 @@ def check_partition(res, part_name_to_split):
         unpart.external_input_fp = os.path.join(res.partition_source_dir, res.taxon_filename)
         check_partition_union(fragment, misc, subs, unpart)
 
+
 def check_partition_union(fragment, misc, subs, unpartitioned):
     slice_roots, slice_ids = misc._debug_validity_check()
     for p in subs:
@@ -280,6 +280,7 @@ def check_partition_union(fragment, misc, subs, unpartitioned):
             if pr not in slice_ids:
                 slice_roots.add(p_root_id)
     unpartitioned._debug_check_subtree_ids(slice_roots, slice_ids)
+
 
 def get_inverse_misc_non_misc_dir_for_tax(inp_dir, tax_id):
     """ If given an unpartitioned dir, return (misc, False) otherwise (canonical, True)

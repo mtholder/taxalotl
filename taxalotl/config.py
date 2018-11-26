@@ -11,7 +11,7 @@ _LOG = get_logger(__name__)
 def _none_for_missing_config_get(config, section, option, default=None):
     try:
         return config.get(section, option)
-    except:
+    except Exception:
         return default
 
 
@@ -95,7 +95,7 @@ class TaxalotlConfig(object):
         # from taxalotl.resource_wrapper import ResourceWrapper type: (str) -> ResourceWrapper
         try:
             return self.resources_mgr.resources[res_id]
-        except:
+        except Exception:
             raise ValueError("Unknown resource ID '{}'".format(res_id))
 
     def get_terminalized_res_by_id(self, res_id, logging_action_str=None):

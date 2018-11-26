@@ -7,6 +7,7 @@ from taxalotl.tax_partition import (get_taxon_partition, INP_TAXONOMY_DIRNAME, M
 
 _LOG = get_logger(__name__)
 
+
 def get_frag_from_dir(taxalotl_conf, tax_dir):
     res = taxalotl_conf.get_terminalized_res_by_id("ott")
     pd = res.partitioned_filepath
@@ -34,4 +35,3 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
         tf = tp.get_taxa_as_forest()
         out.write("taxonomy for {} according to {}".format(fragment, res_id))
         tf.write_indented(out)
-

@@ -21,11 +21,13 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
 from taxalotl.tax_partition import use_tax_partitions
 from taxalotl.dynamic_partitioning import perform_dynamic_separation
 from taxalotl.compare import compare_taxonomies_in_dir
+
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
 
 SEP_NAMES = '__separator_names__.json'
 SEP_MAPPING = '__separator_names_to_dir__.json'
+
 
 def download_resources(taxalotl_config, id_list):
     for rid in id_list:
@@ -44,7 +46,7 @@ def download_resources(taxalotl_config, id_list):
         _LOG.info(repr(prompt))
         try:
             # noinspection PyCompatibility
-            resp = raw_input(prompt)
+            resp = input(prompt)
         except NameError:
             resp = input(prompt)
         if resp != 'y':
@@ -167,10 +169,12 @@ def partition_resources(taxalotl_config, id_list, level_list):
             normalize_resources(taxalotl_config, [rid])
         for part_name_to_split in level_list:
             if not NAME_TO_PARTS_SUBSETS[part_name_to_split]:
-                _LOG.info('"{}" is a terminal group in the primary partition map'.format(part_name_to_split))
+                _LOG.info('"{}" is a terminal group in the primary partition map'.format(
+                    part_name_to_split))
                 continue
             with use_tax_partitions() as tax_cache:
                 do_partition(res, part_name_to_split)
+
 
 def check_partition_resources(taxalotl_config, id_list, level_list):
     if level_list == [None]:
@@ -181,10 +185,12 @@ def check_partition_resources(taxalotl_config, id_list, level_list):
             normalize_resources(taxalotl_config, [rid])
         for part_name_to_split in level_list:
             if not NAME_TO_PARTS_SUBSETS[part_name_to_split]:
-                _LOG.info('"{}" is a terminal group in the primary partition map'.format(part_name_to_split))
+                _LOG.info('"{}" is a terminal group in the primary partition map'.format(
+                    part_name_to_split))
                 continue
             with use_tax_partitions() as tax_cache:
                 check_partition(res, part_name_to_split)
+
 
 def pull_otifacts(taxalotl_config):
     dest_dir = taxalotl_config.resources_dir
@@ -260,6 +266,7 @@ def build_partition_maps(taxalotl_config):
     write_as_json(nsd, mfp, indent=2)
     _LOG.info("Partitions maps written to {}".format(mfp))
 
+
 def accumulate_taxon_dir_names(top_dir, name_to_paths):
     for root, dirs, files in os.walk(top_dir):
         if root.endswith('__misc__'):
@@ -285,6 +292,7 @@ def cache_separator_names(taxalotl_config):
     write_as_json(n2p, outfn)
     _LOG.info("Separator name to dir mapping written to {}".format(outfn))
 
+
 def compare_taxonomies(taxalotl_config, levels):
     assert levels != [None]
     rw = taxalotl_config.get_terminalized_res_by_id("ott", '')
@@ -301,6 +309,7 @@ def compare_taxonomies(taxalotl_config, levels):
             m = 'Will compare taxonomies for "{}" based on {}'
             _LOG.info(m.format(level, tax_dir))
             compare_taxonomies_in_dir(taxalotl_config, tax_dir)
+
 
 def clean_resources(taxalotl_config, action, id_list):
     if not id_list:
@@ -332,9 +341,7 @@ def clean_resources(taxalotl_config, action, id_list):
             raise NotImplementedError("clean of {} not yet implemented".format(action))
 
 
-
 def accumulate_separated_descendants(taxalotl_config, id_list):
-
     rw = taxalotl_config.get_terminalized_res_by_id("ott", '')
     outfn = os.path.join(rw.partitioned_filepath, SEP_MAPPING)
     if not os.path.exists(outfn):
@@ -351,6 +358,6 @@ def accumulate_separated_descendants(taxalotl_config, id_list):
     for i in id_list:
         _LOG.info('accumulate_separated_descendants for {}'.format(i))
         res = taxalotl_config.get_terminalized_res_by_id(i, '')
-        for dir in postorder:
-            _LOG.info('accumulate_separated_descendants for {}'.format(dir))
-            res.accumulate_separated_descendants(dir)
+        for d in postorder:
+            _LOG.info('accumulate_separated_descendants for {}'.format(d))
+            res.accumulate_separated_descendants(d)

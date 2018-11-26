@@ -19,6 +19,7 @@ INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank
 INP_OTT_SYNONYMS_HEADER = "uid\t|\tname\t|\ttype\t|\t\n"
 FULL_OTT_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tsourceinfo\t|\tuniqname\t|\tflags\t|\t\n"
 
+
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     syn_fp = tax_part.input_synonyms_filepath
     tax_part.syn_header = ''
@@ -28,7 +29,7 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     with codecs.open(syn_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         try:
-            tax_part.syn_header = iinp.next()
+            tax_part.syn_header = next(iinp)
         except StopIteration:
             return
         shs = tax_part.syn_header.split('\t|\t')
@@ -65,7 +66,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
     with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         try:
-            tax_part.taxon_header = iinp.next()
+            tax_part.taxon_header = next(iinp)
         except StopIteration:
             return
         for n, line in enumerate(iinp):
@@ -237,6 +238,7 @@ def full_ott_line_parser(taxon, line):
         if ls[6]:
             taxon.flags = set(ls[6].split(','))
 
+
 def flag_after_rank_parser(taxon, line):
     try:
         ls = line.split('\t|\t')
@@ -264,10 +266,12 @@ HEADER_TO_LINE_PARSER = {FULL_OTT_HEADER: full_ott_line_parser,
                          INP_OTT_TAXONOMY_HEADER: full_ott_line_parser,
                          INP_FLAGGED_OTT_TAXONOMY_HEADER: flag_after_rank_parser,
                          INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER: flag_after_rank_parser,
-                        }
+                         }
+
 
 class OTTTaxon(object):
     _DATT = ('id', 'par_id', 'name', 'rank', 'src_dict', 'flags', 'uniqname')
+
     def __init__(self, line=None, line_num='<unknown>', line_parser=full_ott_line_parser, d=None):
         self.id, self.par_id, self.name, self.rank = None, None, None, None
         self.src_dict, self.flags, self.uniqname = None, None, None
@@ -313,13 +317,15 @@ class OTTTaxon(object):
                         d[k] = v
         return d
 
+
 def write_indented_subtree(out, node, indent_level):
-    out.write('{}{} (id={})\n'.format('  '*indent_level,
+    out.write('{}{} (id={})\n'.format('  ' * indent_level,
                                       node.name_that_is_unique,
                                       node.id))
     if node.children_refs:
         for c in node.children_refs:
             write_indented_subtree(out, c, indent_level=1 + indent_level)
+
 
 class TaxonTree(object):
     def __init__(self, root_id, id_to_children_ids, id_to_taxon):
@@ -339,6 +345,7 @@ class TaxonTree(object):
                 to_process.update(curr_children_ids)
             else:
                 curr_taxon.children_refs = None
+
     def get_taxon(self, uid):
         return self.id_to_taxon.get(uid)
 
@@ -359,6 +366,7 @@ class TaxonForest(object):
             self.roots[r] = TaxonTree(root_id=r,
                                       id_to_children_ids=id_to_children,
                                       id_to_taxon=id_to_taxon)
+
     def write_indented(self, out):
         for r in self.roots.values():
             write_indented_subtree(out, r.root, indent_level=0)
@@ -384,7 +392,7 @@ def read_taxonomy_to_get_id_to_fields(tax_dir):
         return {}
     with codecs.open(fp, 'r', encoding='utf-8') as inp:
         iinp = iter(inp)
-        header = iinp.next()
+        header = next(iinp)
         assert header == expected_header
         id_to_obj = {}
         for n, line in enumerate(iinp):
@@ -402,7 +410,7 @@ def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
     expected_header = '\t|\t'.join(fields)
     with codecs.open(fp, 'r', encoding='utf-8') as inp:
         iinp = iter(inp)
-        header = iinp.next()
+        header = next(iinp)
         assert header == expected_header
         for n, line in enumerate(iinp):
             if not line.startswith(sri):
