@@ -1,6 +1,6 @@
 [paths]
 # Base is just used to make the following paths easier to specify
-base = /home/user/scratch
+base = /home/user/.opentreeoflife/taxalotl
 # raw is the parent of unaltered resources and their archives
 raw = %(base)s/raw
 # normalized is the parent of OTT-formatted versions of resources
