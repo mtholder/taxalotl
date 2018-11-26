@@ -30,12 +30,12 @@ class TaxalotlConfig(object):
                 if resources_dir is None and os.path.exists('resources'):
                     def_resources = os.path.abspath("resources")
             else:
-                home_loc = os.path.expanduser("~/.taxalotl")
+                home_loc = os.path.expanduser("~/.opentreeoflife/taxalotl/taxalotl.conf")
                 if os.path.exists(home_loc):
                     filepath = home_loc
         if filepath is None:
             m = "filepath to taxalotl.conf must be provided (or it must be in the current dir, " \
-                "or ~/.taxalotl)."
+                "or ~/.opentreeoflife/taxalotl/taxalotl.conf)."
             raise ValueError(m)
         if not os.path.isfile(filepath):
             raise ValueError('No config file found at "{}"'.format(filepath))
