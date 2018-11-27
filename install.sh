@@ -4,7 +4,7 @@ source venv/bin/activate || exit
 git clone https://github.com/mtholder/peyotl.git || exit
 
 cd peyotl || exit
-git checkout dev-missing-illustrations || exit
+git checkout taxalotl || exit
 pip install -r requirements.txt || exit
 python setup.py develop || exit
 cd - 2>/dev/null || exit

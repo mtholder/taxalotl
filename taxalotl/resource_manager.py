@@ -28,10 +28,14 @@ def get_resource_wrapper(raw, refs, parent=None):
     from taxalotl.resource_mapper import BASE_ID_TO_RES_TYPE, wrapper_types
     base = BASE_ID_TO_RES_TYPE.get(raw["base_id"].lower())
     if base:
+        #_LOG.debug('get_resource_wrapper.calling base raw={}'.format(raw))
         return base(raw, parent=parent, refs=refs)
     rt = raw["resource_type"].lower()
+    #_LOG.debug('rt={}'.format(rt))
     for wt in wrapper_types:
         if rt == wt.resource_type:
+            #_LOG.debug('get_resource_wrapper.calling wrapper_types wt={}'.format(wt))
+
             return wt(raw, parent=parent, refs=refs)
     raise RuntimeError("resource_type '{}' not recognized".format(rt))
 
@@ -41,6 +45,7 @@ def get_subclass_resource_wrapper(raw, known_dict, refs):
     par = known_dict[par_key]
     raw["resource_type"] = par.resource_type
     raw["base_id"] = par.base_id
+    # _LOG.debug('get_subclass_resource_wrapper.raw = {}'.format(raw))
     return get_resource_wrapper(raw, refs, parent=par)
 
 
@@ -48,12 +53,14 @@ def wrap_otifact_resources(res, refs=None):
     rd = {}
     by_par = {}
     for k, v in res.items():
+        # _LOG.debug('k,v = {}, {}'.format(k, v))
         v["id"] = k
         par = v.get('inherits_from')
         if par:
             by_par.setdefault(par, []).append((k, v))
         else:
             v["base_id"] = k
+            # _LOG.debug('wrap_otifact_resources k = {}'.format(k))
             w = get_resource_wrapper(v, refs)
             rd[k] = w
     while by_par:
@@ -67,7 +74,9 @@ def wrap_otifact_resources(res, refs=None):
             rk_v_list = by_par[k]
             del by_par[k]
             for rk, v in rk_v_list:
+                # _LOG.debug('rk,v = {}, {}'.format(rk, v))
                 rd[rk] = get_subclass_resource_wrapper(v, rd, refs)
+    # _LOG.warn('rd = {}'.format(rd))
     aliases = {}
     for w in rd.values():
         if w.aliases:
@@ -75,6 +84,7 @@ def wrap_otifact_resources(res, refs=None):
                 if a in aliases or a in rd:
                     raise RuntimeError("Repeated alias for an id: {}".format(a))
                 aliases[a] = w
+    # _LOG.warn('aliases = {}'.format(aliases))
     rd.update(aliases)
     return rd
 

@@ -8,7 +8,7 @@ _taxalotl()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     NUM_ARGS=${#COMP_WORDS[@]}
-    if test $NUM_ARGS -lt 2 ; then
+    if test ${NUM_ARGS} -lt 2 ; then
         opts=$(taxalotl-cli.py --show-completions)
     else
         opts=$(taxalotl-cli.py --show-completions ${COMP_WORDS[*]})

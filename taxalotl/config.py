@@ -100,6 +100,8 @@ class TaxalotlConfig(object):
 
     def get_terminalized_res_by_id(self, res_id, logging_action_str=None):
         orig_res = self.get_resource_by_id(res_id)
+        if orig_res.id == res_id:
+            return orig_res
         base_res = self.get_resource_by_id(orig_res.base_id)
         if base_res.is_abstract:
             wrapper = base_res.get_leaf_obj()
