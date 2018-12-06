@@ -493,3 +493,7 @@ class TaxonomyWrapper(ResourceWrapper):
         anc_tax_part = get_taxon_partition(self, anc_frag)
         anc_tax_part.register_accumulated_des(accum_list)
         TAX_SLICE_CACHE.try_del(tax_part.cache_key)
+
+    @property
+    def is_abstract_input_resource_type(self):
+        return self.id == self.base_id and self.base_id != 'ott'

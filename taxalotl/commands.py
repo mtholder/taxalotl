@@ -28,6 +28,8 @@ out_stream = sys.stdout
 SEP_NAMES = '__separator_names__.json'
 SEP_MAPPING = '__separator_names_to_dir__.json'
 
+def analyze_update(taxalotl_config, id_list):
+    raise NotImplementedError('analyze_update')
 
 def download_resources(taxalotl_config, id_list):
     for rid in id_list:

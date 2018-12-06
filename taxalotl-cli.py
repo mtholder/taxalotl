@@ -9,6 +9,7 @@ from peyotl import (get_logger, read_as_json)
 
 from taxalotl import TaxalotlConfig
 from taxalotl.commands import (accumulate_separated_descendants,
+                               analyze_update,
                                build_partition_maps,
                                cache_separator_names,
                                check_partition_resources,
@@ -31,12 +32,14 @@ from taxalotl.partitions import (PART_NAMES,
 
 _LOG = get_logger(__name__)
 
+# Commands that don't take a resource ID
 res_indep_cmds = ['build-partition-maps',
                   'cache-separator-names',
                   'compare-taxonomies',
                   'diagnose-new-separators',
                   'pull-otifacts',
                   ]
+# Commands that take any resource ID
 res_dep_cmds = ['accumulate-separated-descendants',
                 'check-partition',
                 'clean',
@@ -47,7 +50,9 @@ res_dep_cmds = ['accumulate-separated-descendants',
                 'status',
                 'unpack',
                 ]
-all_cmds = res_dep_cmds + res_indep_cmds
+# Commands that take an resource ID for a class of input resource (no version number suffix).
+ver_inp_res_dep_cmds = ['analyze-update', ]
+all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 
 
 def main_post_parse(args):
@@ -57,7 +62,9 @@ def main_post_parse(args):
         with codecs.open(hist_file, 'a', encoding='utf-8') as hout:
             hout.write('"{}"\n'.format('" "'.join(sys.argv)))
     try:
-        if args.which == 'clean':
+        if args.which == 'analyze-update':
+            analyze_update(taxalotl_config, args.resources)
+        elif args.which == 'clean':
             if args.action not in all_cmds:
                 m = "Expecting clean action to be one of: {}"
                 raise ValueError(m.format(', '.join(all_cmds)))
@@ -122,6 +129,13 @@ def main():
 
     p.set_defaults(which="all")
     subp = p.add_subparsers(help="command help")
+    # ANALYZE UPDATE
+    analyze_update_p = subp.add_parser('analyze-update',
+                                      help="calculates a diff between the last version of a " \
+                                           "taxonomy used and the latest version downloaded.")
+    analyze_update_p.add_argument('resources', nargs="*", help="IDs of the resources to analyzed.")
+    analyze_update_p.set_defaults(which="analyze-update")
+
     # PULL OTifacts
     pull_otifacts_p = subp.add_parser('pull-otifacts',
                                       help="refresh list of taxonomic artifacts from OTifacts repo")
@@ -250,7 +264,7 @@ def main():
                     comp_list.append(u)
             comp_list.extend(all_cmds)
         else:
-            if sel_cmd in res_dep_cmds or sel_cmd in ['compare-taxonomies']:
+            if sel_cmd in res_dep_cmds or sel_cmd in ['compare-taxonomies'] or sel_cmd in ver_inp_res_dep_cmds:
                 # From Ned Batchelder's answer on http://stackoverflow.com/a/14728477
                 class ArgumentParserError(Exception):
                     pass
@@ -272,6 +286,8 @@ def main():
                     taxalotl_config = TaxalotlConfig(filepath=config, resources_dir=resdir)
                     if sel_cmd in res_dep_cmds:
                         comp_list = list(taxalotl_config.resources_mgr.resources.keys())
+                    elif sel_cmd in ver_inp_res_dep_cmds:
+                        comp_list = list(taxalotl_config.resources_mgr.abstract_input_resource_types())
                 except:
                     pass
 

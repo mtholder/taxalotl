@@ -119,10 +119,14 @@ def write_ott_taxonomy_tsv(out_fp,
             stack = [root_id]
             while stack:
                 curr_id = stack.pop()
+                if curr_id in has_syn_dict:
+                    syn_id_order.append(curr_id)
                 try:
-                    if curr_id in has_syn_dict:
-                        syn_id_order.append(curr_id)
                     name = id_to_name[curr_id]
+                except KeyError:
+                    _LOG.warn('Could not find a name for ID "{}"'.format(curr_id))
+                    continue
+                try:
                     par_id = id_to_par.get(curr_id)
                     if par_id is None:
                         spar_id = ''

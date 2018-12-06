@@ -133,3 +133,6 @@ class ResourceManager(object):
         mfp = os.path.join(self.resource_dir, ResourceManager._MERGED_FILENAME)
         self.resources = wrap_otifact_resources(read_resource_file(mfp))
         self._filepath_read = mfp
+
+    def abstract_input_resource_types(self):
+        return [k for k, v in self.resources.items() if v.is_abstract_input_resource_type]
