@@ -96,3 +96,16 @@ So,
 
 is sufficient to trigger download, unpack, normalize, and partitions actions on the latest
 version of OTT.
+
+**NOTE** taxalotl will try to show you the license information that it knows about 
+when you trigger a download, but it is your responsibility to make sure that you are abiding
+by the terms of any license.
+So you will usually have to answer a prompt before the download
+starts.
+
+Currently taxalotl has a somewhat quirky mix of information that is hard-coded based on
+OTT version 3.0 (the start point for the taxalotl updating of taxonomy) and
+information that it gleans from the taxonomy.
+Before you parition other resources, you'll need to run:
+
+    taxalotl-cli.py build-partition-maps

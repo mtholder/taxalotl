@@ -284,7 +284,7 @@ def main():
                 taxalotl_config = None
                 try:
                     fa, unk = fake_parser.parse_known_args()
-                    resdir, config = fa.resources_dir, fa.config
+                    config = fa.config
                     taxalotl_config = TaxalotlConfig(filepath=config)
                     if sel_cmd in res_dep_cmds:
                         comp_list = list(taxalotl_config.resources_mgr.resources.keys())

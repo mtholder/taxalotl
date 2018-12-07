@@ -173,7 +173,8 @@ def status_of_resources(taxalotl_config,
                 ntrw = taxalotl_config.get_resource_by_id(rid)
                 ntrw.write_status(out_stream, indent='')
                 trw = taxalotl_config.get_terminalized_res_by_id(rid, '')
-                trw.write_status(out_stream, indent='  ')
+                if trw is not ntrw:
+                    trw.write_status(out_stream, indent='  ')
             else:
                 rw = taxalotl_config.get_resource_by_id(rid)
                 indent = '  ' if rw.base_id in par_id_set else ''
