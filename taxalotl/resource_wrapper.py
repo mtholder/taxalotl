@@ -265,6 +265,14 @@ class ResourceWrapper(FromOTifacts):
             return self.children[-1].get_leaf_obj()
         return self
 
+    def get_self_and_children(self):
+        # type: () -> [ResourceWrapper]
+        r = [self]
+        if self.children:
+            for c in self.children:
+                r.extend(c.get_self_and_children())
+        return r
+
     @property
     def download_filepath(self):
         if self.is_abstract:

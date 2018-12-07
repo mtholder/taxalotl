@@ -99,17 +99,16 @@ class TaxalotlConfig(object):
             raise ValueError("Unknown resource ID '{}'".format(res_id))
 
     def get_terminalized_res_by_id(self, res_id, logging_action_str=None):
+        return self.get_all_terminalized_res_by_id(res_id)[-1]
+
+    def get_all_terminalized_res_by_id(self, res_id):
         orig_res = self.get_resource_by_id(res_id)
         if orig_res.id == res_id and not orig_res.is_abstract:
-            return orig_res
+            return [orig_res]
         base_res = self.get_resource_by_id(orig_res.base_id)
         if base_res.is_abstract:
-            wrapper = base_res.get_leaf_obj()
-            if logging_action_str and (wrapper is not orig_res):
-                m = "{} action being performed on {} as the most recent version of {}"
-                _LOG.info(m.format(logging_action_str, wrapper.id, orig_res.id))
-            return wrapper
-        return orig_res
+            return list(base_res.get_self_and_children())
+        return [orig_res]
 
     def get_all_ancs(self, res):
         all_ancs = [res]

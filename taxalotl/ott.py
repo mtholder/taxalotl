@@ -294,6 +294,12 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
     def get_primary_partition_map(self):
         return OTT_PARTMAP
 
+    def input_dict(self):
+        d = {}
+        for k, v in self.inputs:
+            d[k] = v
+        return d
+
 
 # noinspection PyAbstractClass
 class OTTaxonomyIdListWrapper(ResourceWrapper):
