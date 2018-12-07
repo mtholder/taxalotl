@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import subprocess
 import os
 import sys
 
@@ -234,6 +235,22 @@ def check_partition_resources(taxalotl_config, id_list, level_list):
             with use_tax_partitions() as tax_cache:
                 check_partition(res, part_name_to_split)
 
+def exec_or_runtime_error(invocation, working_dir='.'):
+    rc = subprocess.call(invocation, cwd=working_dir)
+    if rc != 0:
+        qi = '", "'.join(invocation)
+        m = 'Command\n"{}"\nfailed with returncode={}\n'
+        raise RuntimeError(m.format(qi, rc))
+
+def clone_otifacts(otifacts_dir):
+    otifacts_url = 'git@github.com:mtholder/OTifacts.git'
+    m = 'Expecting OTifacts to be cloned at "{}". Will attempt to clone it from {}...'
+    _LOG.warn(m.format(otifacts_dir, otifacts_url))
+    exec_or_runtime_error(['git', 'clone', otifacts_url, otifacts_dir])
+
+
+def git_pull_otifacts(otifacts_dir):
+    exec_or_runtime_error(['git', 'pull'], working_dir=otifacts_dir)
 
 def pull_otifacts(taxalotl_config):
     dest_dir = taxalotl_config.resources_dir
@@ -241,8 +258,9 @@ def pull_otifacts(taxalotl_config):
     repo_dir = os.path.split(taxalotl_dir)[0]
     otifacts_dir = os.path.join(repo_dir, 'OTifacts')
     if not os.path.isdir(otifacts_dir):
-        m = 'Expecting OTifacts to be cloned as sibling of this directory at "{}"'
-        raise RuntimeError(m.format(otifacts_dir))
+        clone_otifacts(otifacts_dir)
+    else:
+        git_pull_otifacts(otifacts_dir)
     all_res = read_all_otifacts(otifacts_dir)
     for res_type in ['external taxonomy', 'open tree taxonomy', 'id list']:
         ext_tax = filter_otifacts_by_type(all_res, res_type)
