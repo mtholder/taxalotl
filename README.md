@@ -17,10 +17,10 @@ The code is based on parts of the
 `virtualenv` is always recommended for experimental
     Python packages.
 
-Depends on:
+Taxalotl depends on:
   * `requests`
   * `beautifulsoup4`
-  * some utilities that are only on a dev branch of `peyotl`
+  * some utilities that are only on the `taxalotl` branch of `peyotl`
 
 So, the easiest way to install right now is:
 
@@ -45,6 +45,8 @@ These affect the logging message handling of Taxalotl.
 ## Usage
 The `taxalotl-cli.py` script provides the command-line interface which
 is broken up into several commands.
+The command-level documentation is below.
+See the [Tutorial.md](./Tutorial.md) for an overview of usage.
 
 The syntax `${x}` in the documentation below refers to
 the value of some variable (`x` in this case),

@@ -1,6 +1,14 @@
+[behavior]
+# If true, you'll see the full stacktrace when the CLI crashes because of an exception
+crash_with_stacktraces = false
+
 [paths]
 # Base is just used to make the following paths easier to specify
-base = /home/user/.opentreeoflife/taxalotl
+base = /ABS-PATH-TO-YOUR-HOME-DIR/.opentreeoflife/taxalotl
+
+# There is probably no reason to even allow these to be configuration-dependent,
+#   so you probably should NOT modify the following settings.
+
 # raw is the parent of unaltered resources and their archives
 raw = %(base)s/raw
 # normalized is the parent of OTT-formatted versions of resources
@@ -11,6 +19,3 @@ processed = %(base)s/processed
 partitioned = %(base)s/partitioned
 
 
-[behavior]
-# If true, you'll see the full stacktrace when the CLI crashes because of an exception
-crash_with_stacktraces = false
