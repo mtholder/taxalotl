@@ -1,6 +1,6 @@
 [behavior]
 # If true, you'll see the full stacktrace when the CLI crashes because of an exception
-crash_with_stacktraces = false
+crash_with_stacktraces = true
 
 [paths]
 # Base is just used to make the following paths easier to specify

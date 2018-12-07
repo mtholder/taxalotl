@@ -13,7 +13,7 @@ python setup.py develop || exit
 
 echo
 echo 'Taxalotl installed, but you will still need to run:'
-echo '    source venv/bin/activate'
+echo '    source env/bin/activate'
 echo 'in your shell before you can access it.'
 
 usershome=$(readlink -f ~)
