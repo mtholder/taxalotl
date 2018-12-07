@@ -29,6 +29,10 @@ SEP_NAMES = '__separator_names__.json'
 SEP_MAPPING = '__separator_names_to_dir__.json'
 
 def analyze_update_to_resources(prev, curr):
+    m = 'Could not analyze taxonomy update because {} has not been partitioned.'
+    for el in [prev, curr]:
+        if not el.has_been_partitioned():
+            raise RuntimeError(m.format(el.id))
     raise NotImplementedError('ha')
 
 def analyze_update(taxalotl_config, id_list):
@@ -153,7 +157,7 @@ def status_of_resources(taxalotl_config,
                 rw = taxalotl_config.get_terminalized_res_by_id(rid, '')
             else:
                 rw = taxalotl_config.get_resource_by_id(rid)
-            out_stream.write('rw.__dict__ = {}'.format(rw.__dict__))
+            # out_stream.write('rw.__dict__ = {}'.format(rw.__dict__))
             rw.write_status(out_stream, indent=' ' * 4)
 
 
