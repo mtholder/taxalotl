@@ -4,7 +4,7 @@ crash_with_stacktraces = false
 
 [paths]
 # Base is just used to make the following paths easier to specify
-base = /ABS-PATH-TO-YOUR-HOME-DIR/.opentreeoflife/taxalotl
+base = ABS-PATH-TO-YOUR-HOME-DIR/.opentreeoflife/taxalotl
 
 # There is probably no reason to even allow these to be configuration-dependent,
 #   so you probably should NOT modify the following settings.
