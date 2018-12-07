@@ -108,14 +108,16 @@ def main_post_parse(args):
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
             check_partition_resources(taxalotl_config, args.resources, [args.level])
         elif args.which == 'all':
-            raise NotImplementedError('Currently you must enter a command to run. Use the --help option or see the Tutorial.md')
+            m = 'Currently you must enter a command to run. Use the --help option or see the Tutorial.md\n'
+            sys.stdout.write(m)
+            return 1
         else:
             raise NotImplementedError('"{}" action not implemented yet'.format(args.which))
     except Exception as x:
         if taxalotl_config.crash_with_stacktraces:
             raise
         sys.exit('taxalotl-cli: Exiting with exception:\n{}'.format(x))
-
+    return 0
 
 def main():
     import argparse
@@ -321,8 +323,8 @@ def main():
 
         sys.stdout.write('{}\n'.format(' '.join(comp_list)))
     else:
-        main_post_parse(p.parse_args())
-
+        rc = main_post_parse(p.parse_args())
+        sys.exit(rc)
 
 if __name__ == "__main__":
     main()
