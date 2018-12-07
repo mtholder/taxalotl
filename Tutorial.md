@@ -9,6 +9,7 @@ The following assumes that you are running bash (or some bash-compatible) shell:
     bash install.sh
     source env/bin/activate
     export PEYOTL_CONFIG_FILE="$PWD/recommended-peyotl-conf.ini"
+    export PATH="${PATH}:${PWD}"
     source completion.sh
 
 This should set up a python 3 virtualenv inside an `env` directory
@@ -20,3 +21,5 @@ the `crash_with_stacktraces` setting in `~/.opentreeoflife/taxalotl/taxalotl.con
 to `false`, but you probably want to leave it set to true now so that you can
 submit more useful bug reports.
 
+## Grokking taxalotl
+The script `taxalotl-cli.py` should be on your PATH, this is the front-end to taxalotl.

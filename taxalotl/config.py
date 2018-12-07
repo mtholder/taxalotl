@@ -21,14 +21,10 @@ class TaxalotlConfig(object):
                  raw_downloads_dir=None,
                  processed_dir=None,
                  normalized_dir=None,
-                 resources_dir=None,
                  partitioned_dir=None):
-        def_resources = ''
         if filepath is None:
             if os.path.exists("taxalotl.conf"):
                 filepath = os.path.abspath("taxalotl.conf")
-                if resources_dir is None and os.path.exists('resources'):
-                    def_resources = os.path.abspath("resources")
             else:
                 home_loc = os.path.expanduser("~/.opentreeoflife/taxalotl/taxalotl.conf")
                 if os.path.exists(home_loc):
@@ -56,9 +52,7 @@ class TaxalotlConfig(object):
         pd = processed_dir
         if pd is None:
             pd = _none_for_missing_config_get(cfg, 'paths', 'processed')
-        resd = resources_dir
-        if resd is None:
-            resd = _none_for_missing_config_get(cfg, 'paths', 'resources', def_resources)
+        resd = _none_for_missing_config_get(cfg, 'paths', 'resources')
         normd = normalized_dir
         if normd is None:
             normd = _none_for_missing_config_get(cfg, 'paths', 'normalized')
@@ -81,11 +75,12 @@ class TaxalotlConfig(object):
     def resources_mgr(self):
         if self._resources_mgr is None:
             if self.resources_dir is None:
-                raise RuntimeError(
-                    "The resources dir must be provided in the config file or the current dir")
+                m = "The resources dir must be provided in the config file or the current dir"
+                raise RuntimeError(m)
             if not os.path.isdir(self.resources_dir):
-                raise RuntimeError(
-                    '"{}" is not an existing resources dir.'.format(self.resources_dir))
+                m = 'The resources dir "{}" does not exist. Creating an empty one...'
+                _LOG.warn(m.format(self.resources_dir))
+                os.makedirs(self.resources_dir)
             self._resources_mgr = ResourceManager(self.resources_dir)
             for v in self._resources_mgr.resources.values():
                 v.config = self

@@ -56,7 +56,7 @@ all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 
 
 def main_post_parse(args):
-    taxalotl_config = TaxalotlConfig(filepath=args.config, resources_dir=args.resources_dir)
+    taxalotl_config = TaxalotlConfig(filepath=args.config)
     hist_file = os.path.expanduser("~/.taxalotl_history")
     if os.path.isfile(hist_file):
         with codecs.open(hist_file, 'a', encoding='utf-8') as hout:
@@ -107,6 +107,8 @@ def main_post_parse(args):
             if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
             check_partition_resources(taxalotl_config, args.resources, [args.level])
+        elif args.which == 'all':
+            raise NotImplementedError('Currently you must enter a command to run. Use the --help option or see the Tutorial.md')
         else:
             raise NotImplementedError('"{}" action not implemented yet'.format(args.which))
     except Exception as x:
@@ -120,7 +122,6 @@ def main():
 
     description = "The main CLI for taxalotl"
     p = argparse.ArgumentParser(description=description)
-    p.add_argument("--resources-dir", type=str, help="the resources directory (optional)")
     p.add_argument("--config", type=str, help="the taxalotl.conf filepath (optional)")
     p.add_argument("--show-completions",
                    action="store_true",
@@ -243,7 +244,7 @@ def main():
     #   argparse does not help us out here... at all
     if "--show-completions" in sys.argv:
         a = sys.argv[1:]
-        univ = frozenset(['--resources-dir', '--config'])
+        univ = frozenset(['--config',])
         sel_cmd = None
         num_cmds = 0
         for c in all_cmds:
@@ -275,7 +276,6 @@ def main():
                         raise ArgumentParserError(message)
 
                 fake_parser = ThrowingArgumentParser()
-                fake_parser.add_argument("--resources-dir", type=str)
                 fake_parser.add_argument("--config", type=str)
                 fake_parser.add_argument('blah', nargs="*")
                 comp_list = []
@@ -283,7 +283,7 @@ def main():
                 try:
                     fa, unk = fake_parser.parse_known_args()
                     resdir, config = fa.resources_dir, fa.config
-                    taxalotl_config = TaxalotlConfig(filepath=config, resources_dir=resdir)
+                    taxalotl_config = TaxalotlConfig(filepath=config)
                     if sel_cmd in res_dep_cmds:
                         comp_list = list(taxalotl_config.resources_mgr.resources.keys())
                     elif sel_cmd in ver_inp_res_dep_cmds:

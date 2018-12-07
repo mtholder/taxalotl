@@ -117,17 +117,30 @@ def _group_by_status(res, id_list):
             ]
 
 
+def get_list_of_all_resources(taxalotl_config):
+    res = taxalotl_config.resources_mgr.resources
+    id_list = list(res.keys())
+    id_list.sort()
+    if not id_list:
+        m = """taxalotl does not know about any resources. This means that the resources directory
+    is empty (or its contents are unparse-able).
+You probably need to run the pull-otifacts command. If that does NOT solve the problem should
+    report this bug and try moving that directory (so that taxalotl will create a clean one).
+"""
+        out_stream.write(m)
+    return id_list
+
 def status_of_resources(taxalotl_config,
                         id_list,
                         ids_only=False,
                         by_status=False,
                         terminal_only=False):
     terminalize = True
-    res = taxalotl_config.resources_mgr.resources
     if not id_list:
+        id_list = get_list_of_all_resources(taxalotl_config)
+        if not id_list:
+            return
         terminalize = False
-        id_list = list(res.keys())
-        id_list.sort()
     if terminal_only:
         x = []
         for i in id_list:
@@ -135,6 +148,7 @@ def status_of_resources(taxalotl_config,
             if ri.id == i:
                 x.append(i)
         id_list = x
+    res = taxalotl_config.resources_mgr.resources
     if by_status:
         t_and_id_list = _group_by_status(res, id_list)
     else:

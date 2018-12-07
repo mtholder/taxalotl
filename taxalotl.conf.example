@@ -17,5 +17,8 @@ normalized = %(base)s/normalized
 processed = %(base)s/processed
 # partitioned is the parent directories that break the resources up by large taxon
 partitioned = %(base)s/partitioned
+# resources holds a view of the OTifacts repository that collects information about the URLs
+#   of data sources produced and used by the Open Tree of Life project.
+resources = %(base)s/resources
 
 
