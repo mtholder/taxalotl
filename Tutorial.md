@@ -109,3 +109,4 @@ information that it gleans from the taxonomy.
 Before you parition other resources, you'll need to run:
 
     taxalotl-cli.py build-partition-maps
+
