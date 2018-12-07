@@ -395,36 +395,37 @@ class ResourceWrapper(FromOTifacts):
             raise NotImplementedError(m.format(self.base_id))
         norm_fn(self.unpacked_filepath, self.normalized_filepath, self)
 
-    def write_status(self, out, indent='', list_all_artifacts=False):
+    def write_status(self, out, indent='', list_all_artifacts=False, hanging_indent='  '):
         dfp = self.download_filepath
+        src_str = '{} '.format(self.source) if self.source else ''
         if dfp is None:
             lo = self.get_leaf_obj()
             if lo == self:
                 suff = ''
             else:
                 suff = ' the most recent version appears to be "{}"'.format(lo.id)
-            template = "{}: {}. {}. This is a class of resource, not a downloadable artifact{}.\n"
-            out.write(template.format(self.id, self.resource_type, self.source, suff))
+            template = "{}{}: {}. {}This is a class of resource, not a downloadable artifact{}.\n"
+            out.write(template.format(indent, self.id, self.resource_type, src_str, suff))
             return
-        out.write('{}: {} {} '.format(self.id, self.resource_type, self.source))
+        out.write('{}{}: {} {}'.format(indent, self.id, self.resource_type, src_str))
         if self.version:
             out.write('version {}. '.format(self.version))
         else:
             out.write('(unversioned). ')
         out.write("date={}\n".format(self.date if self.date else 'unknown'))
-
+        hi = '{}{}'.format(indent, hanging_indent)
         s = "is at" if self.has_been_downloaded() else "not yet downloaded to"
-        down_str = "{}Raw ({} format) {} {}\n".format(indent, self.format, s, dfp)
+        down_str = "{}Raw ({} format) {} {}\n".format(hi, self.format, s, dfp)
         ufp = self.unpacked_filepath
         s = "is at" if self.has_been_unpacked() else "not yet unpacked to"
-        unp_str = "{}Raw ({} schema) {} {}\n".format(indent, self.schema, s, ufp)
+        unp_str = "{}Raw ({} schema) {} {}\n".format(hi, self.schema, s, ufp)
         nfp = self.normalized_filepath
         s = "is at" if self.has_been_normalized() else "not yet normalized to"
-        norm_str = "{}OTT formatted form {} {}\n".format(indent, s, nfp)
+        norm_str = "{}OTT formatted form {} {}\n".format(hi, s, nfp)
         if self.has_been_partitioned():
-            part_str = "{}Has been partitioned at {}\n".format(indent, self.partitioned_filepath)
+            part_str = "{}Has been partitioned at {}\n".format(hi, self.partitioned_filepath)
         else:
-            part_str = "{}Has not been partitioned yet.\n".format(indent)
+            part_str = "{}Has not been partitioned yet.\n".format(hi)
         if list_all_artifacts:
             out.write('{}{}{}{}'.format(down_str, unp_str, norm_str, part_str))
         else:

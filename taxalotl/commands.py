@@ -164,16 +164,22 @@ def status_of_resources(taxalotl_config,
             if id_list:
                 out_stream.write("{}{}\n".format(pref, sep.join(id_list)))
         return
+    par_id_set = set()
     for tag, id_list in t_and_id_list:
         if tag:
             out_stream.write("{}:\n".format(tag))
         for rid in id_list:
             if terminalize:
-                rw = taxalotl_config.get_terminalized_res_by_id(rid, '')
+                ntrw = taxalotl_config.get_resource_by_id(rid)
+                ntrw.write_status(out_stream, indent='')
+                trw = taxalotl_config.get_terminalized_res_by_id(rid, '')
+                trw.write_status(out_stream, indent='  ')
             else:
                 rw = taxalotl_config.get_resource_by_id(rid)
-            # out_stream.write('rw.__dict__ = {}'.format(rw.__dict__))
-            rw.write_status(out_stream, indent=' ' * 4)
+                indent = '  ' if rw.base_id in par_id_set else ''
+                rw.write_status(out_stream, indent=indent)
+                if rw.is_abstract:
+                    par_id_set.add(rw.id)
 
 
 def unpack_resources(taxalotl_config, id_list):
