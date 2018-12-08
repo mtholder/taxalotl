@@ -206,6 +206,7 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
 
 
 class PlantListWrapper(TaxonomyWrapper):
+    schema = set(["plant list"])
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 

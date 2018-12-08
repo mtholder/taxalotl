@@ -261,6 +261,7 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
 
 
 class GBIFWrapper(TaxonomyWrapper):
+    schema = set(["http://rs.tdwg.org/dwc/"])
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 

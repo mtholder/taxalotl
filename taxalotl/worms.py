@@ -12,5 +12,6 @@ _LOG = get_logger(__name__)
 
 
 class WormsTaxonomyWrapper(TaxonomyWrapper):
+    schema = set(["ott"])
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)

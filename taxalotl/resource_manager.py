@@ -31,13 +31,13 @@ def get_resource_wrapper(raw, refs, parent=None):
         #_LOG.debug('get_resource_wrapper.calling base raw={}'.format(raw))
         return base(raw, parent=parent, refs=refs)
     rt = raw["resource_type"].lower()
+    st = raw.get('schema', '').lower()
     #_LOG.debug('rt={}'.format(rt))
     for wt in wrapper_types:
-        if rt == wt.resource_type:
+        if rt == wt.resource_type and ((not st) or st in wt.schema):
             #_LOG.debug('get_resource_wrapper.calling wrapper_types wt={}'.format(wt))
-
             return wt(raw, parent=parent, refs=refs)
-    raise RuntimeError("resource_type '{}' not recognized".format(rt))
+    raise RuntimeError("resource_type, schema = ({}, {}) not recognized".format(rt, st))
 
 
 def get_subclass_resource_wrapper(raw, known_dict, refs):
@@ -62,7 +62,8 @@ def wrap_otifact_resources(res, refs=None):
             v["base_id"] = k
             # _LOG.debug('wrap_otifact_resources k = {}'.format(k))
             w = get_resource_wrapper(v, refs)
-            rd[k] = w
+            if w is not None:
+                rd[k] = w
     while by_par:
         curr_key_set = set(rd.keys())
         needed = set(by_par.keys())

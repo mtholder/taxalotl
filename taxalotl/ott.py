@@ -237,6 +237,7 @@ def get_stable_source_keys(taxon):
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(TaxonomyWrapper):
     resource_type = 'open tree taxonomy'
+    schema = set(['ott'])
 
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
@@ -304,6 +305,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
 # noinspection PyAbstractClass
 class OTTaxonomyIdListWrapper(ResourceWrapper):
     resource_type = 'open tree taxonomy idlist'
+    schema = set([resource_type])
 
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)

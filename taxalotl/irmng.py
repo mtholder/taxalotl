@@ -312,6 +312,7 @@ def normalize_irmng(source, destination, res_wrapper):
 
 
 class IRMNGWrapper(TaxonomyWrapper):
+    schema = set(["irmng dwc"])
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 

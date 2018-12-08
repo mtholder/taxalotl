@@ -460,6 +460,13 @@ class ResourceWrapper(FromOTifacts):
 # noinspection PyAbstractClass
 class TaxonomyWrapper(ResourceWrapper):
     resource_type = 'external taxonomy'
+    schema = set(['headerless ott',
+                  "newick",
+                  "ott",
+                  "ott id csv",
+                  "tab-separated ott",
+                ])
+
 
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)

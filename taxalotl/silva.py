@@ -213,9 +213,13 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
 # noinspection PyAbstractClass
 class SilvaIdListWrapper(TaxonomyWrapper):
     resource_type = 'id list'
+    schema = set(['id list'])
 
 
 class SilvaWrapper(TaxonomyWrapper):
+    resource_type = 'id list'
+    schema = set(["silva taxmap"])
+
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 

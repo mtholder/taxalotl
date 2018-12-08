@@ -100,6 +100,7 @@ class CoLTaxonomyWrapper(TaxonomyWrapper):
     taxon_filename = 'taxa.txt'
     synonyms_filename = None
     partition_parsing_fn = staticmethod(partition_col_by_root_id)
+    schema = set(["http://rs.tdwg.org/dwc/"])
 
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)

@@ -243,6 +243,7 @@ def normalize_ncbi(source, destination, res_wrapper):
 ###################################################################################################
 
 class NCBIWrapper(TaxonomyWrapper):
+    schema = set(["ncbi taxonomy"])
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
