@@ -29,6 +29,7 @@ out_stream = sys.stdout
 SEP_NAMES = '__separator_names__.json'
 SEP_MAPPING = '__separator_names_to_dir__.json'
 
+
 def analyze_update_to_resources(prev, curr):
     m = 'Could not analyze taxonomy update because {} has not been partitioned.'
     for el in [prev, curr]:
@@ -36,27 +37,35 @@ def analyze_update_to_resources(prev, curr):
             raise RuntimeError(m.format(el.id))
     raise NotImplementedError('ha')
 
+
 def analyze_update(taxalotl_config, id_list):
     ott_res = taxalotl_config.get_terminalized_res_by_id('ott')
     ott_inps = ott_res.input_dict()
     for i in id_list:
         prev_used_version_id = ott_inps.get(i)
         if prev_used_version_id is None:
-            _LOG.info('Taxonomy {} was a not an input to the current version of OTT, so an update cannot be analyzed.'.format(i))
+            _LOG.info(
+                'Taxonomy {} was a not an input to the current version of OTT, so an update cannot be analyzed.'.format(
+                    i))
             continue
         x = taxalotl_config.get_all_terminalized_res_by_id(i)
         xi = [j.id for j in x]
         try:
             prev_used_version_index = xi.index(prev_used_version_id)
         except ValueError:
-            _LOG.info('The previously used version of {} is {}, but this is not known to taxalotl, you might need to run the pull-otifacts action.'.format(i, prev_used_version_id))
+            _LOG.info(
+                'The previously used version of {} is {}, but this is not known to taxalotl, you might need to run the pull-otifacts action.'.format(
+                    i, prev_used_version_id))
             continue
         if prev_used_version_index == len(xi) - 1:
-            _LOG.info('The previously used version of {} is {} appears to be the latest version of that resource, you might need to run the pull-otifacts action.'.format(i, prev_used_version_id))
+            _LOG.info(
+                'The previously used version of {} is {} appears to be the latest version of that resource, you might need to run the pull-otifacts action.'.format(
+                    i, prev_used_version_id))
             continue
         prev_used = x[prev_used_version_index]
         latest_wrapper = x[-1]
         analyze_update_to_resources(prev_used, latest_wrapper)
+
 
 def download_resources(taxalotl_config, id_list):
     for rid in id_list:
@@ -130,6 +139,7 @@ You probably need to run the pull-otifacts command. If that does NOT solve the p
 """
         out_stream.write(m)
     return id_list
+
 
 def status_of_resources(taxalotl_config,
                         id_list,
@@ -242,12 +252,14 @@ def check_partition_resources(taxalotl_config, id_list, level_list):
             with use_tax_partitions() as tax_cache:
                 check_partition(res, part_name_to_split)
 
+
 def exec_or_runtime_error(invocation, working_dir='.'):
     rc = subprocess.call(invocation, cwd=working_dir)
     if rc != 0:
         qi = '", "'.join(invocation)
         m = 'Command\n"{}"\nfailed with returncode={}\n'
         raise RuntimeError(m.format(qi, rc))
+
 
 def clone_otifacts(otifacts_dir):
     otifacts_url = 'git@github.com:mtholder/OTifacts.git'
@@ -258,6 +270,7 @@ def clone_otifacts(otifacts_dir):
 
 def git_pull_otifacts(otifacts_dir):
     exec_or_runtime_error(['git', 'pull'], working_dir=otifacts_dir)
+
 
 def pull_otifacts(taxalotl_config):
     dest_dir = taxalotl_config.resources_dir

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # from __future__ import print_function
-import codecs
+import io
 import os
 from contextlib import contextmanager
 
@@ -738,7 +738,7 @@ def _write_d_as_tsv(header, dict_to_write, id_order, dest_path):
     pd = os.path.split(dest_path)[0]
     assure_dir_exists(pd)
     _LOG.info('Writing {} records to "{}"'.format(len(dict_to_write), dest_path))
-    with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
+    with io.open(dest_path, 'w', encoding='utf-8') as outp:
         outp.write(header)
         for i in id_order:
             el = dict_to_write.get(i)
@@ -771,7 +771,7 @@ def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
     pd = os.path.split(dest_path)[0]
     assure_dir_exists(pd)
     _LOG.info('Writing {} records to "{}"'.format(x, dest_path))
-    with codecs.open(dest_path, 'w', encoding='utf-8') as outp:
+    with io.open(dest_path, 'w', encoding='utf-8') as outp:
         outp.write(header)
         for l in ltw:
             outp.write(l)

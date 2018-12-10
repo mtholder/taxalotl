@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import codecs
+import io
 import sys
 import os
 
@@ -59,7 +59,7 @@ def main_post_parse(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config)
     hist_file = os.path.expanduser("~/.taxalotl_history")
     if os.path.isfile(hist_file):
-        with codecs.open(hist_file, 'a', encoding='utf-8') as hout:
+        with io.open(hist_file, 'a', encoding='utf-8') as hout:
             hout.write('"{}"\n'.format('" "'.join(sys.argv)))
     try:
         if args.which == 'analyze-update':
@@ -119,6 +119,7 @@ def main_post_parse(args):
         sys.exit('taxalotl-cli: Exiting with exception:\n{}'.format(x))
     return 0
 
+
 def main():
     import argparse
 
@@ -134,8 +135,8 @@ def main():
     subp = p.add_subparsers(help="command help")
     # ANALYZE UPDATE
     analyze_update_p = subp.add_parser('analyze-update',
-                                      help="calculates a diff between the last version of a " \
-                                           "taxonomy used and the latest version downloaded.")
+                                       help="calculates a diff between the last version of a "
+                                            "taxonomy used and the latest version downloaded.")
     analyze_update_p.add_argument('resources', nargs="*", help="IDs of the resources to analyzed.")
     analyze_update_p.set_defaults(which="analyze-update")
 
@@ -246,7 +247,7 @@ def main():
     #   argparse does not help us out here... at all
     if "--show-completions" in sys.argv:
         a = sys.argv[1:]
-        univ = frozenset(['--config',])
+        univ = frozenset(['--config', ])
         sel_cmd = None
         num_cmds = 0
         for c in all_cmds:
@@ -267,7 +268,9 @@ def main():
                     comp_list.append(u)
             comp_list.extend(all_cmds)
         else:
-            if sel_cmd in res_dep_cmds or sel_cmd in ['compare-taxonomies'] or sel_cmd in ver_inp_res_dep_cmds:
+            if sel_cmd in res_dep_cmds \
+              or sel_cmd in ['compare-taxonomies'] \
+              or sel_cmd in ver_inp_res_dep_cmds:
                 # From Ned Batchelder's answer on http://stackoverflow.com/a/14728477
                 class ArgumentParserError(Exception):
                     pass
@@ -289,7 +292,8 @@ def main():
                     if sel_cmd in res_dep_cmds:
                         comp_list = list(taxalotl_config.resources_mgr.resources.keys())
                     elif sel_cmd in ver_inp_res_dep_cmds:
-                        comp_list = list(taxalotl_config.resources_mgr.abstract_input_resource_types())
+                        comp_list = list(
+                            taxalotl_config.resources_mgr.abstract_input_resource_types())
                 except:
                     pass
 
@@ -325,6 +329,7 @@ def main():
     else:
         rc = main_post_parse(p.parse_args())
         sys.exit(rc)
+
 
 if __name__ == "__main__":
     main()

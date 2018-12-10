@@ -25,14 +25,14 @@ def _find_irmng_input_files(source):
     if len(poss_p) == 1:
         prof_file = poss_p[0]
     else:
-        m = "Expecting 1 file to IRMNG_DWC_SP_PROFILE.*\.csv found: {}".format(poss_p)
+        m = "Expecting 1 file to IRMNG_DWC_SP_PROFILE.*.csv found: {}".format(poss_p)
         raise RuntimeError(m)
     if len(poss_i) == 2:
         if poss_i[0] == prof_file:
             return os.path.join(source, poss_i[1]), os.path.join(source, prof_file)
         if poss_i[1] == prof_file:
             return os.path.join(source, poss_i[1]), os.path.join(source, prof_file)
-    raise RuntimeError("Expecting 2 files to match IRMNG_DWC.*\.csv found: {}".format(poss_i))
+    raise RuntimeError("Expecting 2 files to match IRMNG_DWC.*.csv found: {}".format(poss_i))
 
 
 def read_irmng_file(irmng_file_name):
@@ -212,8 +212,8 @@ def fix_irmng(itd):
         if tsta_nst_keep[2]:
             continue  # already seen
         if (taxon_id in grandfathered
-            or (tsta_nst_keep[0] in taxon_statuses_to_keep
-                and tsta_nst_keep[1] in nomenclatural_statuses_to_keep)):
+                or (tsta_nst_keep[0] in taxon_statuses_to_keep
+                    and tsta_nst_keep[1] in nomenclatural_statuses_to_keep)):
             scan_id = taxon_id
             while not tsta_nst_keep[2]:
                 if scan_id in grandfathered:
@@ -312,7 +312,8 @@ def normalize_irmng(source, destination, res_wrapper):
 
 
 class IRMNGWrapper(TaxonomyWrapper):
-    schema = set(["irmng dwc"])
+    schema = {"irmng dwc"}
+
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 

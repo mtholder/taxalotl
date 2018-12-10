@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import codecs
+import io
 import os
 import shutil
 import urllib
+import urllib.request
 
 from peyotl import (assure_dir_exists,
                     download_large_file,
@@ -125,9 +126,9 @@ def copy_and_add_ott_headers(unpacked_dirp, normalized_dirp, resource_wrapper):
     for fn, header in special:
         tf = os.path.join(unpacked_dirp, fn)
         if os.path.isfile(tf):
-            content = codecs.open(tf, 'r', encoding='utf-8').read()
+            content = io.open(tf, 'rU', encoding='utf-8').read()
             outfp = os.path.join(normalized_dirp, fn)
-            with codecs.open(outfp, 'w', encoding='utf-8') as out:
+            with io.open(outfp, 'w', encoding='utf-8') as out:
                 out.write(header)
                 out.write(content)
 
@@ -143,8 +144,8 @@ def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
         tf = os.path.join(unpacked_dirp, fn)
         if os.path.isfile(tf):
             outfp = os.path.join(normalized_dirp, fn)
-            with codecs.open(tf, 'r', encoding='utf-8') as inp:
-                with codecs.open(outfp, 'w', encoding='utf-8') as out:
+            with io.open(tf, 'rU', encoding='utf-8') as inp:
+                with io.open(outfp, 'w', encoding='utf-8') as out:
                     for line in inp:
                         ls = line.split('\t')
                         out.write('\t|\t'.join(ls))
@@ -374,8 +375,8 @@ class ResourceWrapper(FromOTifacts):
             raise RuntimeError(m.format(self.id))
         if self.url.startswith("ftp://"):
             _LOG.debug("Starting FTP download from {} to {}".format(self.url, dfp))
-            with urllib.request.Request(self.url) as req:
-                with codecs.open(dfp, 'w', 'utf-8') as outp:
+            with urllib.request.urlopen(self.url) as req:
+                with io.open(dfp, 'w', 'utf-8') as outp:
                     outp.write(req.read())
             _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
         else:
@@ -460,13 +461,7 @@ class ResourceWrapper(FromOTifacts):
 # noinspection PyAbstractClass
 class TaxonomyWrapper(ResourceWrapper):
     resource_type = 'external taxonomy'
-    schema = set(['headerless ott',
-                  "newick",
-                  "ott",
-                  "ott id csv",
-                  "tab-separated ott",
-                ])
-
+    schema = {'headerless ott', "newick", "ott", "ott id csv", "tab-separated ott"}
 
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
@@ -484,7 +479,7 @@ class TaxonomyWrapper(ResourceWrapper):
         _LOG.info('frag = {}'.format(frag))
         tax_part = get_taxon_partition(self, fragment=frag)
         tax_part.read_inputs_for_read_only()
-        root_ids = tax_part.get_root_ids()
+        # root_ids = tax_part.get_root_ids()
         forest = tax_part.get_taxa_as_forest()
         des_accum = tax_part.read_acccumulated_des()
         if des_accum:
@@ -504,7 +499,6 @@ class TaxonomyWrapper(ResourceWrapper):
         while not self.has_been_partitioned_for_fragment(anc_frag):
             if not anc_frag:
                 assert False
-                return
             anc_frag = os.path.split(anc_frag)[0]
         anc_tax_part = get_taxon_partition(self, anc_frag)
         anc_tax_part.register_accumulated_des(accum_list)

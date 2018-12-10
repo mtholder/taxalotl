@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-import codecs
+import io
 import os
 import time
 from peyotl import (add_or_append_to_dict, get_logger)
@@ -47,7 +47,7 @@ def parse_ncbi_names_file(names_fp, itd):
          2 synonyms node_id -> [(name, type of synonym))
     """
     count = 0
-    with codecs.open(names_fp, "r", encoding='utf-8') as namesf:
+    with io.open(names_fp, "rU", encoding='utf-8') as namesf:
         for line in namesf:
             # if you do \t|\t then you don't get the name class right because it is "\t|"
             spls = line.split("\t|")
@@ -94,7 +94,7 @@ def parse_ncbi_nodes_file(nodes_fp, itd):
     to_children = itd.to_children  # key is the parent and value is the list of children
     to_rank = itd.to_rank  # key is the node id and the value is the rank
     root_nodes = itd.root_nodes
-    with codecs.open(nodes_fp, "r", encoding='utf-8') as nodesf:
+    with io.open(nodes_fp, "rU", encoding='utf-8') as nodesf:
         for line in nodesf:
             spls = line.split("\t|\t")
             ns = spls[0].strip()
@@ -119,7 +119,7 @@ def parse_ncbi_nodes_file(nodes_fp, itd):
 
 def parse_ncbi_merged(fp, itd):
     if os.path.exists(fp):
-        with codecs.open(fp, 'r', encoding='utf-8') as inp:
+        with io.open(fp, 'rU', encoding='utf-8') as inp:
             for line in inp:
                 rs = line.split('\t|')
                 from_id, to_id = int(rs[0]), int(rs[1])
@@ -243,7 +243,8 @@ def normalize_ncbi(source, destination, res_wrapper):
 ###################################################################################################
 
 class NCBIWrapper(TaxonomyWrapper):
-    schema = set(["ncbi taxonomy"])
+    schema = {"ncbi taxonomy"}
+
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 

@@ -2,14 +2,16 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
+
+import csv
+import io
+import os
+import tempfile
+
 from peyotl import (add_or_append_to_dict, assure_dir_exists,
                     get_logger,
                     shorter_fp_form,
                     write_as_json)
-import tempfile
-import codecs
-import csv
-import os
 
 _LOG = get_logger(__name__)
 
@@ -26,7 +28,7 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     if not os.path.exists(syn_fp):
         return
     _LOG.debug('parsing synonyms from "{}" ...'.format(syn_fp))
-    with codecs.open(syn_fp, 'rU', encoding='utf-8') as inp:
+    with io.open(syn_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         try:
             tax_part.syn_header = next(iinp)
@@ -63,7 +65,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
         return
     ptp = shorter_fp_form(complete_taxon_fp)
     _LOG.debug('parsing taxa from "{}" ...'.format(ptp))
-    with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
+    with io.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         try:
             tax_part.taxon_header = next(iinp)
@@ -112,7 +114,7 @@ def write_ott_taxonomy_tsv(out_fp,
     rn = list(root_nodes)
     rn.sort()
     header = INP_OTT_TAXONOMY_HEADER if extinct_known is None else INP_FLAGGED_OTT_TAXONOMY_HEADER
-    with codecs.open(out_fp, 'w', encoding='utf-8') as out:
+    with io.open(out_fp, 'w', encoding='utf-8') as out:
         out.write(header)
         # need to print id, parent id, and name
         for root_id in rn:
@@ -162,7 +164,7 @@ def write_ott_synonyms_tsv(out_fp,
                            id_order,
                            details_log):
     num_syn_written = 0
-    with codecs.open(out_fp, 'w', encoding='utf-8') as out:
+    with io.open(out_fp, 'w', encoding='utf-8') as out:
         out.write(INP_OTT_SYNONYMS_HEADER)
         for nd_id in id_order:
             syn_list = id_to_name_name_type_list[nd_id]
@@ -174,7 +176,7 @@ def write_ott_synonyms_tsv(out_fp,
 
 
 def write_ott_forwards(out_fp, forwarded_dict):
-    with codecs.open(out_fp, 'w', encoding='utf-8') as out:
+    with io.open(out_fp, 'w', encoding='utf-8') as out:
         for key, value in forwarded_dict.items():
             out.write('{}\t{}\n'.format(key, value))
 
@@ -187,7 +189,7 @@ def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
     ncbi_to_name = {}
     i = 0
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
-    with codecs.open(fp, 'r', encoding='utf-8') as inp:
+    with io.open(fp, 'rU', encoding='utf-8') as inp:
         reader = csv.reader(inp, delimiter='\t')
         header = reader.next()
         uidx = header.index('uid')
@@ -394,7 +396,7 @@ def read_taxonomy_to_get_id_to_fields(tax_dir):
     expected_header = '\t|\t'.join(fields)
     if not os.path.exists(fp):
         return {}
-    with codecs.open(fp, 'r', encoding='utf-8') as inp:
+    with io.open(fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         header = next(iinp)
         assert header == expected_header
@@ -412,7 +414,7 @@ def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
     fields = ['uid', 'parent_uid', 'name', 'rank', 'sourceinfo', 'uniqname', 'flags', '\n']
     expected_header = '\t|\t'.join(fields)
-    with codecs.open(fp, 'r', encoding='utf-8') as inp:
+    with io.open(fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         header = next(iinp)
         assert header == expected_header

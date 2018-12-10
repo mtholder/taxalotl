@@ -5,7 +5,7 @@
 from __future__ import print_function
 from unidecode import unidecode
 import csv
-import codecs
+import io
 import os
 import time
 
@@ -23,7 +23,7 @@ _num_downloads_this_session = 0
 
 def download_csv_for_family(fam_dir, fam_html_fp, url_pref):
     global _num_downloads_this_session
-    fam_html_content = codecs.open(fam_html_fp, 'rU', encoding='utf-8').read()
+    fam_html_content = io.open(fam_html_fp, 'rU', encoding='utf-8').read()
     soup = Soup(fam_html_content, 'html.parser')
     csva = soup.find_all("a", attrs={"type": "text/csv"})
     if len(csva) != 1:
@@ -45,7 +45,7 @@ def scrape_families_from_higher_group(out_dir, top_file):
     dirname = os.path.split(top_file)[1] + '_families'
     fam_dir = os.path.join(out_dir, dirname)
     assure_dir_exists(fam_dir)
-    top_content = codecs.open(top_file, 'rU', encoding='utf-8').read()
+    top_content = io.open(top_file, 'rU', encoding='utf-8').read()
     soup = Soup(top_content, 'html.parser')
     nametree_list = soup.select("#nametree > li")
     _LOG.debug("will write to {}".format(dirname))
@@ -99,7 +99,7 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
     legit_ids = {fam_name, }
     illegit_ids = set()
     name_to_id = {}
-    with codecs.open(inp_fp, 'rb') as csvfile:
+    with io.open(inp_fp, 'rb') as csvfile:
         csvreader = csv.reader(csvfile)
         header = csvreader.next()
         _LOG.info(u'header = {}'.format(header))
@@ -191,13 +191,13 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
     j = '\t|\t'
     taxon_fp = os.path.join(out_dir, 'taxonomy.tsv')
     assure_dir_exists(out_dir)
-    with codecs.open(taxon_fp, 'w', encoding='utf-8') as outp:
+    with io.open(taxon_fp, 'w', encoding='utf-8') as outp:
         outp.write('{}\n'.format(j.join(['uid', 'parent_uid', 'name', 'rank', 'flags'])))
         outp.write('{}\n'.format(j.join(id_to_line[fam_name])))
         for i in id_order:
             outp.write(_gen_line(id_to_line[i]))
     not_accepted_fp = os.path.join(out_dir, 'not-accepted.tsv')
-    with codecs.open(not_accepted_fp, 'w', encoding='utf-8') as outp:
+    with io.open(not_accepted_fp, 'w', encoding='utf-8') as outp:
         outp.write('{}\n'.format(j.join(['uid', 'name', 'rank', 'flags'])))
         for i in illegit_ids:
             line_el = id_to_line[i]
@@ -206,7 +206,8 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
 
 
 class PlantListWrapper(TaxonomyWrapper):
-    schema = set(["plant list"])
+    schema = {"plant list"}
+
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 

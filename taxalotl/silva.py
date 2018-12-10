@@ -5,7 +5,7 @@
 #   Jessica Grant as a part of the reference_taxonomy and OToL efforts.
 from __future__ import print_function
 
-import codecs
+import io
 import os
 
 from peyotl import (assure_dir_exists,
@@ -23,7 +23,7 @@ _LOG = get_logger(__name__)
 
 def parse_silva_ids(fn):
     preferred = set()
-    with codecs.open(fn, 'r', encoding='utf-8') as inp:
+    with io.open(fn, 'rU', encoding='utf-8') as inp:
         for line in inp:
             ls = line.strip()
             if ls:
@@ -73,7 +73,7 @@ def parse_acc_to_trim_from_ncbi(tax_fp):
                     'root;cellular organisms;Eukaryota;Viridiplantae;',)
     euk = 'root;cellular organisms;Eukaryota;'
     to_trim = set()
-    with codecs.open(tax_fp, 'r', encoding='utf-8') as inp:
+    with io.open(tax_fp, 'rU', encoding='utf-8') as inp:
         for n, line in enumerate(inp):
             ls = line.strip()
             if not ls:
@@ -122,10 +122,10 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
     trim_pref = (fung_pref, animal_pref, pl_pref, mito_pref, chloro_pref)
 
     namepath_to_id_pair = {}
-    with codecs.open(expect_tax_fp, 'r', encoding='utf-8') as inp:
+    with io.open(expect_tax_fp, 'rU', encoding='utf-8') as inp:
         eh = 'primaryAccession\tstart\tstop\tpath\torganism_name\ttaxid\n'
         iinp = iter(inp)
-        h = iinp.next()
+        h = next(iinp)
         if h != eh:
             raise ValueError("Unexpected header: {}".format(h))
         for n, line in enumerate(iinp):
@@ -178,7 +178,7 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
     to_par = itd.to_par
     to_children = itd.to_children
     to_name = itd.to_name
-    npk = namepath_to_id_pair.keys()
+    npk = list(namepath_to_id_pair.keys())
     npk.sort()
     to_par["0"] = None
     to_children["0"] = []
@@ -213,12 +213,12 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
 # noinspection PyAbstractClass
 class SilvaIdListWrapper(TaxonomyWrapper):
     resource_type = 'id list'
-    schema = set(['id list'])
+    schema = {'id list'}
 
 
 class SilvaWrapper(TaxonomyWrapper):
     resource_type = 'id list'
-    schema = set(["silva taxmap"])
+    schema = {"silva taxmap"}
 
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)

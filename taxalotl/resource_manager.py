@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import codecs
+import io
 import json
 import os
 
@@ -12,7 +12,7 @@ _LOG = get_logger(__name__)
 
 def read_resource_file(fp):
     try:
-        with codecs.open(fp, 'rU', encoding='utf-8') as inp:
+        with io.open(fp, 'rU', encoding='utf-8') as inp:
             return json.load(inp)
     except:
         _LOG.exception("Error reading JSON from \"{}\"".format(fp))
@@ -20,7 +20,7 @@ def read_resource_file(fp):
 
 
 def write_resources_file(obj, fp):
-    with codecs.open(fp, 'w', encoding='utf-8') as outp:
+    with io.open(fp, 'w', encoding='utf-8') as outp:
         json.dump(obj, outp, indent=2, sort_keys=True, separators=(',', ': '))
 
 
@@ -28,14 +28,14 @@ def get_resource_wrapper(raw, refs, parent=None):
     from taxalotl.resource_mapper import BASE_ID_TO_RES_TYPE, wrapper_types
     base = BASE_ID_TO_RES_TYPE.get(raw["base_id"].lower())
     if base:
-        #_LOG.debug('get_resource_wrapper.calling base raw={}'.format(raw))
+        # _LOG.debug('get_resource_wrapper.calling base raw={}'.format(raw))
         return base(raw, parent=parent, refs=refs)
     rt = raw["resource_type"].lower()
     st = raw.get('schema', '').lower()
-    #_LOG.debug('rt={}'.format(rt))
+    # _LOG.debug('rt={}'.format(rt))
     for wt in wrapper_types:
         if rt == wt.resource_type and ((not st) or st in wt.schema):
-            #_LOG.debug('get_resource_wrapper.calling wrapper_types wt={}'.format(wt))
+            # _LOG.debug('get_resource_wrapper.calling wrapper_types wt={}'.format(wt))
             return wt(raw, parent=parent, refs=refs)
     raise RuntimeError("resource_type, schema = ({}, {}) not recognized".format(rt, st))
 

@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-import codecs
+import io
 
 from peyotl import (get_logger, shorter_fp_form)
 
@@ -63,7 +63,7 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
     assert not syn_fp
     syn_by_id = tax_part.syn_by_id
     ptp = shorter_fp_form(complete_taxon_fp)
-    with codecs.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
+    with io.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
         tax_part.taxon_header = next(iinp)
         prev_line = None
@@ -100,7 +100,7 @@ class CoLTaxonomyWrapper(TaxonomyWrapper):
     taxon_filename = 'taxa.txt'
     synonyms_filename = None
     partition_parsing_fn = staticmethod(partition_col_by_root_id)
-    schema = set(["http://rs.tdwg.org/dwc/"])
+    schema = {"http://rs.tdwg.org/dwc/"}
 
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)

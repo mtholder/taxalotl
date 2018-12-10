@@ -7,7 +7,7 @@
 #   reference-taxonomy/feed/gbif/process_gbif_taxonomy.py
 from __future__ import print_function
 
-import codecs
+import io
 import os
 import re
 
@@ -61,8 +61,8 @@ def canonical_name(name):
 
 def write_gbif_projection_file(source, destination):
     i = 0
-    with codecs.open(source, 'r', encoding='utf-8') as infile:
-        with codecs.open(destination, 'w', encoding='utf-8') as outfile:
+    with io.open(source, 'rU', encoding='utf-8') as infile:
+        with io.open(destination, 'w', encoding='utf-8') as outfile:
             for line in infile:
                 row = line.split('\t')
                 scientific = row[6]
@@ -106,7 +106,7 @@ def read_gbif_projection(proj_filepath, itd):
     to_ignore = {0}
     count = 0
     n_syn = 0
-    with codecs.open(proj_filepath, 'r', encoding='utf-8') as inp:
+    with io.open(proj_filepath, 'rU', encoding='utf-8') as inp:
         for row in inp:
             fields = row.split('\t')
             # acceptedNameUsageID
@@ -136,7 +136,7 @@ def read_gbif_projection(proj_filepath, itd):
                 n_syn += 1
                 continue
             elif ("Paleobiology Database" in source) or (
-                        source == "c33ce2f2-c3cc-43a5-a380-fe4526d63650"):
+                    source == "c33ce2f2-c3cc-43a5-a380-fe4526d63650"):
                 paleos.add(taxon_id)
             if tstatus == 'synonym' or (tstatus == 'doubtful' and taxon_id not in not_doubtful):
                 to_remove.add(taxon_id)
@@ -261,7 +261,8 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
 
 
 class GBIFWrapper(TaxonomyWrapper):
-    schema = set(["http://rs.tdwg.org/dwc/"])
+    schema = {"http://rs.tdwg.org/dwc/"}
+
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
