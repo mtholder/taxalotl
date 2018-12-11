@@ -215,6 +215,11 @@ class SilvaIdListWrapper(TaxonomyWrapper):
     resource_type = 'id list'
     schema = {'id list'}
 
+# noinspection PyAbstractClass
+class SilvaToNCBIMappingListWrapper(TaxonomyWrapper):
+    resource_type = "id to ncbi mapping"
+    schema = {"id to ncbi mapping", "silva taxmap", "fasta silva taxmap"}
+
 
 class SilvaWrapper(TaxonomyWrapper):
     resource_type = 'id list'

@@ -10,7 +10,7 @@ from taxalotl.irmng import IRMNGWrapper
 from taxalotl.ncbi import NCBIWrapper
 from taxalotl.ott import OTTaxonomyWrapper, OTTaxonomyIdListWrapper
 from taxalotl.plant_list import PlantListWrapper
-from taxalotl.silva import SilvaIdListWrapper, SilvaWrapper
+from taxalotl.silva import SilvaIdListWrapper, SilvaWrapper, SilvaToNCBIMappingListWrapper
 from taxalotl.resource_wrapper import TaxonomyWrapper
 from taxalotl.worms import WormsTaxonomyWrapper
 
@@ -34,6 +34,7 @@ def _fill_wrapper():
     wrapper_types.update(BASE_ID_TO_RES_TYPE.values())
     wrapper_types.add(TaxonomyWrapper)
     wrapper_types.add(SilvaIdListWrapper)
+    wrapper_types.add(SilvaToNCBIMappingListWrapper)
     wrapper_types.add(OTTaxonomyIdListWrapper)
 
 
