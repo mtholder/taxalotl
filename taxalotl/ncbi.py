@@ -249,4 +249,4 @@ class NCBIWrapper(TaxonomyWrapper):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def normalize(self):
-        normalize_ncbi(self.unpacked_filepath, self.normalized_filepath, self)
+        normalize_ncbi(self.unpacked_filepath, self.normalized_filedir, self)

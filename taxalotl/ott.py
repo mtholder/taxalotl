@@ -306,12 +306,8 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
 class OTTaxonomyIdListWrapper(ResourceWrapper):
     resource_type = 'open tree taxonomy idlist'
     schema = {resource_type, 'ott id csv'}
+    _norm_filename = 'by_qid.csv'
 
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
 
-    def has_been_normalized(self):
-        dfp = self.normalized_filepath
-        return (dfp is not None
-                and os.path.exists(dfp)
-                and os.path.exists(os.path.join(dfp, 'by_qid.csv')))

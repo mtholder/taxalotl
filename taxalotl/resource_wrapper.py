@@ -150,11 +150,42 @@ def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
                         ls = line.split('\t')
                         out.write('\t|\t'.join(ls))
 
+def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):
+    inpfp = os.path.join(unpacked_dirp, resource_wrapper.local_filename)
+    outfd = resource_wrapper.normalized_filedir
+    if not os.path.exists(outfd):
+        os.makedirs(outfd)
+    outfp = resource_wrapper.normalized_filepath
+    if resource_wrapper.schema.lower() == 'silva taxmap':
+        shutil.copyfile(inpfp, outfp)
+    else:
+        with io.open(inpfp, 'rU', encoding='utf-8') as inp:
+            with io.open(outfp, 'w', encoding='utf-8') as outp:
+                for line in inp:
+                    ls = line.strip()
+                    if not ls:
+                        continue
+                    if ls[0] != '>':
+                        raise ValueError('Expecting each line to start with > found:\n{}'.format(ls))
+                    spl = ls.split(' ')
+                    silva_info = spl[0]
+                    rest = ' '.join(spl[1:])
+                    sispl = silva_info.split('.')
+                    first_col = '.'.join(sispl[:-2])
+                    sec_col, third_col = sispl[-2:]
+                    label = rest.split(';')[-1]
+                    if not rest.endswith(';'):
+                        rest += ';'
+                    ol = '\t'.join([first_col, sec_col, third_col, rest, label])
+                    outp.write('{}\n'.format(ol))
+
 
 _schema_to_norm_fn = {"headerless ott": copy_and_add_ott_headers,
                       "newick": normalize_newick,
                       "ott": copy_taxonomy_by_linking,
                       "ott id csv": copy_id_list_by_linking,
+                      "silva_ncbi": normalize_silva_ncbi,
+                      'fasta silva taxmap': normalize_silva_ncbi,
                       "tab-separated ott": normalize_tab_sep_ott,
                       }
 
@@ -219,6 +250,7 @@ class FromOTifacts(object):
 
 class ResourceWrapper(FromOTifacts):
     taxon_filename = 'taxonomy.tsv'
+    _norm_filename = taxon_filename
     synonyms_filename = 'synonyms.tsv'
     partition_parsing_fn = staticmethod(partition_ott_by_root_id)
 
@@ -288,10 +320,17 @@ class ResourceWrapper(FromOTifacts):
         return os.path.join(self.config.raw_downloads_dir, self.id)
 
     @property
-    def normalized_filepath(self):
+    def normalized_filedir(self):
         if self.is_abstract:
             return None
         return os.path.join(self.config.normalized_dir, self.id)
+
+    @property
+    def normalized_filepath(self):
+        fd = self.normalized_filedir
+        if fd is None:
+            return None
+        return os.path.join(fd, self._norm_filename)
 
     @property
     def partitioned_filepath(self):
@@ -301,7 +340,7 @@ class ResourceWrapper(FromOTifacts):
 
     @property
     def partition_source_dir(self):
-        return self.normalized_filepath
+        return self.normalized_filedir
 
     @property
     def is_abstract(self):
@@ -318,16 +357,16 @@ class ResourceWrapper(FromOTifacts):
         return dfp is not None and os.path.exists(dfp)
 
     def has_been_normalized(self):
-        dfp = self.normalized_filepath
+        dfp = self.normalized_filedir
         return (dfp is not None
                 and os.path.exists(dfp)
-                and os.path.exists(os.path.join(dfp, 'taxonomy.tsv')))
+                and os.path.exists(self.normalized_filepath))
 
     def has_been_partitioned(self):
         return has_any_partition_dirs(self.partitioned_filepath, self.id)
 
     def remove_normalize_artifacts(self):
-        self._remove_taxonomy_dir(self.normalized_filepath)
+        self._remove_taxonomy_dir(self.normalized_filedir)
 
     def remove_partition_artifacts(self):
         part_dir_list = find_partition_dirs_for_taxonomy(self.partitioned_filepath, self.id)
@@ -394,7 +433,7 @@ class ResourceWrapper(FromOTifacts):
         except KeyError:
             m = "Normalization from \"{}\" is not currently supported"
             raise NotImplementedError(m.format(self.base_id))
-        norm_fn(self.unpacked_filepath, self.normalized_filepath, self)
+        norm_fn(self.unpacked_filepath, self.normalized_filedir, self)
 
     def write_status(self, out, indent='', list_all_artifacts=False, hanging_indent='  '):
         dfp = self.download_filepath
@@ -420,7 +459,7 @@ class ResourceWrapper(FromOTifacts):
         ufp = self.unpacked_filepath
         s = "is at" if self.has_been_unpacked() else "not yet unpacked to"
         unp_str = "{}Raw ({} schema) {} {}\n".format(hi, self.schema, s, ufp)
-        nfp = self.normalized_filepath
+        nfp = self.normalized_filedir
         s = "is at" if self.has_been_normalized() else "not yet normalized to"
         norm_str = "{}OTT formatted form {} {}\n".format(hi, s, nfp)
         if self.has_been_partitioned():

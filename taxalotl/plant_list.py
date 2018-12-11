@@ -235,7 +235,7 @@ class PlantListWrapper(TaxonomyWrapper):
     def normalize(self):
         dd = self.unpacked_filepath
         subdirs = ['{}_families'.format(i) for i in 'AGPB']
-        dn = self.normalized_filepath
+        dn = self.normalized_filedir
         assure_dir_exists(dn)
         for s in subdirs:
             nsd = os.path.join(dn, s)

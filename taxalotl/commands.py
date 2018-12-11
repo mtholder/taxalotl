@@ -216,7 +216,7 @@ def normalize_resources(taxalotl_config, id_list):
             unpack_resources(taxalotl_config, [rw.id])
         if rw.has_been_normalized():
             m = "{} was already normalized at {}"
-            _LOG.info(m.format(rw.id, rw.normalized_filepath))
+            _LOG.info(m.format(rw.id, rw.normalized_filedir))
         else:
             rw.normalize()
 

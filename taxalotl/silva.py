@@ -219,6 +219,10 @@ class SilvaIdListWrapper(TaxonomyWrapper):
 class SilvaToNCBIMappingListWrapper(TaxonomyWrapper):
     resource_type = "id to ncbi mapping"
     schema = {"id to ncbi mapping", "silva taxmap", "fasta silva taxmap"}
+    _norm_filename = 'ncbi_taxmap.tsv'
+
+    def __init__(self, obj, parent=None, refs=None):
+        TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
 
 class SilvaWrapper(TaxonomyWrapper):
@@ -229,7 +233,7 @@ class SilvaWrapper(TaxonomyWrapper):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def normalize(self):
-        normalize_silva_taxonomy(self.unpacked_filepath, self.normalized_filepath, self)
+        normalize_silva_taxonomy(self.unpacked_filepath, self.normalized_filedir, self)
 
     def get_primary_partition_map(self):
-        return read_as_json(os.path.join(self.normalized_filepath, GEN_MAPPING_FILENAME))
+        return read_as_json(os.path.join(self.normalized_filedir, GEN_MAPPING_FILENAME))
