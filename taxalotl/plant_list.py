@@ -99,13 +99,13 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
     legit_ids = {fam_name, }
     illegit_ids = set()
     name_to_id = {}
-    with io.open(inp_fp, 'rb') as csvfile:
+    with io.open(inp_fp, 'rU', encoding='utf-8') as csvfile:
         csvreader = csv.reader(csvfile)
-        header = csvreader.next()
+        header = next(csvreader)
         _LOG.info(u'header = {}'.format(header))
         for n, raw_row in enumerate(csvreader):
             # noinspection PyCompatibility
-            row = [str(i, 'utf-8') for i in raw_row]
+            row = [i for i in raw_row]
             taxon_id = row[0]
             fam = row[2]
             if fam != family:

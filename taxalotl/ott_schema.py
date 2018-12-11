@@ -191,7 +191,7 @@ def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
     with io.open(fp, 'rU', encoding='utf-8') as inp:
         reader = csv.reader(inp, delimiter='\t')
-        header = reader.next()
+        header = next(reader)
         uidx = header.index('uid')
         namex = header.index('name')
         for row in reader:

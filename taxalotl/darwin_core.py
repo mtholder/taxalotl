@@ -103,7 +103,7 @@ def read_gbif_projection(proj_filepath, itd):
     paleos = set()
     ranks_to_ignore = frozenset(["form", "variety", "subspecies", "infraspecificname"])
     # kingdom incertae sedis is 0
-    to_ignore = {0}
+    to_ignore = set()
     count = 0
     n_syn = 0
     with io.open(proj_filepath, 'rU', encoding='utf-8') as inp:
