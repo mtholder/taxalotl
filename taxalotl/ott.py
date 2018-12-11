@@ -305,7 +305,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
 # noinspection PyAbstractClass
 class OTTaxonomyIdListWrapper(ResourceWrapper):
     resource_type = 'open tree taxonomy idlist'
-    schema = {resource_type}
+    schema = {resource_type, 'ott id csv'}
 
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)

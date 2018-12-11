@@ -294,7 +294,8 @@ def main():
                     elif sel_cmd in ver_inp_res_dep_cmds:
                         comp_list = list(
                             taxalotl_config.resources_mgr.abstract_input_resource_types())
-                except:
+                except Exception as _excep:
+                    _LOG.warn('Exception: {}'.format(_excep))
                     pass
 
                 if sel_cmd == 'status':

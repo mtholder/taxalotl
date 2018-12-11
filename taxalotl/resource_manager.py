@@ -37,7 +37,9 @@ def get_resource_wrapper(raw, refs, parent=None):
         if rt == wt.resource_type and ((not st) or st in wt.schema):
             # _LOG.debug('get_resource_wrapper.calling wrapper_types wt={}'.format(wt))
             return wt(raw, parent=parent, refs=refs)
-    raise RuntimeError("resource_type, schema = ({}, {}) not recognized".format(rt, st))
+    m = "resource_type, schema = ({}, {}) not recognized".format(rt, st)
+    _LOG.error(m)
+    raise RuntimeError(m)
 
 
 def get_subclass_resource_wrapper(raw, known_dict, refs):

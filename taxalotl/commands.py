@@ -282,7 +282,10 @@ def pull_otifacts(taxalotl_config):
     else:
         git_pull_otifacts(otifacts_dir)
     all_res = read_all_otifacts(otifacts_dir)
-    for res_type in ['external taxonomy', 'open tree taxonomy', 'id list']:
+    for res_type in ['external taxonomy',
+                     'open tree taxonomy',
+                     'id list',
+                     'open tree taxonomy idlist']:
         ext_tax = filter_otifacts_by_type(all_res, res_type)
         by_root_id = partition_otifacts_by_root_element(ext_tax)
         for root_key, res_dict in by_root_id.items():
