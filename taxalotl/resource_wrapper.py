@@ -168,7 +168,7 @@ def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):
                     if ls[0] != '>':
                         raise ValueError('Expecting each line to start with > found:\n{}'.format(ls))
                     spl = ls.split(' ')
-                    silva_info = spl[0]
+                    silva_info = spl[0][1:]
                     rest = ' '.join(spl[1:])
                     sispl = silva_info.split('.')
                     first_col = '.'.join(sispl[:-2])

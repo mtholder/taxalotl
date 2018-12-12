@@ -205,6 +205,13 @@ def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
     return ncbi_to_name
 
 
+def int_or_str(s):
+    try:
+        return int(s)
+    except:
+        return str(s)
+
+
 def full_ott_line_parser(taxon, line):
     try:
         ls = line.split('\t|\t')
@@ -212,9 +219,9 @@ def full_ott_line_parser(taxon, line):
     except:
         _LOG.exception("Error reading line {}:\n{}".format(taxon.line_num, line))
         raise
-    taxon.id = int(ls[0])
+    taxon.id = int_or_str(ls[0])
     if ls[1]:
-        taxon.par_id = int(ls[1])
+        taxon.par_id = int_or_str(ls[1])
     else:
         taxon.par_id = None
     taxon.name = ls[2]
@@ -230,7 +237,7 @@ def full_ott_line_parser(taxon, line):
         for el in sel:
             src, sid = el.split(':')
             try:
-                sid = int(sid)
+                sid = int_or_str(sid)
             except:
                 pass
             d.setdefault(src, set()).add(sid)

@@ -36,28 +36,29 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
     depends_on = res_wrapper.depends_on
     taxalotl_config = res_wrapper.config
-    expect_id_fp, ncbi_mapping_fp = None, None
+    expect_id_fp, ncbi_mapping_res = None, None
     for dep_id in depends_on:
         dep_res = taxalotl_config.get_terminalized_res_by_id(dep_id, 'normalize silva')
         if not dep_res.has_been_unpacked():
             unpack_resources(taxalotl_config, [dep_id])
-        dep_fp = os.path.join(dep_res.unpacked_filepath, dep_res.local_filename)
-        if not os.path.isfile(dep_fp):
-            raise ValueError("Silva ID file not found at: {}".format(dep_fp))
         if dep_res.schema.lower() == 'id list':
+            dep_fp = os.path.join(dep_res.unpacked_filepath, dep_res.local_filename)
             expect_id_fp = dep_fp
-        elif dep_res.schema.lower() == 'silva taxmap':
-            ncbi_mapping_fp = dep_fp
+        elif dep_res.schema.lower() in {'silva taxmap', "fasta silva taxmap"}:
+            dep_fp = dep_res.normalized_filepath
+            ncbi_mapping_res = dep_res
         else:
             raise ValueError('unrecognized dependency schema {}'.format(dep_res.schema))
+        if not os.path.isfile(dep_fp):
+            raise ValueError("Silva processing dependency not found at: {}".format(dep_fp))
     if expect_id_fp is None:
         raise ValueError('ID list dependency not found.')
-    if ncbi_mapping_fp is None:
+    if ncbi_mapping_res is None:
         raise ValueError('NCBI mapping dependency not found.')
     expect_tax_fp = os.path.join(res_wrapper.unpacked_filepath, res_wrapper.local_filename)
     if not os.path.isfile(expect_tax_fp):
         raise ValueError("Silva taxon file not found at: {}".format(expect_tax_fp))
-    acc_to_trim = parse_acc_to_trim_from_ncbi(ncbi_mapping_fp)
+    acc_to_trim = ncbi_mapping_res.parse_acc_to_trim_from_ncbi()
     preferred = parse_silva_ids(expect_id_fp)
     itd = InterimTaxonomyData()
     part_name_to_silva_id = parse_silva_taxon_file(expect_tax_fp, preferred, acc_to_trim, itd)
@@ -65,28 +66,6 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
     itd.write_to_dir(destination)
     mapping_file = os.path.join(destination, GEN_MAPPING_FILENAME)
     write_as_json(part_name_to_silva_id, mapping_file, indent=2, separators=(',', ': '))
-
-
-def parse_acc_to_trim_from_ncbi(tax_fp):
-    trimmed_pref = ('root;cellular organisms;Eukaryota;Opisthokonta;Fungi;',
-                    'root;cellular organisms;Eukaryota;Opisthokonta;Metazoa;',
-                    'root;cellular organisms;Eukaryota;Viridiplantae;',)
-    euk = 'root;cellular organisms;Eukaryota;'
-    to_trim = set()
-    with io.open(tax_fp, 'rU', encoding='utf-8') as inp:
-        for n, line in enumerate(inp):
-            ls = line.strip()
-            if not ls:
-                continue
-            prim_acc, start, stop, path, name = ls.split('\t')
-            if n % 10000 == 0:
-                _LOG.info("scanned taxon {} '{}' ...".format(n, name))
-            if path.startswith(euk):
-                for pref in trimmed_pref:
-                    if path.startswith(pref):
-                        to_trim.add(prim_acc)
-                        break
-    return to_trim
 
 
 def gen_all_namepaths(path, name, prim_acc):
@@ -223,6 +202,30 @@ class SilvaToNCBIMappingListWrapper(TaxonomyWrapper):
 
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
+
+    def parse_acc_to_trim_from_ncbi(self):
+        trimmed_pref = {'root;cellular organisms;Eukaryota;Opisthokonta;Fungi;',
+                        'root;cellular organisms;Eukaryota;Opisthokonta;Metazoa;',
+                        'root;cellular organisms;Eukaryota;Viridiplantae;',
+                        'Eukaryota;Archaeplastida;Chloroplastida;',
+                        'Eukaryota;Opisthokonta;Holozoa;Metazoa;',
+                        'Eukaryota;Opisthokonta;Nucletmycea;Fungi;',
+                        }
+
+        to_trim = set()
+        with io.open(self.normalized_filepath, 'rU', encoding='utf-8') as inp:
+            for n, line in enumerate(inp):
+                ls = line.strip()
+                if not ls:
+                    continue
+                prim_acc, start, stop, path, name = ls.split('\t')
+                if n % 10000 == 0:
+                    _LOG.info("scanned taxon {} '{}' ...".format(n, name))
+                for pref in trimmed_pref:
+                    if path.startswith(pref):
+                        to_trim.add(prim_acc)
+                        break
+        return to_trim
 
 
 class SilvaWrapper(TaxonomyWrapper):

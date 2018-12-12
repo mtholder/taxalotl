@@ -103,7 +103,9 @@ def ott_build_paritition_maps(res):
                 _LOG.info("{}: {} -> (None -> {})".format(src_pre, k, v))
             else:
                 assert v == pv
+    # @TODO: hard copying the fact that OTT was built with SILVA-115
     if 'silva' in filled:
+        filled['silva_115'] = filled['silva']
         del filled['silva']
     # @TODO: make this automatic not generic
     gbif = filled['gbif']
