@@ -219,7 +219,7 @@ def main():
     # ENFORCE-NEW-SEPARATORS
     enf_sep_p = subp.add_parser('enforce-new-separators',
                                 help="Uses the __sep__.json files created by "
-                                     "diagnose-new-separators to partition by unproblematic"
+                                     "diagnose-new-separators to partition by unproblematic "
                                      "taxa")
     enf_sep_p.add_argument('resources', nargs="*", help="IDs of the resources to separate")
     enf_sep_p.add_argument("--level",

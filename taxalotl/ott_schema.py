@@ -330,6 +330,12 @@ class OTTTaxon(object):
                         d[k] = v
         return d
 
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
+    def __getitem__(self, item):
+        return self.__dict__[item]
+
 
 def write_indented_subtree(out, node, indent_level):
     out.write('{}{} (id={})\n'.format('  ' * indent_level,
