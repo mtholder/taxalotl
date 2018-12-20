@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import subprocess
 import os
+import subprocess
 import sys
 
 from peyotl import (get_logger,
@@ -12,16 +12,14 @@ from peyotl import (get_logger,
                     partition_otifacts_by_root_element,
                     write_as_json)
 
+# from taxalotl.dynamic_partitioning import perform_dynamic_separation
+from taxalotl.compare import compare_taxonomies_in_dir
 from taxalotl.partitions import (GEN_MAPPING_FILENAME,
-                                 check_partition,
                                  do_partition,
                                  NAME_TO_PARTS_SUBSETS,
                                  PART_NAMES,
-                                 PREORDER_PART_LIST,
-                                 TERMINAL_PART_NAMES)
+                                 PREORDER_PART_LIST)
 from taxalotl.tax_partition import use_tax_partitions
-# from taxalotl.dynamic_partitioning import perform_dynamic_separation
-from taxalotl.compare import compare_taxonomies_in_dir
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -235,22 +233,6 @@ def partition_resources(taxalotl_config, id_list, level_list):
                 continue
             with use_tax_partitions() as tax_cache:
                 do_partition(res, part_name_to_split)
-
-
-def check_partition_resources(taxalotl_config, id_list, level_list):
-    if level_list == [None]:
-        level_list = PREORDER_PART_LIST
-    for rid in id_list:
-        res = taxalotl_config.get_terminalized_res_by_id(rid, 'partition')
-        if not res.has_been_normalized():
-            normalize_resources(taxalotl_config, [rid])
-        for part_name_to_split in level_list:
-            if not NAME_TO_PARTS_SUBSETS[part_name_to_split]:
-                _LOG.info('"{}" is a terminal group in the primary partition map'.format(
-                    part_name_to_split))
-                continue
-            with use_tax_partitions() as tax_cache:
-                check_partition(res, part_name_to_split)
 
 
 def exec_or_runtime_error(invocation, working_dir='.'):

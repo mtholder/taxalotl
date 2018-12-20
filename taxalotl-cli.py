@@ -12,7 +12,6 @@ from taxalotl.commands import (accumulate_separated_descendants,
                                analyze_update,
                                build_partition_maps,
                                cache_separator_names,
-                               check_partition_resources,
                                clean_resources,
                                compare_taxonomies,
                                diagnose_new_separators,
@@ -103,10 +102,6 @@ def main_post_parse(args):
             if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
             partition_resources(taxalotl_config, args.resources, [args.level])
-        elif args.which == 'check-partition':
-            if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
-                raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
-            check_partition_resources(taxalotl_config, args.resources, [args.level])
         elif args.which == 'all':
             m = 'Currently you must enter a command to run. Use the --help option or see the Tutorial.md\n'
             sys.stdout.write(m)
@@ -197,15 +192,6 @@ def main():
                              help="The level of the taxonomy to partition")
 
     partition_p.set_defaults(which="partition")
-    # PARTITION
-    partition_p = subp.add_parser('check-partition',
-                                  help="Check that a partitioning of a resource taxon")
-    partition_p.add_argument('resources', nargs="+", help="IDs of the resources to partitition")
-    partition_p.add_argument("--level",
-                             default=None,
-                             help="The level of the taxonomy to check partition")
-
-    partition_p.set_defaults(which="check-partition")
 
     # DIAGNOSE-NEW-SEPARATORS
     diag_sep_p = subp.add_parser('diagnose-new-separators',
@@ -286,7 +272,7 @@ def main():
                 comp_list = []
                 taxalotl_config = None
                 try:
-                    fa, unk = fake_parser.parse_known_args()
+                    fa = fake_parser.parse_known_args()[0]
                     config = fa.config
                     taxalotl_config = TaxalotlConfig(filepath=config)
                     if sel_cmd in res_dep_cmds:

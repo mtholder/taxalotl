@@ -150,6 +150,7 @@ def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
                         ls = line.split('\t')
                         out.write('\t|\t'.join(ls))
 
+
 def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):
     inpfp = os.path.join(unpacked_dirp, resource_wrapper.local_filename)
     outfd = resource_wrapper.normalized_filedir
@@ -166,7 +167,8 @@ def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):
                     if not ls:
                         continue
                     if ls[0] != '>':
-                        raise ValueError('Expecting each line to start with > found:\n{}'.format(ls))
+                        raise ValueError(
+                            'Expecting each line to start with > found:\n{}'.format(ls))
                     spl = ls.split(' ')
                     silva_info = spl[0][1:]
                     rest = ' '.join(spl[1:])
