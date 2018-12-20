@@ -18,7 +18,8 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
                                  do_partition,
                                  NAME_TO_PARTS_SUBSETS,
                                  PART_NAMES,
-                                 PREORDER_PART_LIST)
+                                 PREORDER_PART_LIST,
+                                 write_info_for_res)
 from taxalotl.tax_partition import use_tax_partitions
 
 _LOG = get_logger(__name__)
@@ -218,21 +219,36 @@ def normalize_resources(taxalotl_config, id_list):
         else:
             rw.normalize()
 
+def _iter_norm_term_res_internal_level_pairs(taxalotl_config, id_list, level_list, cmd_name):
+    '''iterates over (non abstract resource, level) pairs
 
-def partition_resources(taxalotl_config, id_list, level_list):
+    Several commands work on normalized resources and work on levels.
+    This generator serves as a common iterator for them.
+    Working on the specified and (as the inner loop) over the requested levels.
+    '''
     if level_list == [None]:
         level_list = PREORDER_PART_LIST
     for rid in id_list:
-        res = taxalotl_config.get_terminalized_res_by_id(rid, 'partition')
+        res = taxalotl_config.get_terminalized_res_by_id(rid, cmd_name)
         if not res.has_been_normalized():
             normalize_resources(taxalotl_config, [rid])
         for part_name_to_split in level_list:
             if not NAME_TO_PARTS_SUBSETS[part_name_to_split]:
                 _LOG.info('"{}" is a terminal group in the primary partition map'.format(
                     part_name_to_split))
-                continue
-            with use_tax_partitions() as tax_cache:
-                do_partition(res, part_name_to_split)
+            else:
+                yield res, part_name_to_split
+
+def info_on_resources(taxalotl_config, id_list, level_list):
+    for res, part_name_to_split in _iter_norm_term_res_internal_level_pairs(taxalotl_config,
+                                                                            id_list, level_list,
+                                                                            'partition'):
+        write_info_for_res(out_stream, res, level=part_name_to_split)
+
+def partition_resources(taxalotl_config, id_list, level_list):
+    for res, part_name_to_split in _iter_norm_term_res_internal_level_pairs(taxalotl_config, id_list, level_list, 'partition'):
+        with use_tax_partitions() as tax_cache:
+            do_partition(res, part_name_to_split)
 
 
 def exec_or_runtime_error(invocation, working_dir='.'):

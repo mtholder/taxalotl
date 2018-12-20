@@ -17,6 +17,7 @@ from taxalotl.commands import (accumulate_separated_descendants,
                                diagnose_new_separators,
                                enforce_new_separators,
                                download_resources,
+                               info_on_resources,
                                normalize_resources,
                                partition_resources,
                                pull_otifacts,
@@ -44,6 +45,7 @@ res_dep_cmds = ['accumulate-separated-descendants',
                 'clean',
                 'download',
                 'enforce-new-separators',
+                'info',
                 'normalize',
                 'partition',
                 'status',
@@ -102,6 +104,10 @@ def main_post_parse(args):
             if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
             partition_resources(taxalotl_config, args.resources, [args.level])
+        elif args.which == 'info':
+            if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
+                raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
+            info_on_resources(taxalotl_config, args.resources, [args.level])
         elif args.which == 'all':
             m = 'Currently you must enter a command to run. Use the --help option or see the Tutorial.md\n'
             sys.stdout.write(m)
@@ -193,6 +199,16 @@ def main():
 
     partition_p.set_defaults(which="partition")
 
+    # INFO
+    info_p = subp.add_parser('info',
+                                  help="Report statistics about a resource")
+    info_p.add_argument('resources', nargs="+", help="IDs of the resources")
+    info_p.add_argument("--level",
+                             default=None,
+                             help="The level of the taxonomy to partition")
+
+    info_p.set_defaults(which="info")
+
     # DIAGNOSE-NEW-SEPARATORS
     diag_sep_p = subp.add_parser('diagnose-new-separators',
                                  help="Uses the last OTT build to find taxa IDs that "
@@ -212,9 +228,9 @@ def main():
                            default=None,
                            help="The partition that is the root of the separation (default all)")
     enf_sep_p.set_defaults(which="enforce-new-separators")
-    # NORMALIZE
+    # ACCUMULATE-SEPARATED-DESCENDANTS
     accum_sep_des_p = subp.add_parser('accumulate-separated-descendants',
-                                      help="Should be run after enforce-separators and before compare-taxonomie")
+                                      help="Should be run after enforce-separators and before compare-taxonomies")
     accum_sep_des_p.add_argument('resources', nargs="*", help="IDs of the resources")
     accum_sep_des_p.set_defaults(which="accumulate-separated-descendants")
 

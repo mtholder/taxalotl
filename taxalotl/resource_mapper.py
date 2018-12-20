@@ -17,7 +17,7 @@ from taxalotl.worms import WormsTaxonomyWrapper
 BASE_ID_TO_RES_TYPE = {
     'col': CoLTaxonomyWrapper,
     'gbif': GBIFWrapper,
-    'irmng': IRMNGWrapper,
+    'irmng_raw': IRMNGWrapper,
     'ncbi': NCBIWrapper,
     'ott': OTTaxonomyWrapper,
     'silva': SilvaWrapper,

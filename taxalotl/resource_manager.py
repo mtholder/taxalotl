@@ -4,6 +4,7 @@ from __future__ import print_function
 import io
 import json
 import os
+from .resource_wrapper import AbstractResourceWrapper
 
 from peyotl import (get_logger)
 
@@ -27,19 +28,19 @@ def write_resources_file(obj, fp):
 def get_resource_wrapper(raw, refs, parent=None):
     from taxalotl.resource_mapper import BASE_ID_TO_RES_TYPE, wrapper_types
     base = BASE_ID_TO_RES_TYPE.get(raw["base_id"].lower())
-    if base:
+    if base and base is not AbstractResourceWrapper:
         # _LOG.debug('get_resource_wrapper.calling base raw={}'.format(raw))
         return base(raw, parent=parent, refs=refs)
     rt = raw["resource_type"].lower()
     st = raw.get('schema', '').lower()
     # _LOG.debug('rt={}'.format(rt))
     for wt in wrapper_types:
-        if rt == wt.resource_type and ((not st) or st in wt.schema):
+        if rt == wt.resource_type and (st in wt.schema):
             # _LOG.debug('get_resource_wrapper.calling wrapper_types wt={}'.format(wt))
             return wt(raw, parent=parent, refs=refs)
-    m = "resource_type, schema = ({}, {}) not recognized".format(rt, st)
-    _LOG.error(m)
-    raise RuntimeError(m)
+    m = "resource_type, schema = ({}, {}) not recognized for {}, using AbstractResourceWrapper...".format(rt, st, raw['id'])
+    # _LOG.info(m)
+    return AbstractResourceWrapper(raw, parent=parent, refs=refs)
 
 
 def get_subclass_resource_wrapper(raw, known_dict, refs):
@@ -84,8 +85,12 @@ def wrap_otifact_resources(res, refs=None):
     for w in rd.values():
         if w.aliases:
             for a in w.aliases:
-                if a in aliases or a in rd:
-                    raise RuntimeError("Repeated alias for an id: {}".format(a))
+                pra = aliases.get(a)
+                if pra:
+                    if pra.base_id != pra.id:
+                        aliases[a] = w
+                if a in rd:
+                    raise RuntimeError("Previously registered for an id: {}".format(a))
                 aliases[a] = w
     # _LOG.warn('aliases = {}'.format(aliases))
     rd.update(aliases)

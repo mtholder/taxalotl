@@ -498,6 +498,18 @@ class ResourceWrapper(FromOTifacts):
     def has_been_partitioned_for_fragment(self, fragment):
         return os.path.exists(self.get_misc_taxon_filepath_for_part(fragment))
 
+    @property
+    def base_resource(self):
+        return self if not self.parent else self.parent.base_resource
+
+    @property
+    def alias_list(self):
+        x = getattr(self, 'aliases', [])
+        return list(x) if x else []
+
+class AbstractResourceWrapper(ResourceWrapper):
+    def __init__(self, obj, parent=None, refs=None, config=None):
+        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs, config=config)
 
 # noinspection PyAbstractClass
 class TaxonomyWrapper(ResourceWrapper):
@@ -548,3 +560,4 @@ class TaxonomyWrapper(ResourceWrapper):
     @property
     def is_abstract_input_resource_type(self):
         return self.id == self.base_id and self.base_id != 'ott'
+
