@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 
+from typing import Dict, List
 import csv
 import io
 import os
@@ -347,7 +348,10 @@ def write_indented_subtree(out, node, indent_level):
 
 
 class TaxonTree(object):
-    def __init__(self, root_id, id_to_children_ids, id_to_taxon):
+    def __init__(self,
+                 root_id: int,
+                 id_to_children_ids: Dict[int, List[int]],
+                 id_to_taxon: Dict[int, OTTTaxon]):
         self.root = id_to_taxon[root_id]
         self.root.parent_ref = None
         self.id_to_taxon = {}
@@ -368,6 +372,45 @@ class TaxonTree(object):
     def get_taxon(self, uid):
         return self.id_to_taxon.get(uid)
 
+    def postorder(self) -> OTTTaxon:
+        for t in reversed(list(self.preorder())):
+            yield t
+
+    def preorder(self) -> OTTTaxon:
+        curr = self.root
+        if not curr:
+            return
+        yield curr
+        to_process = []
+        if curr.children_refs:
+            to_process.append(list(curr.children_refs))
+        while to_process:
+            cl = to_process[-1]
+            if not cl:
+                to_process.pop(-1)
+            else:
+                curr = cl.pop(0)
+                if curr.children_refs:
+                    to_process.append(list(curr.children_refs))
+                yield curr
+
+    def add_num_tips_below(self):
+        for taxon in self.postorder():
+            if taxon.children_refs is None:
+                taxon.num_tips_below = 1
+            else:
+                taxon.num_tips_below = sum([i.num_tips_below for i in taxon.children_refs])
+
+
+    def to_root_gen(self, taxon):
+        if taxon is None:
+            return
+        yield taxon
+        while taxon.par_id:
+            if taxon is self.root:
+                return
+            taxon = self.id_to_taxon[taxon.par_id]
+            yield taxon
 
 class TaxonForest(object):
     def __init__(self, id_to_taxon):

@@ -226,7 +226,7 @@ def _add_nst_subtree_el_to_dict(rd, nst_el, par_to_child):
 
 NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
                            'species group', 'species subgroup', 'varietas', 'variety', ])
-
+MIN_SEP_SIZE = 1000
 
 def get_stable_source_keys(taxon):
     all_src_keys = taxon.src_dict.keys()
@@ -234,6 +234,64 @@ def get_stable_source_keys(taxon):
     r = [i for i in filtered if i not in UNSTABLE_SRC_PREFIXES]
     r.sort()
     return r
+
+
+
+def _diagnose_relevant_sources(tree):
+    source_to_count = defaultdict(int)
+    leaf_set = set()
+    src_prefix_set = set()
+    for v in tree.id_to_taxon.values():
+        if v.children_refs is None:
+            leaf_set.add(v.id)
+        filtered = get_stable_source_keys(v)
+        src_prefix_set.update(filtered)
+        for src in filtered:
+            source_to_count[src] += 1
+    # We'll define a "minor" source as one that is found in 5000 fold fewer taxa as
+    #   the most common source for a slice. This is arbitrary.
+    FOLD_DIFF = 5000
+    max_seen = max(source_to_count.values())
+    min_cutoff = 0 if max_seen < FOLD_DIFF else max_seen // FOLD_DIFF
+    ac_src = [k for k, v in source_to_count.items() if v >= min_cutoff]
+    ac_src.sort()
+    _LOG.info("Relevant sources appear to be: {}".format(ac_src))
+    return frozenset(ac_src)
+
+PART_KEY_TO_REL_SRC_SET = {
+    'Chordata': frozenset(['gbif', 'irmng', 'ncbi', 'worms']),
+}
+
+def get_true_false_repsonse(p, true_func=None, def_value=False):
+    if true_func is None:
+        true_func = lambda r: r.lower() == 'y'
+    try:
+        resp = input(p)
+        return true_func(resp)
+    except:
+        return def_value
+
+def add_confirmed_sep(nns, tree, list_num_id_taxon):
+    if list_num_id_taxon:
+        r = tree.root
+        m = 'The current partition subtree "{}" has {} tips below it.'
+        _LOG.info(m.format(r.name_that_is_unique, r.num_tips_below))
+    top_sep_set = set()
+    for nt, i, obj in list_num_id_taxon:
+        if top_sep_set:
+            already_sep = False
+            for anc_obj in tree.to_root_gen(obj):
+                if anc_obj.id in top_sep_set:
+                    already_sep = True
+                    break
+            if already_sep:
+                continue
+        m = '"{}" has {} tips below it.'.format(obj.name_that_is_unique, nt)
+        p = '{} Enter (y) to treat is a separator: '.format(m)
+        if get_true_false_repsonse(p):
+            top_sep_set.add(i)
+    if top_sep_set:
+        nns.add_separtors_for_tree(tree, top_sep_set)
 
 
 # noinspection PyAbstractClass
@@ -256,39 +314,31 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
         tax_forest = tax_part.get_taxa_as_forest()
         _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
         nns = NestedNewSeparator()
-        source_to_count = defaultdict(int)
 
+        try:
+            ac_src = PART_KEY_TO_REL_SRC_SET[current_partition_key]
+        except:
+            m = 'Might try calling _diagnose_relevant_sources for "{}", but in Jan 2019 moved to ' \
+                'making this hard coded in PART_KEY_TO_REL_SRC_SET.'
+            raise NotImplementedError(m.format(current_partition_key))
+        _LOG.info("Relevant sources for {} are recorded as to be: {}".format(current_partition_key, ac_src))
         for tree in tax_forest.trees:
-            leaf_set = set()
-            src_prefix_set = set()
-            for v in tree.id_to_taxon.values():
-                if v.children_refs is None:
-                    leaf_set.add(v.id)
-                filtered = get_stable_source_keys(v)
-                src_prefix_set.update(filtered)
-                for src in filtered:
-                    source_to_count[src] += 1
-            # We'll define a "minor" source as one that is found in 5000 fold fewer taxa as
-            #   the most common source for a slice. This is arbitrary.
-            FOLD_DIFF = 5000
-            max_seen = max(source_to_count.values())
-            min_cutoff = 0 if max_seen < FOLD_DIFF else max_seen // FOLD_DIFF
-            ac_src = [k for k, v in source_to_count.items() if v >= min_cutoff]
-            ac_src.sort()
-            _LOG.info("Relevant sources appear to be: {}".format(ac_src))
-            ac_src = frozenset(ac_src)
+            tree.add_num_tips_below()
             assert ac_src
-            nst = set()
+            nst = []
             for i, obj in tree.id_to_taxon.items():
                 if obj is tree.root:
                     continue  # no point in partitioning at the root taxon
-                if i in leaf_set:
+                if not obj.children_refs:
                     continue  # no point in partitioning leaves...
                 sk_for_obj = set(get_stable_source_keys(obj))
                 if sk_for_obj.issuperset(ac_src):
-                    if not obj.rank or (obj.rank not in NON_SEP_RANKS):
-                        nst.add(i)
-            nns.add_separtors_for_tree(tree, nst)
+                    if obj.num_tips_below >= MIN_SEP_SIZE:
+                        if not obj.rank or (obj.rank not in NON_SEP_RANKS):
+                            nst.append((obj.num_tips_below, i, obj))
+            nst.sort(reverse=True)
+            add_confirmed_sep(nns, tree, nst)
+
         if len(nns.separators) == 0:
             _LOG.info('No new separators found for "{}"'.format(current_partition_key))
             return None
