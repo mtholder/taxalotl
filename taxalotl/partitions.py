@@ -222,13 +222,15 @@ def merge_and_write_taxon_partition_list(tp_list):
             tp.write()
             fp_set.add(fp)
 
+
 def write_info_for_res(outstream, res, part_name_to_split):
     _LOG.debug('part_name_to_split = {}'.format(part_name_to_split))
     par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
     _LOG.debug('par_frag = {}'.format(par_frag))
     if par_frag and not res.has_been_partitioned_for_fragment(par_frag):
         par_name = os.path.split(par_frag)[-1]
-        outstream.write('{} does not cover or has not been partitioned into {}\n'.format(res.id, par_name))
+        outstream.write(
+            '{} does not cover or has not been partitioned into {}\n'.format(res.id, par_name))
         return
     part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
     master_map = res.get_primary_partition_map()
@@ -238,9 +240,11 @@ def write_info_for_res(outstream, res, part_name_to_split):
         return
     fragment = os.path.join(par_frag, part_name_to_split) if par_frag else part_name_to_split
     if not res.has_been_partitioned_for_fragment(fragment):
-        outstream.write('{} does not cover or has not been partitioned into {}\n'.format(res.id, fragment))
+        outstream.write(
+            '{} does not cover or has not been partitioned into {}\n'.format(res.id, fragment))
         return
     outstream.write('What can I say about {} at {} ? Great stuff...\n'.format(res.id, fragment))
+
 
 def do_partition(res, part_name_to_split):
     """Partition a parent taxon into descendants and garbagebin (__misc__) dir
@@ -296,7 +300,8 @@ def check_partition_union(fragment, misc, subs, unpartitioned):
     for p in subs:
         p_ids = p._debug_validity_check()[1]
         slice_ids.update(p_ids)
-        _LOG.warn('{} IDs from {} bring total in {} up to {}'.format(len(p_ids), p.fragment, len(slice_ids), misc.fragment))
+        _LOG.warn('{} IDs from {} bring total in {} up to {}'.format(len(p_ids), p.fragment,
+                                                                     len(slice_ids), misc.fragment))
         for p_root_id, root_obj in p._roots.items():
             pr = root_obj['par_id']
             if pr not in slice_ids:

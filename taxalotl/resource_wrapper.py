@@ -507,9 +507,11 @@ class ResourceWrapper(FromOTifacts):
         x = getattr(self, 'aliases', [])
         return list(x) if x else []
 
+
 class AbstractResourceWrapper(ResourceWrapper):
     def __init__(self, obj, parent=None, refs=None, config=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs, config=config)
+
 
 # noinspection PyAbstractClass
 class TaxonomyWrapper(ResourceWrapper):
@@ -560,4 +562,3 @@ class TaxonomyWrapper(ResourceWrapper):
     @property
     def is_abstract_input_resource_type(self):
         return self.id == self.base_id and self.base_id != 'ott'
-

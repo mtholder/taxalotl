@@ -219,13 +219,14 @@ def normalize_resources(taxalotl_config, id_list):
         else:
             rw.normalize()
 
+
 def _iter_norm_term_res_internal_level_pairs(taxalotl_config, id_list, level_list, cmd_name):
-    '''iterates over (non abstract resource, level) pairs
+    """iterates over (non abstract resource, level) pairs
 
     Several commands work on normalized resources and work on levels.
     This generator serves as a common iterator for them.
     Working on the specified and (as the inner loop) over the requested levels.
-    '''
+    """
     if level_list == [None]:
         level_list = PREORDER_PART_LIST
     for rid in id_list:
@@ -239,15 +240,19 @@ def _iter_norm_term_res_internal_level_pairs(taxalotl_config, id_list, level_lis
             else:
                 yield res, part_name_to_split
 
+
 def info_on_resources(taxalotl_config, id_list, level_list):
     for res, part_name_to_split in _iter_norm_term_res_internal_level_pairs(taxalotl_config,
                                                                             id_list, level_list,
                                                                             'partition'):
-        write_info_for_res(out_stream, res, level=part_name_to_split)
+        write_info_for_res(out_stream, res, part_name_to_split)
+
 
 def partition_resources(taxalotl_config, id_list, level_list):
-    for res, part_name_to_split in _iter_norm_term_res_internal_level_pairs(taxalotl_config, id_list, level_list, 'partition'):
-        with use_tax_partitions() as tax_cache:
+    for res, part_name_to_split in _iter_norm_term_res_internal_level_pairs(taxalotl_config,
+                                                                            id_list, level_list,
+                                                                            'partition'):
+        with use_tax_partitions():
             do_partition(res, part_name_to_split)
 
 

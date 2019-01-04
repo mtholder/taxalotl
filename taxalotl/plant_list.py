@@ -237,12 +237,15 @@ class PlantListWrapper(TaxonomyWrapper):
         subdirs = ['{}_families'.format(i) for i in 'AGPB']
         dn = self.normalized_filedir
         assure_dir_exists(dn)
+        stem = ''
         for s in subdirs:
             nsd = os.path.join(dn, s)
             assure_dir_exists(nsd)
             in_sd = os.path.join(dd, s)
             csvf = [i for i in os.listdir(in_sd) if i.endswith('.csv')]
             csvf.sort()
+            if not csvf:
+                continue
             for i in csvf:
                 inp_fp = os.path.join(in_sd, i)
                 stem = i[:-4]
