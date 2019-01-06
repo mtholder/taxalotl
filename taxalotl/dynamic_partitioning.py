@@ -3,6 +3,7 @@ from __future__ import print_function
 import os
 import re
 import copy
+from typing import Dict
 
 from peyotl import get_logger, read_as_json, write_as_json, assure_dir_exists
 
@@ -27,44 +28,19 @@ def _escape_odd_char(s):
     return ''.join(x)
 
 
-def perform_dynamic_separation(ott_res, part_key, sep_fn, suppress_cache_flush=False, src_id=None):
+def perform_dynamic_separation(ott_res,
+                               res,
+                               part_key: str,
+                               separation_by_ott:Dict[int,Dict]):
     """Called where part_key is a PART_NAME element from the OTT 3 separation taxa."""
     fragment = get_fragment_from_part_name(part_key)
-    general_dynamic_separation(ott_res,
-                               fragment,
-                               sep_fn,
-                               suppress_cache_flush=suppress_cache_flush,
-                               src_id=src_id)
-
-
-def general_dynamic_separation(ott_res,
-                               fragment,
-                               sep_fn,
-                               suppress_cache_flush=False,
-                               src_id=None):
-    """
-    :param src_id:
-    :param suppress_cache_flush:
-    :param ott_res: resource wrapper for OTT
-    :param fragment: path_frag relative to the top of the partitioned dir
-    :param sep_fn:  name of the separations file ('__sep__.json')
-    :return: None
-    """
-    sep_json_filepath = os.path.join(ott_res.partitioned_filepath, fragment, sep_fn)
-    if not os.path.isfile(sep_json_filepath):
-        _LOG.info('No separators found for {}'.format(fragment))
-        return
-    sep_obj = read_as_json(sep_json_filepath)
     try:
         _general_dynamic_separation_from_obj(ott_res,
+                                             res,
                                              fragment,
-                                             sep_obj,
-                                             sep_fn,
-                                             src_id=src_id,
-                                             suppress_cache_flush=suppress_cache_flush)
+                                             separation_by_ott)
     finally:
-        if not suppress_cache_flush:
-            TAX_SLICE_CACHE.flush()
+        TAX_SLICE_CACHE.flush()
 
 
 class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
@@ -198,22 +174,17 @@ def _return_sep_obj_copy_with_ott_fields(sep_obj):
 
 
 def _general_dynamic_separation_from_obj(ott_res,
+                                         res,
                                          fragment,
-                                         sep_obj,
-                                         sep_fn,
-                                         src_id=None,
-                                         suppress_cache_flush=None):
+                                         separation_by_ott):
     """Separtes all sources and handles the recursion. Delegates to do_new_separation_of_src
 
-    :param ott_res:
-    :param fragment:
-    :param sep_obj:
-    :param sep_fn:
-    :return:
     """
+    sep_obj = separation_by_ott
     _LOG.info('breaking {} using {} separators: {}'.format(fragment,
                                                            len(sep_obj.keys()),
                                                            sep_obj.keys()))
+    return
     # Collect the set of source taxonomy IDs and mapping of sep ID (which is
     #   currently an OTT ID to the munged uniqname that will act as a readable
     #   subdirectory
@@ -231,8 +202,7 @@ def _general_dynamic_separation_from_obj(ott_res,
                                                 fragment=fragment,
                                                 sep_obj=aug_sep_obj,
                                                 src_id=it_src_id,
-                                                sep_fn=sep_fn,
-                                                suppress_cache_flush=suppress_cache_flush)
+                                                sep_fn=sep_fn)
 
 
 def _gen_dyn_separation_from_obj_for_source(ott_res,

@@ -16,12 +16,14 @@ from peyotl import (get_logger,
 from taxalotl.compare import compare_taxonomies_in_dir
 from taxalotl.partitions import (GEN_MAPPING_FILENAME,
                                  do_partition,
+                                 get_part_dir_from_part_name,
                                  NAME_TO_PARTS_SUBSETS,
                                  PART_NAMES,
                                  PREORDER_PART_LIST,
                                  TERMINAL_PART_NAMES,
                                  write_info_for_res)
 from taxalotl.tax_partition import (use_tax_partitions, get_taxonomies_for_dir)
+from taxalotl.dynamic_partitioning import perform_dynamic_separation
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -446,14 +448,7 @@ def perform_separation(taxalotl_config, part_name, sep_fn):
     sep_mapping_fp = os.path.join(ott_res.partitioned_filepath, SEP_MAPPING)
     if not os.path.isfile(sep_mapping_fp):
         cache_separator_names(taxalotl_config)
-    sm = read_as_json(sep_mapping_fp)
-    try:
-        part_dir_list = sm[part_name]
-    except:
-        raise ValueError('Did not find {} in {} dict'.format(part_name, sep_mapping_fp))
-    if len(part_dir_list) != 1:
-        raise ValueError('Did not find 1  value for {} in {} dict'.format(part_name, sep_mapping_fp))
-    top_dir = part_dir_list[0]
+    top_dir = get_part_dir_from_part_name(ott_res, part_name)
     active_sep_fn = os.path.join(top_dir, sep_fn)
     try:
         active_seps = read_as_json(active_sep_fn)
@@ -464,11 +459,7 @@ def perform_separation(taxalotl_config, part_name, sep_fn):
     for rid in resource_ids:
         rw = taxalotl_config.get_resource_by_id(rid)
         print(rid, rw)
-    """
-    sepfn = os.path.join(ott_res.partitioned_filepath, NEW_SEP_FILENAME)
-            print(part_name, sepfn)
-            perform_dynamic_separation(ott_res,
-                                       src_id=src,
-                                       part_key=part_name,
-                                       sep_fn=NEW_SEP_FILENAME,
-                                       suppress_cache_flush=True)"""
+        perform_dynamic_separation(ott_res,
+                                   res=rw,
+                                   part_key=part_name,
+                                   separation_by_ott=active_seps)
