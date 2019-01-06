@@ -23,7 +23,8 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
                                  TERMINAL_PART_NAMES,
                                  write_info_for_res)
 from taxalotl.tax_partition import (use_tax_partitions, get_taxonomies_for_dir)
-from taxalotl.dynamic_partitioning import perform_dynamic_separation
+from taxalotl.dynamic_partitioning import (perform_dynamic_separation,
+                                           return_sep_obj_copy_with_ott_fields)
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -451,7 +452,7 @@ def perform_separation(taxalotl_config, part_name, sep_fn):
     top_dir = get_part_dir_from_part_name(ott_res, part_name)
     active_sep_fn = os.path.join(top_dir, sep_fn)
     try:
-        active_seps = read_as_json(active_sep_fn)
+        active_seps = return_sep_obj_copy_with_ott_fields(read_as_json(active_sep_fn))
         print(active_seps)
     except:
         raise ValueError('{} does not exist'.format(part_name, active_sep_fn))

@@ -112,17 +112,19 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
             assert own_tp
             assert own_tp is not dest_tax_part_obj
             own_tp.move_from_misc_to_new_part(dest_tax_part_obj)
-        if self.misc_uncle is not None:
-            m = 'delegating separate call on fragment {} to uncle... {}'
-            _LOG.info(m.format(fragment_to_partition, self.misc_uncle.fragment))
-            self.misc_uncle.separate(fragment_to_partition,
-                                     list_of_subdirname_and_roots=None,
-                                     dest_tax_part_obj=dest_tax_part_obj)
+        # Not working up the "uncle's chain" as we have moved to a more
+        #  interactive, non-recursive separation mode
+        # if self.misc_uncle is not None:
+        #     m = 'delegating separate call on fragment {} to uncle... {}'
+        #     _LOG.info(m.format(fragment_to_partition, self.misc_uncle.fragment))
+        #     self.misc_uncle.separate(fragment_to_partition,
+        #                              list_of_subdirname_and_roots=None,
+        #                              dest_tax_part_obj=dest_tax_part_obj)
 
     def _flush(self):
         if self._has_flushed:
             return
-        _LOG.info("flushing VirtualTaxonomyToRootSlice for {}".format(self.fragment))
+        # _LOG.debug("flushing VirtualTaxonomyToRootSlice for {}".format(self.fragment))
         if self._taxon_partition:
             tp = self._taxon_partition
             self._taxon_partition = None
@@ -161,7 +163,7 @@ def get_virtual_tax_to_root_slice(res,
     return VirtualTaxonomyToRootSlice(res, fragment)
 
 
-def _return_sep_obj_copy_with_ott_fields(sep_obj):
+def return_sep_obj_copy_with_ott_fields(sep_obj):
     r = {}
     for sep_id, i in sep_obj.items():
         cobj = copy.deepcopy(i)
@@ -169,9 +171,20 @@ def _return_sep_obj_copy_with_ott_fields(sep_obj):
         cobj['src_dict']["ott"] = [int(sep_id)]
         s = cobj.get("sub")
         if s:
-            cobj["sub"] = _return_sep_obj_copy_with_ott_fields(s)
+            cobj["sub"] = return_sep_obj_copy_with_ott_fields(s)
     return r
 
+
+def _assure_sep_dirs(ott_res, fragment, sep_obj):
+    sep_id_to_fn = {}
+    for sep_id, i in sep_obj.items():
+        fs = _escape_odd_char(i["uniqname"])
+        sep_id_to_fn[sep_id] = fs
+        nd = os.path.join(ott_res.partitioned_filepath, fragment, fs)
+        if not os.path.isdir(nd):
+            _LOG.info('Creating {}'.format(nd))
+            os.mkdir(nd)
+    return sep_id_to_fn
 
 def _general_dynamic_separation_from_obj(ott_res,
                                          res,
@@ -181,42 +194,11 @@ def _general_dynamic_separation_from_obj(ott_res,
 
     """
     sep_obj = separation_by_ott
-    _LOG.info('breaking {} using {} separators: {}'.format(fragment,
-                                                           len(sep_obj.keys()),
-                                                           sep_obj.keys()))
-    return
-    # Collect the set of source taxonomy IDs and mapping of sep ID (which is
-    #   currently an OTT ID to the munged uniqname that will act as a readable
-    #   subdirectory
-    src_set = set()
-    sep_id_to_fn = {}
-    aug_sep_obj = _return_sep_obj_copy_with_ott_fields(sep_obj)
-    for sep_id, i in aug_sep_obj.items():
-        src_set.update(i['src_dict'].keys())
-        sep_id_to_fn[sep_id] = _escape_odd_char(i["uniqname"])
-    _LOG.info('src_set: {}'.format(src_set))
-    for it_src_id in src_set:
-        if src_id is not None and src_id != it_src_id:
-            continue
-        _gen_dyn_separation_from_obj_for_source(ott_res,
-                                                fragment=fragment,
-                                                sep_obj=aug_sep_obj,
-                                                src_id=it_src_id,
-                                                sep_fn=sep_fn)
-
-
-def _gen_dyn_separation_from_obj_for_source(ott_res,
-                                            fragment,
-                                            sep_obj,
-                                            src_id,
-                                            sep_fn,
-                                            suppress_cache_flush=None):
-    sep_id_to_fn = {}
-    for sep_id, i in sep_obj.items():
-        sep_id_to_fn[sep_id] = _escape_odd_char(i["uniqname"])
-    taxalotl_config = ott_res.config
-    res = taxalotl_config.get_terminalized_res_by_id(src_id)
+    m = 'breaking for the {} taxonomy for {} using {} separators: {}'
+    _LOG.info(m.format(res.id, fragment, len(sep_obj.keys()), sep_obj.keys()))
+    sep_id_to_fn = _assure_sep_dirs(ott_res, fragment, separation_by_ott)
     virt_taxon_slice = get_virtual_tax_to_root_slice(res, fragment)
+    src_id = res.base_id
     try:
         sep_dir_ids_list = []
         for sep_id, i in sep_obj.items():
@@ -228,29 +210,28 @@ def _gen_dyn_separation_from_obj_for_source(ott_res,
 
         # Write the subdirectory separtion files, if needed (only first source)
         # and gather the list of recursive calls
-        recursive_call_list = []
-        for sep_id, obj in sep_obj.items():
-            sub = obj.get("sub")
-            if not sub:
-                continue
-            next_frag = os.path.join(fragment, sep_id_to_fn[sep_id])
-            subdir = os.path.join(ott_res.partitioned_filepath, next_frag)
-            assure_dir_exists(subdir)
-            subjson = os.path.join(subdir, sep_fn)
-            if not os.path.exists(subjson):
-                write_as_json(sub, subjson, indent=2, sort_keys=True, separators=(',', ': '))
-                _LOG.info('sub separation file written to "{}"'.format(subjson))
-            rec_el = (next_frag, sub)
-            recursive_call_list.append(rec_el)
-        # _LOG.info("Skipping recursion"); recursive_call_list = []
-        for recurse_el in recursive_call_list:
-            next_frag, next_sep_obj = recurse_el
-            _gen_dyn_separation_from_obj_for_source(ott_res=ott_res,
-                                                    fragment=next_frag,
-                                                    sep_obj=next_sep_obj,
-                                                    src_id=src_id,
-                                                    sep_fn=sep_fn,
-                                                    suppress_cache_flush=suppress_cache_flush)
+        # recursive_call_list = []
+        # for sep_id, obj in sep_obj.items():
+        #     sub = obj.get("sub")
+        #     if not sub:
+        #         continue
+        #     next_frag = os.path.join(fragment, sep_id_to_fn[sep_id])
+        #     subdir = os.path.join(ott_res.partitioned_filepath, next_frag)
+        #     assure_dir_exists(subdir)
+        #     subjson = os.path.join(subdir, sep_fn)
+        #     if not os.path.exists(subjson):
+        #         write_as_json(sub, subjson, indent=2, sort_keys=True, separators=(',', ': '))
+        #         _LOG.info('sub separation file written to "{}"'.format(subjson))
+        #     rec_el = (next_frag, sub)
+        #     recursive_call_list.append(rec_el)
+        # # _LOG.info("Skipping recursion"); recursive_call_list = []
+        # for recurse_el in recursive_call_list:
+        #     next_frag, next_sep_obj = recurse_el
+        #     _gen_dyn_separation_from_obj_for_source(ott_res=ott_res,
+        #                                             fragment=next_frag,
+        #                                             sep_obj=next_sep_obj,
+        #                                             src_id=src_id,
+        #                                             sep_fn=sep_fn,
+        #                                             suppress_cache_flush=suppress_cache_flush)
     finally:
-        if not suppress_cache_flush:
-            virt_taxon_slice.remove_self_from_cache()
+        virt_taxon_slice.remove_self_from_cache()
