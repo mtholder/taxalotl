@@ -67,7 +67,12 @@ def wrap_otifact_resources(res, refs=None):
             w = get_resource_wrapper(v, refs)
             if w is not None:
                 rd[k] = w
+
     while by_par:
+        # for k, v in by_par.items():
+        #     for rk, inner_v in v:
+        #         _LOG.debug('Round {}: by_par[{}] = [{}, {}]'.format(round, k, rk, inner_v))
+        # round += 1
         curr_key_set = set(rd.keys())
         needed = set(by_par.keys())
         inter = curr_key_set.intersection(needed)

@@ -17,6 +17,16 @@ ACCUM_DES_FILENAME = '__accum_des__.json'
 _LOG = get_logger(__name__)
 
 
+def get_taxonomies_for_dir(taxon_dir):
+    inps_dir = os.path.join(taxon_dir, INP_TAXONOMY_DIRNAME)
+    resource_ids = []
+    for name in os.listdir(inps_dir):
+        fp = os.path.join(inps_dir, name)
+        if os.path.isdir(fp) and os.path.isfile(os.path.join(fp, ROOTS_FILENAME)):
+            resource_ids.append(name)
+    return resource_ids
+
+
 def get_roots_for_subset(tax_dir, misc_tax_dir):
     return _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, ROOTS_FILENAME)
 
@@ -775,3 +785,4 @@ def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
         outp.write(header)
         for l in ltw:
             outp.write(l)
+

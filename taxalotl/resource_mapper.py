@@ -18,6 +18,7 @@ BASE_ID_TO_RES_TYPE = {
     'col': CoLTaxonomyWrapper,
     'gbif': GBIFWrapper,
     'irmng_raw': IRMNGWrapper,
+    'irmng_ot': TaxonomyWrapper,
     'ncbi': NCBIWrapper,
     'ott': OTTaxonomyWrapper,
     'silva': SilvaWrapper,

@@ -19,8 +19,9 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
                                  NAME_TO_PARTS_SUBSETS,
                                  PART_NAMES,
                                  PREORDER_PART_LIST,
+                                 TERMINAL_PART_NAMES,
                                  write_info_for_res)
-from taxalotl.tax_partition import use_tax_partitions
+from taxalotl.tax_partition import (use_tax_partitions, get_taxonomies_for_dir)
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -321,26 +322,12 @@ def diagnose_new_separators(taxalotl_config, level_list):
 
 
 def enforce_new_separators(taxalotl_config, id_list, level_list):
-    raise NotImplementedError('enforce_new_separators')
-    # if level_list == [None]:
-    #     level_list = list(PREORDER_PART_LIST) + list(TERMINAL_PART_NAMES)
-    # ott_res = taxalotl_config.get_terminalized_res_by_id("ott", 'enforce-new-separators')
-    # if not ott_res.has_been_partitioned():
-    #     partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
-    # if not id_list:
-    #     id_list = ["ott", "gbif", "irmng", "silva", "worms", "ncbi"]
-    # for src in id_list:
-    #     if src is not None:
-    #         res = taxalotl_config.get_terminalized_res_by_id(src, 'enforce-new-separators')
-    #         if not res.has_been_partitioned():
-    #             partition_resources(taxalotl_config, [src], PREORDER_PART_LIST)
-    #     with use_tax_partitions() as cache:
-    #         for part_name in level_list:
-    #             perform_dynamic_separation(ott_res,
-    #                                        src_id=src,
-    #                                        part_key=part_name,
-    #                                        sep_fn=NEW_SEP_FILENAME,
-    #                                        suppress_cache_flush=True)
+    if level_list == [None]:
+        level_list = list(PREORDER_PART_LIST) + list(TERMINAL_PART_NAMES)
+    with use_tax_partitions():
+        for part_name in level_list:
+            perform_separation(taxalotl_config, part_name, NEW_SEP_FILENAME)
+
 
 
 def build_partition_maps(taxalotl_config):
@@ -450,3 +437,38 @@ def accumulate_separated_descendants(taxalotl_config, id_list):
         for d in postorder:
             _LOG.info('accumulate_separated_descendants for {}'.format(d))
             res.accumulate_separated_descendants(d)
+
+
+def perform_separation(taxalotl_config, part_name, sep_fn):
+    ott_res = taxalotl_config.get_terminalized_res_by_id("ott", 'enforce-new-separators')
+    if not ott_res.has_been_partitioned():
+        partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
+    sep_mapping_fp = os.path.join(ott_res.partitioned_filepath, SEP_MAPPING)
+    if not os.path.isfile(sep_mapping_fp):
+        cache_separator_names(taxalotl_config)
+    sm = read_as_json(sep_mapping_fp)
+    try:
+        part_dir_list = sm[part_name]
+    except:
+        raise ValueError('Did not find {} in {} dict'.format(part_name, sep_mapping_fp))
+    if len(part_dir_list) != 1:
+        raise ValueError('Did not find 1  value for {} in {} dict'.format(part_name, sep_mapping_fp))
+    top_dir = part_dir_list[0]
+    active_sep_fn = os.path.join(top_dir, sep_fn)
+    try:
+        active_seps = read_as_json(active_sep_fn)
+        print(active_seps)
+    except:
+        raise ValueError('{} does not exist'.format(part_name, active_sep_fn))
+    resource_ids = get_taxonomies_for_dir(top_dir)
+    for rid in resource_ids:
+        rw = taxalotl_config.get_resource_by_id(rid)
+        print(rid, rw)
+    """
+    sepfn = os.path.join(ott_res.partitioned_filepath, NEW_SEP_FILENAME)
+            print(part_name, sepfn)
+            perform_dynamic_separation(ott_res,
+                                       src_id=src,
+                                       part_key=part_name,
+                                       sep_fn=NEW_SEP_FILENAME,
+                                       suppress_cache_flush=True)"""
