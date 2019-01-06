@@ -7,8 +7,7 @@ from typing import Dict
 
 from peyotl import get_logger, read_as_json, write_as_json, assure_dir_exists
 
-from taxalotl.partitions import (get_fragment_from_part_name,
-                                 get_all_taxdir_and_misc_uncles,
+from taxalotl.partitions import (get_all_taxdir_and_misc_uncles,
                                  )
 from taxalotl.tax_partition import (TAX_SLICE_CACHE,
                                     get_taxon_partition,
@@ -33,7 +32,7 @@ def perform_dynamic_separation(ott_res,
                                part_key: str,
                                separation_by_ott:Dict[int,Dict]):
     """Called where part_key is a PART_NAME element from the OTT 3 separation taxa."""
-    fragment = get_fragment_from_part_name(part_key)
+    fragment = ott_res.get_fragment_from_part_name(part_key)
     try:
         _general_dynamic_separation_from_obj(ott_res,
                                              res,

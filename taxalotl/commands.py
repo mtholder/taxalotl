@@ -374,11 +374,7 @@ def cache_separator_names(taxalotl_config):
 
 def compare_taxonomies(taxalotl_config, levels):
     assert levels != [None]
-    rw = taxalotl_config.get_terminalized_res_by_id("ott", '')
-    outfn = os.path.join(rw.partitioned_filepath, SEP_MAPPING)
-    if not os.path.exists(outfn):
-        cache_separator_names(taxalotl_config)
-    todir = read_as_json(outfn)
+    todir = taxalotl_config.get_separator_dict()
     for level in levels:
         try:
             tax_dir_list = todir[level]
@@ -421,12 +417,7 @@ def clean_resources(taxalotl_config, action, id_list):
 
 
 def accumulate_separated_descendants(taxalotl_config, id_list):
-    rw = taxalotl_config.get_terminalized_res_by_id("ott", '')
-    outfn = os.path.join(rw.partitioned_filepath, SEP_MAPPING)
-    if not os.path.exists(outfn):
-        cache_separator_names(taxalotl_config)
-    assert os.path.exists(outfn)
-    part_to_dir = read_as_json(outfn)
+    part_to_dir = taxalotl_config.get_separator_dict()
     # created a post-order list by using the length of the directory...
     dir_tuple_list = []
     for d in part_to_dir.values():

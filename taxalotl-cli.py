@@ -56,6 +56,14 @@ ver_inp_res_dep_cmds = ['analyze-update', ]
 all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 
 
+def _validate_level_arg(taxalotl_config, level):
+    if (level is not None) and (level not in NAME_TO_PARTS_SUBSETS):
+        sep_dict = taxalotl_config.get_separator_dict()
+        if level not in sep_dict:
+            sn = set(NAME_TO_PARTS_SUBSETS.keys()).union(sep_dict.keys())
+            raise RuntimeError('--level should be one of "{}"'.format('", "'.join(sn)))
+    return True
+
 def main_post_parse(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config)
     hist_file = os.path.expanduser("~/.taxalotl_history")
@@ -91,12 +99,10 @@ def main_post_parse(args):
         elif args.which == 'pull-otifacts':
             pull_otifacts(taxalotl_config)
         elif args.which == 'diagnose-new-separators':
-            if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
-                raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
+            _validate_level_arg(taxalotl_config, args.level)
             diagnose_new_separators(taxalotl_config, [args.level])
         elif args.which == 'enforce-new-separators':
-            if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
-                raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
+            _validate_level_arg(taxalotl_config, args.level)
             enforce_new_separators(taxalotl_config, args.resources, [args.level])
         elif args.which == 'build-partition-maps':
             build_partition_maps(taxalotl_config)

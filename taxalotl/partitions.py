@@ -192,24 +192,9 @@ def find_partition_dirs_for_taxonomy(path_pref, res_id):
     return [i for i in iter_existing_tax_dirs(path_pref, res_id)]
 
 def get_part_dir_from_part_name(res, parts_key):
-    return os.path.join(res.partitioned_filepath, get_fragment_from_part_name(parts_key))
-
-def get_fragment_from_part_name(parts_key):
-    return PART_NAME_TO_FRAGMENT[parts_key]
+    return os.path.join(res.partitioned_filepath, res.config.get_fragment_from_part_name(parts_key))
 
 
-def get_part_inp_taxdir(parts_dir, part_key, taxonomy_id):
-    df = get_fragment_from_part_name(part_key)
-    return os.path.join(parts_dir, df, INP_TAXONOMY_DIRNAME, taxonomy_id)
-
-
-def get_par_and_par_misc_taxdir(parts_dir, part_key, taxonomy_id):
-    df = get_fragment_from_part_name(part_key)
-    par_df = os.path.split(df)[0]
-    misc_df = os.path.join(par_df, MISC_DIRNAME)
-    par_part_key = os.path.split(par_df)[0]
-    pmtd = os.path.join(parts_dir, misc_df, INP_TAXONOMY_DIRNAME, taxonomy_id)
-    return par_part_key, pmtd
 
 
 def merge_and_write_taxon_partition_list(tp_list):

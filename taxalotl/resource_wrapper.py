@@ -19,8 +19,6 @@ from taxalotl.newick import normalize_newick
 from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  has_any_partition_dirs,
                                  get_auto_gen_part_mapper,
-                                 get_part_inp_taxdir,
-                                 get_par_and_par_misc_taxdir,
                                  get_inp_taxdir,
                                  get_misc_inp_taxdir,
                                  get_taxon_partition, )
@@ -394,16 +392,14 @@ class ResourceWrapper(FromOTifacts):
             _LOG.info('Removed "{}"'.format(directory))
 
     def get_taxdir_for_part(self, part_key):
-        return get_part_inp_taxdir(self.partitioned_filepath, part_key, self.id)
+        return self.config.get_part_inp_taxdir(part_key, self.id)
 
     def get_taxdir_for_root_of_part(self, part_key):
         term_dir = self.get_taxdir_for_part(part_key)
         taxon_file = os.path.join(term_dir, self.taxon_filename)
         if os.path.exists(taxon_file):
             return term_dir
-        par_key, misc_dir = get_par_and_par_misc_taxdir(self.partitioned_filepath,
-                                                        part_key,
-                                                        self.id)
+        par_key, misc_dir = self.config.get_par_and_par_misc_taxdir(part_key, self.id)
         taxon_file = os.path.join(misc_dir, self.taxon_filename)
         if os.path.exists(taxon_file):
             return misc_dir
