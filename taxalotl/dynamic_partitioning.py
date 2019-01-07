@@ -32,7 +32,7 @@ def perform_dynamic_separation(ott_res,
                                part_key: str,
                                separation_by_ott:Dict[int,Dict]):
     """Called where part_key is a PART_NAME element from the OTT 3 separation taxa."""
-    fragment = ott_res.get_fragment_from_part_name(part_key)
+    fragment = ott_res.config.get_fragment_from_part_name(part_key)
     try:
         _general_dynamic_separation_from_obj(ott_res,
                                              res,
@@ -197,7 +197,7 @@ def _general_dynamic_separation_from_obj(ott_res,
     _LOG.info(m.format(res.id, fragment, len(sep_obj.keys()), sep_obj.keys()))
     sep_id_to_fn = _assure_sep_dirs(ott_res, fragment, separation_by_ott)
     virt_taxon_slice = get_virtual_tax_to_root_slice(res, fragment)
-    src_id = res.base_id
+    src_id = res.unversioned_base_name
     try:
         sep_dir_ids_list = []
         for sep_id, i in sep_obj.items():

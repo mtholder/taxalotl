@@ -301,49 +301,58 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
+    def get_source_for_sep_or_part(self, current_partition_key):
+        try:
+            return PART_KEY_TO_REL_SRC_SET[current_partition_key]
+        except:
+            dn = self.config.get_fragment_from_part_name(current_partition_key)
+            higher = os.path.split(os.path.split(dn)[0])[-1]
+            if higher.lower() == 'life':
+                raise ValueError('partition/separator name "{}" not found')
+            return self.get_source_for_sep_or_part(higher)
+
     def diagnose_new_separators(self, current_partition_key):
-        f_list = self.config.get_fragment_from_part_name(current_partition_key)
-        assert len(f_list) == 1
-        for fragment in f_list:
-            tax_part = get_taxon_partition(self, fragment)
-            tax_part.read_inputs_for_read_only()
-            if not os.path.isfile(tax_part.tax_fp):
-                m = 'Skipping {} due to lack of file at "{}"'
-                _LOG.warn(m.format(current_partition_key, tax_part.tax_fp))
-                return {}
-            _LOG.info('converting taxonomy from {} to a tree'.format(tax_part.tax_fp))
-            tax_forest = tax_part.get_taxa_as_forest()
-            _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
-            nns = NestedNewSeparator()
+        fragment = self.config.get_fragment_from_part_name(current_partition_key)
+        tax_part = get_taxon_partition(self, fragment)
+        tax_part.read_inputs_for_read_only()
+        if not os.path.isfile(tax_part.tax_fp):
+            m = 'Skipping {} due to lack of file at "{}"'
+            _LOG.warn(m.format(current_partition_key, tax_part.tax_fp))
+            return {}
+        _LOG.info('converting taxonomy from {} to a tree'.format(tax_part.tax_fp))
+        tax_forest = tax_part.get_taxa_as_forest()
+        _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
+        nns = NestedNewSeparator()
 
-            try:
-                ac_src = PART_KEY_TO_REL_SRC_SET[current_partition_key]
-            except:
-                m = 'Might try calling _diagnose_relevant_sources for "{}", but in Jan 2019 moved to ' \
-                    'making this hard coded in PART_KEY_TO_REL_SRC_SET.'
-                raise NotImplementedError(m.format(current_partition_key))
-            _LOG.info("Relevant sources for {} are recorded as to be: {}".format(current_partition_key, ac_src))
-            for tree in tax_forest.trees:
-                tree.add_num_tips_below()
-                assert ac_src
-                nst = []
-                for i, obj in tree.id_to_taxon.items():
-                    if obj is tree.root:
-                        continue  # no point in partitioning at the root taxon
-                    if not obj.children_refs:
-                        continue  # no point in partitioning leaves...
-                    sk_for_obj = set(get_stable_source_keys(obj))
-                    if sk_for_obj.issuperset(ac_src):
-                        if obj.num_tips_below >= MIN_SEP_SIZE:
-                            if not obj.rank or (obj.rank not in NON_SEP_RANKS):
-                                nst.append((obj.num_tips_below, i, obj))
-                nst.sort(reverse=True)
-                add_confirmed_sep(nns, tree, nst)
+        try:
+            ac_src = self.get_source_for_sep_or_part(current_partition_key)
+        except:
+            m = 'Might try calling _diagnose_relevant_sources for "{}", but in Jan 2019 moved to ' \
+                'making this hard coded in PART_KEY_TO_REL_SRC_SET.'
+            raise NotImplementedError(m.format(current_partition_key))
+        _LOG.info("Relevant sources for {} are recorded as to be: {}".format(current_partition_key, ac_src))
+        for tree in tax_forest.trees:
+            tree.add_num_tips_below()
+            assert ac_src
+            nst = []
+            for i, obj in tree.id_to_taxon.items():
+                if obj is tree.root:
+                    continue  # no point in partitioning at the root taxon
+                if not obj.children_refs:
+                    continue  # no point in partitioning leaves...
+                sk_for_obj = set(get_stable_source_keys(obj))
+                if sk_for_obj.issuperset(ac_src):
+                    if obj.num_tips_below >= MIN_SEP_SIZE:
+                        if not obj.rank or (obj.rank not in NON_SEP_RANKS):
+                            nst.append((obj.num_tips_below, i, obj))
+            nst.sort(reverse=True)
+            add_confirmed_sep(nns, tree, nst)
 
-            if len(nns.separators) == 0:
-                _LOG.info('No new separators found for "{}"'.format(current_partition_key))
-                return None
+        if len(nns.separators) == 0:
+            _LOG.info('No new separators found for "{}"'.format(current_partition_key))
+            return None
         rel_dir_for_part = self.config.get_fragment_from_part_name(current_partition_key)
+        assert len(rel_dir_for_part) == 1
         return {rel_dir_for_part: nns}
 
     def build_paritition_maps(self):

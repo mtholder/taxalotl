@@ -82,9 +82,15 @@ class TaxalotlConfig(object):
     def get_fragment_from_part_name(self, parts_key):
         try:
             from taxalotl.partitions import PART_NAME_TO_FRAGMENT
-            return PART_NAME_TO_FRAGMENT[parts_key]
+            x = PART_NAME_TO_FRAGMENT[parts_key]
         except:
-            return self.get_separator_dict()[parts_key]
+            x = self.get_separator_dict()[parts_key]
+        if isinstance(x, list):
+            if len(x) != 1:
+                m = 'fragment -> part_name mapping not a list of size 1 for {}'
+                raise RuntimeError(m.format(parts_key))
+            x = x[0]
+        return x
 
     def get_part_inp_taxdir(self, part_key, taxonomy_id):
         from taxalotl.partitions import INP_TAXONOMY_DIRNAME

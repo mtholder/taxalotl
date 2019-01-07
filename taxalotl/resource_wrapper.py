@@ -558,3 +558,9 @@ class TaxonomyWrapper(ResourceWrapper):
     @property
     def is_abstract_input_resource_type(self):
         return self.id == self.base_id and self.base_id != 'ott'
+
+    @property
+    def unversioned_base_name(self):
+        if self.base_id == 'irmng_ot':
+            return 'irmng'  # sorry this is hacky...
+        return self.base_id

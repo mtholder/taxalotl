@@ -329,7 +329,7 @@ def enforce_new_separators(taxalotl_config, id_list, level_list):
         level_list = list(PREORDER_PART_LIST) + list(TERMINAL_PART_NAMES)
     with use_tax_partitions():
         for part_name in level_list:
-            perform_separation(taxalotl_config, part_name, NEW_SEP_FILENAME)
+            perform_separation(taxalotl_config, part_name, id_list, NEW_SEP_FILENAME)
 
 
 
@@ -433,7 +433,7 @@ def accumulate_separated_descendants(taxalotl_config, id_list):
             res.accumulate_separated_descendants(d)
 
 
-def perform_separation(taxalotl_config, part_name, sep_fn):
+def perform_separation(taxalotl_config, part_name, id_list, sep_fn):
     ott_res = taxalotl_config.get_terminalized_res_by_id("ott", 'enforce-new-separators')
     if not ott_res.has_been_partitioned():
         partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
@@ -447,7 +447,10 @@ def perform_separation(taxalotl_config, part_name, sep_fn):
         print(active_seps)
     except:
         raise ValueError('{} does not exist'.format(part_name, active_sep_fn))
-    resource_ids = get_taxonomies_for_dir(top_dir)
+    if id_list:
+        resource_ids = id_list
+    else:
+        resource_ids = get_taxonomies_for_dir(top_dir)
     for rid in resource_ids:
         rw = taxalotl_config.get_resource_by_id(rid)
         print(rid, rw)

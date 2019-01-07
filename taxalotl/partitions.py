@@ -86,8 +86,9 @@ def get_all_taxdir_and_misc_uncles(parts_dir, frag, taxonomy_id):
     d = [get_inp_taxdir(parts_dir, frag, taxonomy_id)]
     if os.sep in frag:
         frag = os.path.split(frag)[0]
-        while frag:
-            d.append(get_inp_taxdir(parts_dir, os.path.join(frag, MISC_DIRNAME), taxonomy_id))
+        while len(frag) > 1 + len(parts_dir):
+            md = get_inp_taxdir(parts_dir, os.path.join(frag, MISC_DIRNAME), taxonomy_id)
+            d.append(md)
             if os.sep in frag:
                 frag = os.path.split(frag)[0]
             else:
