@@ -771,10 +771,11 @@ def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
             for p in synlist:
                 ltw.append(p[1])
     oset = frozenset(id_order)
-    for key, synlist in dict_to_write.items():
-        if key not in oset:
-            for syn_pair in synlist:
-                ltw.append(syn_pair[1])
+    if dict_to_write:
+        for key, synlist in dict_to_write.items():
+            if key not in oset:
+                for syn_pair in synlist:
+                    ltw.append(syn_pair[1])
     if not ltw:
         return
     x = len(ltw)

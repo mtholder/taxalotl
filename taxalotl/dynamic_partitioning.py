@@ -7,6 +7,8 @@ from typing import Dict
 
 from peyotl import get_logger, read_as_json, write_as_json, assure_dir_exists
 
+
+from taxalotl.util import get_true_false_repsonse
 from taxalotl.partitions import (get_all_taxdir_and_misc_uncles,
                                  )
 from taxalotl.tax_partition import (TAX_SLICE_CACHE,
@@ -113,12 +115,13 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
             own_tp.move_from_misc_to_new_part(dest_tax_part_obj)
         # Not working up the "uncle's chain" as we have moved to a more
         #  interactive, non-recursive separation mode
-        # if self.misc_uncle is not None:
-        #     m = 'delegating separate call on fragment {} to uncle... {}'
-        #     _LOG.info(m.format(fragment_to_partition, self.misc_uncle.fragment))
-        #     self.misc_uncle.separate(fragment_to_partition,
-        #                              list_of_subdirname_and_roots=None,
-        #                              dest_tax_part_obj=dest_tax_part_obj)
+        if self.misc_uncle is not None:
+            m = 'Delegate the separate command on fragment "{}" for {} to uncle "{}" ? (y/n)'
+            m = m.format(fragment_to_partition, self.res.id, self.misc_uncle.fragment)
+            if get_true_false_repsonse(m):
+                self.misc_uncle.separate(fragment_to_partition,
+                                         list_of_subdirname_and_roots=None,
+                                         dest_tax_part_obj=dest_tax_part_obj)
 
     def _flush(self):
         if self._has_flushed:

@@ -6,6 +6,7 @@ import os
 from peyotl import get_logger
 from peyotl.utility.str_util import StringIO
 
+from taxalotl.util import get_true_false_repsonse
 from taxalotl.ott_schema import (read_taxonomy_to_get_single_taxon,
                                  )
 from taxalotl.partitions import (fill_empty_anc_of_mapping,
@@ -261,14 +262,7 @@ PART_KEY_TO_REL_SRC_SET = {
     'Chordata': frozenset(['gbif', 'irmng', 'ncbi', 'worms']),
 }
 
-def get_true_false_repsonse(p, true_func=None, def_value=False):
-    if true_func is None:
-        true_func = lambda r: r.lower() == 'y'
-    try:
-        resp = input(p)
-        return true_func(resp)
-    except:
-        return def_value
+
 
 def add_confirmed_sep(nns, tree, list_num_id_taxon):
     if list_num_id_taxon:
