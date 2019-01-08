@@ -346,7 +346,6 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
             _LOG.info('No new separators found for "{}"'.format(current_partition_key))
             return None
         rel_dir_for_part = self.config.get_fragment_from_part_name(current_partition_key)
-        assert len(rel_dir_for_part) == 1
         return {rel_dir_for_part: nns}
 
     def build_paritition_maps(self):
