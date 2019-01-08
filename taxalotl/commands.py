@@ -42,33 +42,15 @@ def analyze_update_to_resources(prev, curr):
     raise NotImplementedError('ha')
 
 
-def analyze_update(taxalotl_config, id_list):
-    ott_res = taxalotl_config.get_terminalized_res_by_id('ott')
-    ott_inps = ott_res.input_dict()
-    for i in id_list:
-        prev_used_version_id = ott_inps.get(i)
-        if prev_used_version_id is None:
-            _LOG.info(
-                'Taxonomy {} was a not an input to the current version of OTT, so an update cannot be analyzed.'.format(
-                    i))
-            continue
-        x = taxalotl_config.get_all_terminalized_res_by_id(i)
-        xi = [j.id for j in x]
-        try:
-            prev_used_version_index = xi.index(prev_used_version_id)
-        except ValueError:
-            _LOG.info(
-                'The previously used version of {} is {}, but this is not known to taxalotl, you might need to run the pull-otifacts action.'.format(
-                    i, prev_used_version_id))
-            continue
-        if prev_used_version_index == len(xi) - 1:
-            _LOG.info(
-                'The previously used version of {} is {} appears to be the latest version of that resource, you might need to run the pull-otifacts action.'.format(
-                    i, prev_used_version_id))
-            continue
-        prev_used = x[prev_used_version_index]
-        latest_wrapper = x[-1]
-        analyze_update_to_resources(prev_used, latest_wrapper)
+def analyze_update(taxalotl_config, id_list, level_list):
+    assert len(id_list) == 2
+    eid, lid = id_list
+    earlier = taxalotl_config.get_terminalized_res_by_id(eid)
+    later = taxalotl_config.get_terminalized_res_by_id(lid)
+    if earlier.base_id != later.base_id:
+        m ='Can only analyze updates of the same taxonomy base: {}( base = {}), but {} (base = {})'
+        raise ValueError(m.format(eid, earlier.base_id, lid, later.base_id))
+    analyze_update_to_resources(earlier, later)
 
 
 def download_resources(taxalotl_config, id_list):
