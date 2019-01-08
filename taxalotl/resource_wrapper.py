@@ -376,13 +376,18 @@ class ResourceWrapper(FromOTifacts):
     def _remove_taxonomy_dir(self, directory):
         if not os.path.isdir(directory):
             return
-        f_to_remove = [self.taxon_filename, 'roots.txt', 'about.json', 'details.json']
+        f_to_remove = [self.taxon_filename,
+                       '__roots__.json',
+                       'about.json',
+                       'details.json',
+                       '__accum_des__.json',
+                       ]
         if self.synonyms_filename:
             f_to_remove.append(self.synonyms_filename)
-        _LOG.info('Removing contents of "{}"'.format(directory))
         for f in f_to_remove:
             fp = os.path.join(directory, f)
             if os.path.exists(fp):
+                _LOG.info('Removing "{}"'.format(fp))
                 os.unlink(fp)
         try:
             os.rmdir(directory)

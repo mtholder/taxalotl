@@ -173,12 +173,17 @@ def fill_empty_anc_of_mapping(mapping):
 def iter_existing_tax_dirs(path_pref, res_id):
     suffix = os.path.join(INP_TAXONOMY_DIRNAME, res_id)
     misc_suffix = os.path.join(MISC_DIRNAME, INP_TAXONOMY_DIRNAME, res_id)
-    for df in PART_NAME_TO_FRAGMENT.values():
-        p = os.path.join(path_pref, df, suffix)
+    for tup in os.walk(path_pref):
+        dirname = tup[0]
+        if dirname == path_pref:
+            continue
+        p = os.path.join(dirname, suffix)
         if os.path.exists(p):
+            print(p)
             yield p
-        p = os.path.join(path_pref, df, misc_suffix)
+        p = os.path.join(dirname, misc_suffix)
         if os.path.exists(p):
+            print(p)
             yield p
 
 

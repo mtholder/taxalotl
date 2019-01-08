@@ -42,7 +42,7 @@ res_indep_cmds = ['build-partition-maps',
 # Commands that take any resource ID
 res_dep_cmds = ['accumulate-separated-descendants',
                 'check-partition',
-                'clean',
+                'clean-partition',
                 'download',
                 'enforce-new-separators',
                 'info',
@@ -73,11 +73,8 @@ def main_post_parse(args):
     try:
         if args.which == 'analyze-update':
             analyze_update(taxalotl_config, args.resources)
-        elif args.which == 'clean':
-            if args.action not in all_cmds:
-                m = "Expecting clean action to be one of: {}"
-                raise ValueError(m.format(', '.join(all_cmds)))
-            clean_resources(taxalotl_config, args.action, args.resources)
+        elif args.which == 'clean-partition':
+            clean_resources(taxalotl_config, 'partition', args.resources)
         elif args.which == 'cache-separator-names':
             cache_separator_names(taxalotl_config)
         elif args.which == 'compare-taxonomies':
@@ -247,10 +244,9 @@ def main():
                                                   "partition the inputs taxonomies.")
     build_partition_maps_p.set_defaults(which="build-partition-maps")
     # CLEAN
-    clean_p = subp.add_parser('clean', help="remove the results of an action for a resource.")
-    clean_p.add_argument('action', help="command to clean up for")
+    clean_p = subp.add_parser('clean-partition', help="remove the results of an action for a resource.")
     clean_p.add_argument('resources', nargs="*", help="IDs of the resources to clean")
-    clean_p.set_defaults(which='clean')
+    clean_p.set_defaults(which='clean-partition')
     # Handle --show-completions differently from the others, because
     #   argparse does not help us out here... at all
     if "--show-completions" in sys.argv:
@@ -324,10 +320,6 @@ def main():
                         comp_list = list(TERMINAL_PART_NAMES)
                     elif '--level' not in a:
                         comp_list.extend(['--level'])
-                elif sel_cmd == 'clean' and num_cmds == 1:
-                    all_cmds.remove('clean')
-                    all_cmds.remove('status')
-                    comp_list.extend(all_cmds)
                 elif sel_cmd in ['compare-taxonomies']:
                     rw = taxalotl_config.get_terminalized_res_by_id("ott", '')
                     outfn = os.path.join(rw.partitioned_filepath, SEP_NAMES)
