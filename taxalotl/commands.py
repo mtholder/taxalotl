@@ -26,7 +26,9 @@ from taxalotl.tax_partition import (use_tax_partitions, get_taxonomies_for_dir)
 from taxalotl.dynamic_partitioning import (perform_dynamic_separation,
                                            return_sep_obj_copy_with_ott_fields)
 from taxalotl.util import unlink
-
+from taxalotl.config import TaxalotlConfig
+from taxalotl.resource_wrapper import TaxonomyWrapper
+from typing import List
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
 
@@ -34,13 +36,25 @@ SEP_NAMES = '__separator_names__.json'
 SEP_MAPPING = '__separator_names_to_dir__.json'
 
 
-def analyze_update_to_resources(prev, curr):
+def analyze_update_to_resources(taxalotl_config: TaxalotlConfig,
+                                prev: TaxonomyWrapper,
+                                curr: TaxonomyWrapper,
+                                level_list: List[str]):
     m = 'Could not analyze taxonomy update because {} has not been partitioned.'
     for el in [prev, curr]:
         if not el.has_been_partitioned():
             raise RuntimeError(m.format(el.id))
-    raise NotImplementedError('ha')
-
+    if level_list == [None]:
+        level_list = PART_NAMES
+    for part_name in level_list:
+        fragment = taxalotl_config.get_fragment_from_part_name(part_name)
+        print('analyze_update_to_resources for {}'.format(fragment))
+        pf = prev.get_taxon_forest_for_partition(part_name)
+        cf = curr.get_taxon_forest_for_partition(part_name)
+        if len(pf.trees) != 1 or len(cf.trees) != 1:
+            raise NotImplementedError('Analysis of multi-tree forests not supported, yet')
+        prev_tree = pf.trees[0]
+        curr_tree = cf.trees[0]
 
 def analyze_update(taxalotl_config, id_list, level_list):
     assert len(id_list) == 2
@@ -50,7 +64,7 @@ def analyze_update(taxalotl_config, id_list, level_list):
     if earlier.base_id != later.base_id:
         m ='Can only analyze updates of the same taxonomy base: {}( base = {}), but {} (base = {})'
         raise ValueError(m.format(eid, earlier.base_id, lid, later.base_id))
-    analyze_update_to_resources(earlier, later)
+    analyze_update_to_resources(taxalotl_config, earlier, later, level_list)
 
 
 def download_resources(taxalotl_config, id_list):

@@ -73,7 +73,7 @@ def main_post_parse(args):
             hout.write('"{}"\n'.format('" "'.join(sys.argv)))
     try:
         if args.which == 'analyze-update':
-            analyze_update(taxalotl_config, args.resources, args.level)
+            analyze_update(taxalotl_config, args.resources, [args.level])
         elif args.which == 'clean-partition':
             clean_resources(taxalotl_config, 'partition', args.resources)
         elif args.which == 'clean-separation':

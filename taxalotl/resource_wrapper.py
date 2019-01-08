@@ -577,3 +577,16 @@ class TaxonomyWrapper(ResourceWrapper):
         if self.base_id == 'irmng_ot':
             return 'irmng'  # sorry this is hacky...
         return self.base_id
+
+    def get_taxon_forest_for_partition(self, current_partition_key):
+        fragment = self.config.get_fragment_from_part_name(current_partition_key)
+        tax_part = get_taxon_partition(self, fragment)
+        tax_part.read_inputs_for_read_only()
+        if not os.path.isfile(tax_part.tax_fp):
+            m = 'Skipping {} due to lack of file at "{}"'
+            _LOG.warn(m.format(current_partition_key, tax_part.tax_fp))
+            return {}
+        _LOG.info('converting taxonomy from {} to a tree'.format(tax_part.tax_fp))
+        tax_forest = tax_part.get_taxa_as_forest()
+        _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
+        return tax_forest

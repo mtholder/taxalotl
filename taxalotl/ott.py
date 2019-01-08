@@ -306,16 +306,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
             return self.get_source_for_sep_or_part(higher)
 
     def diagnose_new_separators(self, current_partition_key):
-        fragment = self.config.get_fragment_from_part_name(current_partition_key)
-        tax_part = get_taxon_partition(self, fragment)
-        tax_part.read_inputs_for_read_only()
-        if not os.path.isfile(tax_part.tax_fp):
-            m = 'Skipping {} due to lack of file at "{}"'
-            _LOG.warn(m.format(current_partition_key, tax_part.tax_fp))
-            return {}
-        _LOG.info('converting taxonomy from {} to a tree'.format(tax_part.tax_fp))
-        tax_forest = tax_part.get_taxa_as_forest()
-        _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
+        tax_forest = self.get_taxon_forest_for_partition(current_partition_key)
         nns = NestedNewSeparator()
 
         try:

@@ -79,12 +79,21 @@ class TaxalotlConfig(object):
             cache_separator_names(self)
         return read_as_json(fn)
 
-    def get_fragment_from_part_name(self, parts_key):
+    def get_fragment_from_part_name(self, parts_key, recurse=True):
         try:
             from taxalotl.partitions import PART_NAME_TO_FRAGMENT
             x = PART_NAME_TO_FRAGMENT[parts_key]
         except:
-            x = self.get_separator_dict()[parts_key]
+            sd = self.get_separator_dict()
+            try:
+                x = sd[parts_key]
+            except:
+                if not recurse:
+                    raise
+                from taxalotl.commands import cache_separator_names
+                cache_separator_names(self)
+                return self.get_fragment_from_part_name(parts_key, recurse=False)
+
         if isinstance(x, list):
             if len(x) != 1:
                 m = 'fragment -> part_name mapping not a list of size 1 for {}'
