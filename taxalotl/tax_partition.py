@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from peyotl import get_logger, assure_dir_exists, read_as_json, write_as_json
 
 from taxalotl.ott_schema import OTTTaxon, TaxonForest, HEADER_TO_LINE_PARSER
+from taxalotl.util import unlink
 
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
@@ -678,9 +679,8 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             tr.append(os.path.join(self.tax_dir_unpartitioned, ACCUM_DES_FILENAME))
             for f in tr:
                 if os.path.exists(f):
-                    _LOG.info("removing pre-partitioned file at {}".format(f))
                     try:
-                        os.unlink(f)
+                        unlink(f)
                     except:
                         _LOG.exception("could not remove {}".format(f))
         self._has_flushed = True

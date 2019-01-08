@@ -23,6 +23,7 @@ from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_misc_inp_taxdir,
                                  get_taxon_partition, )
 from taxalotl.tax_partition import TAX_SLICE_CACHE
+from taxalotl.util import unlink
 
 _LOG = get_logger(__name__)
 
@@ -387,8 +388,7 @@ class ResourceWrapper(FromOTifacts):
         for f in f_to_remove:
             fp = os.path.join(directory, f)
             if os.path.exists(fp):
-                _LOG.info('Removing "{}"'.format(fp))
-                os.unlink(fp)
+                unlink(fp)
         try:
             os.rmdir(directory)
         except:

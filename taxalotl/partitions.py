@@ -179,11 +179,9 @@ def iter_existing_tax_dirs(path_pref, res_id):
             continue
         p = os.path.join(dirname, suffix)
         if os.path.exists(p):
-            print(p)
             yield p
         p = os.path.join(dirname, misc_suffix)
         if os.path.exists(p):
-            print(p)
             yield p
 
 

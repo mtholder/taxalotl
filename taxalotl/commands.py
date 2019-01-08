@@ -25,6 +25,7 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
 from taxalotl.tax_partition import (use_tax_partitions, get_taxonomies_for_dir)
 from taxalotl.dynamic_partitioning import (perform_dynamic_separation,
                                            return_sep_obj_copy_with_ott_fields)
+from taxalotl.util import unlink
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -385,15 +386,47 @@ def compare_taxonomies(taxalotl_config, levels):
             _LOG.info(m.format(level, tax_dir))
             compare_taxonomies_in_dir(taxalotl_config, tax_dir)
 
+def remove_sep_artifacts_and_empty_dirs(d):
+    dir_to_del = []
+    for tup in os.walk(d):
+        directory, filenames = tup[0], tup[-1]
+        if directory == d:
+            continue
+        if NEW_SEP_FILENAME in filenames:
+            unlink(os.path.join(directory, NEW_SEP_FILENAME))
+        if filenames == [] or filenames == [NEW_SEP_FILENAME]:
+            dir_to_del.append(directory)
+        else:
+            _LOG.info('"{}" not empty and will not be deleted'.format(directory))
+    for directory in reversed(dir_to_del):
+        contents = os.listdir(directory)
+        if contents != []:
+            _LOG.info('"{}" contains {} and will not be deleted'.format(contents, directory))
+        else:
+            try:
+                _LOG.info('Removing empty dir "{}" '.format(directory))
+                os.rmdir(directory)
+            except:
+                _LOG.warn('Could not remove "{}" that directory (?!)'.format(directory))
 
-def clean_resources(taxalotl_config, action, id_list):
+
+def clean_resources(taxalotl_config, action, id_list, levels=None):
+    if levels is None:
+        levels = [None]
     if not id_list:
-        if action == 'build-partition-maps':
-            rw = taxalotl_config.get_terminalized_res_by_id("ott", None)
-            fp = os.path.join(rw.partitioned_filepath, GEN_MAPPING_FILENAME)
+        rw = taxalotl_config.get_terminalized_res_by_id("ott", None)
+        fp = os.path.join(rw.partitioned_filepath, GEN_MAPPING_FILENAME)
+        if action == 'separation':
+            d = rw.partitioned_filepath
+            if levels == [None]:
+                levels = PART_NAMES
+            for part_name in levels:
+                fragment = taxalotl_config.get_fragment_from_part_name(part_name)
+                pd = os.path.join(d, fragment)
+                remove_sep_artifacts_and_empty_dirs(pd)
+        elif action == 'build-partition-maps':
             if os.path.exists(fp):
-                _LOG.info('Removing "{}"...'.format(fp))
-                os.unlink(fp)
+                unlink(fp)
             else:
                 _LOG.info('Mapping file "{}" does not exist. Skipping clean step'.format(fp))
         else:

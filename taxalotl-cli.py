@@ -35,6 +35,7 @@ _LOG = get_logger(__name__)
 # Commands that don't take a resource ID
 res_indep_cmds = ['build-partition-maps',
                   'cache-separator-names',
+                  'clean-separation',
                   'compare-taxonomies',
                   'diagnose-new-separators',
                   'pull-otifacts',
@@ -42,7 +43,6 @@ res_indep_cmds = ['build-partition-maps',
 # Commands that take any resource ID
 res_dep_cmds = ['accumulate-separated-descendants',
                 'check-partition',
-                'clean-partition',
                 'download',
                 'enforce-new-separators',
                 'info',
@@ -75,6 +75,8 @@ def main_post_parse(args):
             analyze_update(taxalotl_config, args.resources)
         elif args.which == 'clean-partition':
             clean_resources(taxalotl_config, 'partition', args.resources)
+        elif args.which == 'clean-separation':
+            clean_resources(taxalotl_config, 'separation', [], [args.level])
         elif args.which == 'cache-separator-names':
             cache_separator_names(taxalotl_config)
         elif args.which == 'compare-taxonomies':
@@ -243,10 +245,20 @@ def main():
                                                   "ID mappings needed to "
                                                   "partition the inputs taxonomies.")
     build_partition_maps_p.set_defaults(which="build-partition-maps")
-    # CLEAN
-    clean_p = subp.add_parser('clean-partition', help="remove the results of an action for a resource.")
+    # CLEAN-PARTITION
+    clean_p = subp.add_parser('clean-partition',
+                              help="remove the results the partition+enforce-new-separator for a resource.")
     clean_p.add_argument('resources', nargs="*", help="IDs of the resources to clean")
     clean_p.set_defaults(which='clean-partition')
+    # CLEAN-PARTITION
+    clean_s_p = subp.add_parser('clean-separation',
+                              help="remove the results the diagnose-new-separator for a resource.")
+    clean_s_p.add_argument("--level",
+                           default=None,
+                           help="The partition that is the root of the separation (default all)")
+
+    clean_s_p.set_defaults(which='clean-separation')
+
     # Handle --show-completions differently from the others, because
     #   argparse does not help us out here... at all
     if "--show-completions" in sys.argv:
