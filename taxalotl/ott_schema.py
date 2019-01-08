@@ -45,8 +45,8 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
                              "synonyms file to be 'uid'. Problem reading: {}".format(syn_fp))
         for n, line in enumerate(iinp):
             ls = line.split('\t|\t')
-            if n > 0 and n % 1000 == 0:
-                _LOG.debug(' read synonym {:7} from "{}"'.format(n, syn_fp))
+            if n > 0 and n % 5000 == 0:
+                _LOG.debug(' reading synonym {:7} from "{}"'.format(n, syn_fp))
             try:
                 accept_id = ls[uid_ind]
                 try:
@@ -296,6 +296,14 @@ class OTTTaxon(object):
             self.line = line
             line_parser(self, line)
 
+    def __str__(self):
+        s = 'rank={}'.format(self.rank) if self.rank else ''
+        m = 'OTTTaxon: "{}" (id={} | par={} | {})'
+        return m.format(self.name, self.id, self.par_id, s)
+
+    def __repr__(self):
+        return 'OTTTaxon(d={})'.format(self.to_serializable_dict())
+
     @property
     def name_that_is_unique(self):
         return self.uniqname if self.uniqname else self.name
@@ -351,7 +359,9 @@ class TaxonTree(object):
     def __init__(self,
                  root_id: int,
                  id_to_children_ids: Dict[int, List[int]],
-                 id_to_taxon: Dict[int, OTTTaxon]):
+                 id_to_taxon: Dict[int, OTTTaxon],
+                 taxon_partition=None):
+        self.taxon_partition = taxon_partition
         self.root = id_to_taxon[root_id]
         self.root.parent_ref = None
         self.id_to_taxon = {}
@@ -375,6 +385,11 @@ class TaxonTree(object):
     def postorder(self) -> OTTTaxon:
         for t in reversed(list(self.preorder())):
             yield t
+
+    def leaves(self) -> OTTTaxon:
+        for nd in self.preorder():
+            if nd.children_refs is None:
+                yield nd
 
     def preorder(self) -> OTTTaxon:
         curr = self.root
@@ -401,6 +416,10 @@ class TaxonTree(object):
             else:
                 taxon.num_tips_below = sum([i.num_tips_below for i in taxon.children_refs])
 
+    def add_update_fields(self):
+        for taxon in self.preorder():
+            taxon.update_status = []
+
 
     def to_root_gen(self, taxon):
         if taxon is None:
@@ -413,7 +432,8 @@ class TaxonTree(object):
             yield taxon
 
 class TaxonForest(object):
-    def __init__(self, id_to_taxon):
+    def __init__(self, id_to_taxon, taxon_partition=None):
+        self.taxon_partition = taxon_partition
         id_to_par = {}
         id_to_children = {}
         for taxon_id, taxon in id_to_taxon.items():
@@ -427,7 +447,8 @@ class TaxonForest(object):
         for r in roots:
             self.roots[r] = TaxonTree(root_id=r,
                                       id_to_children_ids=id_to_children,
-                                      id_to_taxon=id_to_taxon)
+                                      id_to_taxon=id_to_taxon,
+                                      taxon_partition=taxon_partition)
 
     def write_indented(self, out):
         for r in self.roots.values():

@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import copy
 import os
 import subprocess
 import sys
+from enum import Enum
 
 from peyotl import (get_logger,
                     read_all_otifacts,
@@ -25,6 +27,7 @@ from taxalotl.partitions import (GEN_MAPPING_FILENAME,
 from taxalotl.tax_partition import (use_tax_partitions, get_taxonomies_for_dir)
 from taxalotl.dynamic_partitioning import (perform_dynamic_separation,
                                            return_sep_obj_copy_with_ott_fields)
+from taxalotl.ott_schema import TaxonTree
 from taxalotl.util import unlink
 from taxalotl.config import TaxalotlConfig
 from taxalotl.resource_wrapper import TaxonomyWrapper
@@ -47,14 +50,78 @@ def analyze_update_to_resources(taxalotl_config: TaxalotlConfig,
     if level_list == [None]:
         level_list = PART_NAMES
     for part_name in level_list:
-        fragment = taxalotl_config.get_fragment_from_part_name(part_name)
-        print('analyze_update_to_resources for {}'.format(fragment))
-        pf = prev.get_taxon_forest_for_partition(part_name)
-        cf = curr.get_taxon_forest_for_partition(part_name)
-        if len(pf.trees) != 1 or len(cf.trees) != 1:
-            raise NotImplementedError('Analysis of multi-tree forests not supported, yet')
-        prev_tree = pf.trees[0]
-        curr_tree = cf.trees[0]
+        analyze_update_for_level(taxalotl_config, prev, curr, part_name)
+
+class UpdateStatus(Enum):
+    UNCHANGED = 0
+    PAR_CHANGED = 1
+    NEW_TERMINAL = 2
+
+def del_mod_add_dict_diff(oldd, newd):
+    same, d, m, a = True, {}, {}, {}
+    if oldd != newd:
+        for k, v in oldd.items():
+            if k in newd:
+                nv = newd[k]
+                if nv == v:
+                    continue
+                m[k] = nv
+                same = False
+            else:
+                d[k] = v
+                same = False
+        for k, v in newd.items():
+            if k not in oldd:
+                a[k] = v
+                same = False
+    return same, (d, m, a)
+
+def flag_update_status(f, s, stat):
+    f.update_status.append([stat, s])
+    if s is not None:
+        s.update_status = stat
+        f.update_status.append([stat, f])
+
+def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
+                             prev: TaxonomyWrapper,
+                             curr: TaxonomyWrapper,
+                             part_name: str):
+    fragment = taxalotl_config.get_fragment_from_part_name(part_name)
+    print('analyze_update_to_resources for {}'.format(fragment))
+    pf = prev.get_taxon_forest_for_partition(part_name)
+    cf = curr.get_taxon_forest_for_partition(part_name)
+    if len(pf.trees) != 1 or len(cf.trees) != 1:
+        raise NotImplementedError('Analysis of multi-tree forests not supported, yet')
+    prev_tree = pf.trees[0] # type: TaxonTree
+    curr_tree = cf.trees[0] # type: TaxonTree
+    prev_tree.add_num_tips_below()
+    curr_tree.add_num_tips_below()
+    prev_tree.add_update_fields()
+    curr_tree.add_update_fields()
+    print(prev_tree.root.num_tips_below, '->', curr_tree.root.num_tips_below)
+    prev_syn = prev_tree.taxon_partition.synonyms_by_id
+    curr_syn = curr_tree.taxon_partition.synonyms_by_id
+    outfunc = lambda x: out_stream.write('{}\n'.format(x))
+    for leaf in curr_tree.leaves():
+        lid = leaf.id
+        prev_nd = prev_tree.id_to_taxon.get(lid)
+        if prev_nd is None:
+            flag_update_status(leaf, None, UpdateStatus.NEW_TERMINAL)
+            outfunc('New leaf: {}'.format(leaf))
+        else:
+            psd = prev_nd.to_serializable_dict()
+            lsd = leaf.to_serializable_dict()
+            same, dma_dicts = del_mod_add_dict_diff(psd, lsd)
+            if same:
+                flag_update_status(leaf, prev_nd, UpdateStatus.UNCHANGED)
+            else:
+                d, m, a = dma_dicts
+                if (not d) and (not a) and (len(m) == 1) and 'par_id' in m:
+                    flag_update_status(leaf, prev_nd, UpdateStatus.PAR_CHANGED)
+                else:
+                    outfunc('Altered node: {} -> {}'.format(repr(prev_nd), repr(leaf)))
+
+    print('done')
 
 def analyze_update(taxalotl_config, id_list, level_list):
     assert len(id_list) == 2

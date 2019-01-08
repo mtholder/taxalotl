@@ -2,6 +2,7 @@
 # from __future__ import print_function
 import io
 import os
+from copy import copy
 from contextlib import contextmanager
 
 from peyotl import get_logger, assure_dir_exists, read_as_json, write_as_json
@@ -187,6 +188,10 @@ class LightTaxonomyHolder(object):
         self._populated = False
         self._has_unread_tax_inp = False
         self._has_moved_taxa = False  # true when taxa have been moved to another partition
+
+    @property
+    def synonyms_by_id(self):
+        return copy(self._syn_by_id)
 
     def _del_data(self):
         for el in LightTaxonomyHolder._DATT:
@@ -615,7 +620,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         return id_to_obj
 
     def get_taxa_as_forest(self):
-        return TaxonForest(id_to_taxon=self.get_id_to_ott_taxon())
+        return TaxonForest(id_to_taxon=self.get_id_to_ott_taxon(), taxon_partition=self)
 
     def active_tax_dir(self):
         if self._populated:
