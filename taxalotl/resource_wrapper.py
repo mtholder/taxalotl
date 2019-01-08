@@ -349,6 +349,10 @@ class ResourceWrapper(FromOTifacts):
                or (self.url is None and not self.url_list) \
                or self.schema is None
 
+    @property
+    def is_abstract_input_resource_type(self):
+        return False
+
     def has_been_downloaded(self):
         dfp = self.download_filepath
         return dfp is not None and os.path.exists(dfp)
@@ -512,6 +516,10 @@ class ResourceWrapper(FromOTifacts):
 class AbstractResourceWrapper(ResourceWrapper):
     def __init__(self, obj, parent=None, refs=None, config=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs, config=config)
+
+    @property
+    def is_abstract_input_resource_type(self):
+        return True
 
 
 # noinspection PyAbstractClass

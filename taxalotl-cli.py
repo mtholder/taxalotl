@@ -42,6 +42,7 @@ res_indep_cmds = ['build-partition-maps',
                   ]
 # Commands that take any resource ID
 res_dep_cmds = ['accumulate-separated-descendants',
+                'analyze-update',
                 'check-partition',
                 'download',
                 'enforce-new-separators',
@@ -52,7 +53,7 @@ res_dep_cmds = ['accumulate-separated-descendants',
                 'unpack',
                 ]
 # Commands that take an resource ID for a class of input resource (no version number suffix).
-ver_inp_res_dep_cmds = ['analyze-update', ]
+ver_inp_res_dep_cmds = [ ]
 all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 
 
@@ -126,6 +127,9 @@ def main_post_parse(args):
     return 0
 
 
+def _add_level_arg(parser, req=False):
+    parser.add_argument("--level", default=None, required=req, help="The highest taxon to work on.")
+
 def main():
     import argparse
 
@@ -143,7 +147,8 @@ def main():
     analyze_update_p = subp.add_parser('analyze-update',
                                        help="calculates a diff between the last version of a "
                                             "taxonomy used and the latest version downloaded.")
-    analyze_update_p.add_argument('resources', nargs="*", help="IDs of the resources to analyzed.")
+    analyze_update_p.add_argument('resources', nargs=2, help="IDs of the resources to analyzed.")
+    _add_level_arg(analyze_update_p)
     analyze_update_p.set_defaults(which="analyze-update")
 
     # PULL OTifacts
@@ -170,10 +175,7 @@ def main():
     # CACHE-separator-names
     compare_tax_p = subp.add_parser('compare-taxonomies',
                                     help="compare taxonomies for a separated dir")
-    compare_tax_p.add_argument("--level",
-                               default=None,
-                               required=True,
-                               help="The level of the taxonomy to compare")
+    _add_level_arg(compare_tax_p)
     compare_tax_p.set_defaults(which="compare-taxonomies")
 
     # CACHE-separator-names
@@ -198,30 +200,21 @@ def main():
     partition_p = subp.add_parser('partition',
                                   help="Breaks the resource taxon")
     partition_p.add_argument('resources', nargs="+", help="IDs of the resources to partitition")
-    partition_p.add_argument("--level",
-                             default=None,
-                             help="The level of the taxonomy to partition")
-
+    _add_level_arg(partition_p)
     partition_p.set_defaults(which="partition")
 
     # INFO
     info_p = subp.add_parser('info',
-                                  help="Report statistics about a resource")
+                             help="Report statistics about a resource")
     info_p.add_argument('resources', nargs="+", help="IDs of the resources")
-    info_p.add_argument("--level",
-                             default=None,
-                             help="The level of the taxonomy to partition")
-
+    _add_level_arg(info_p)
     info_p.set_defaults(which="info")
 
     # DIAGNOSE-NEW-SEPARATORS
     diag_sep_p = subp.add_parser('diagnose-new-separators',
                                  help="Uses the last OTT build to find taxa IDs that "
                                       "feature are common to the relevant inputs")
-    diag_sep_p.add_argument("--level",
-                            default=None,
-                            help="The partition that is the root of the separation (default all)")
-
+    _add_level_arg(diag_sep_p)
     diag_sep_p.set_defaults(which="diagnose-new-separators")
     # ENFORCE-NEW-SEPARATORS
     enf_sep_p = subp.add_parser('enforce-new-separators',
@@ -229,9 +222,7 @@ def main():
                                      "diagnose-new-separators to partition by unproblematic "
                                      "taxa")
     enf_sep_p.add_argument('resources', nargs="*", help="IDs of the resources to separate")
-    enf_sep_p.add_argument("--level",
-                           default=None,
-                           help="The partition that is the root of the separation (default all)")
+    _add_level_arg(enf_sep_p)
     enf_sep_p.set_defaults(which="enforce-new-separators")
     # ACCUMULATE-SEPARATED-DESCENDANTS
     accum_sep_des_p = subp.add_parser('accumulate-separated-descendants',
@@ -253,10 +244,7 @@ def main():
     # CLEAN-PARTITION
     clean_s_p = subp.add_parser('clean-separation',
                               help="remove the results the diagnose-new-separator for a resource.")
-    clean_s_p.add_argument("--level",
-                           default=None,
-                           help="The partition that is the root of the separation (default all)")
-
+    _add_level_arg(clean_s_p)
     clean_s_p.set_defaults(which='clean-separation')
 
     # Handle --show-completions differently from the others, because
