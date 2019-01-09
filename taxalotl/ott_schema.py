@@ -440,6 +440,18 @@ class TaxonTree(object):
             return self._get_lowest_anc_rank_sorting_number(psn)
         return psn
 
+    def node_rank_sorting_number_range(self, nd):
+        rsn = nd.rank_sorting_number()
+        if rsn is not None:
+            return rsn, rsn
+        csn = self._get_highest_child_rank(nd)
+        if csn is None:
+            raise ValueError("no rank or des rank for {}".format(repr(nd)))
+        asn = self._get_lowest_anc_rank_sorting_number(nd)
+        if asn is None:
+            raise ValueError("no rank or anc rank for {}".format(repr(nd)))
+        return asn, csn
+
     def node_is_specimen_typed(self, nd):
         """Return True for taxa at or below species level."""
         rsn = nd.rank_sorting_number()

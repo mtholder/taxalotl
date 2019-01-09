@@ -11,6 +11,7 @@ from taxalotl.config import TaxalotlConfig
 from taxalotl.ott_schema import TaxonTree
 from taxalotl.partitions import (PART_NAMES)
 from taxalotl.resource_wrapper import TaxonomyWrapper
+from taxalotl.ott_schema import _RANK_TO_SORTING_NUMBER
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -139,7 +140,11 @@ class UpdateStatusLog(object):
             self._write_nd(nd, True)
             curr_written.add(nd.id)
         else:
-            out_stream.write('CLADE ')
+            max_sn, min_csn = tree.node_rank_sorting_number_range(nd)
+            if max_sn == min_csn and max_sn == _RANK_TO_SORTING_NUMBER['genus']:
+                out_stream.write('GENUS ')
+            else:
+                out_stream.write('CLADE ')
 
             self._write_nd(nd, True)
             curr_written.add(nd.id)
