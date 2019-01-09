@@ -23,6 +23,40 @@ INP_OTT_SYNONYMS_HEADER = "uid\t|\tname\t|\ttype\t|\t\n"
 FULL_OTT_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tsourceinfo\t|\tuniqname\t|\tflags\t|\t\n"
 
 
+_RANK_TO_SORTING_NUMBER = {
+    "superkingdom": 280,
+    "kingdom": 270,
+    "subkingdom": 260,
+    "superphylum": 250,
+    "phylum": 240,
+    "subphylum": 230,
+    "superclass": 220,
+    "class": 210,
+    "subclass": 200,
+    "infraclass": 190,
+    "cohort": 180,
+    "superorder": 170,
+    "order": 160,
+    "suborder": 150,
+    "infraorder": 140,
+    "parvorder": 130,
+    "superfamily": 120,
+    "family": 110,
+    "subfamily": 100,
+    "tribe": 90,
+    "subtribe": 80,
+    "genus": 70,
+    "subgenus": 60,
+    "species group": 50,
+    "species subgroup": 40,
+    "species": 30,
+    "subspecies": 20,
+    "varietas": 10,
+    "forma": 0,
+}
+SPECIES_SORTING_NUMBER = _RANK_TO_SORTING_NUMBER['species']
+
+
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     syn_fp = tax_part.input_synonyms_filepath
     tax_part.syn_header = ''
@@ -296,6 +330,11 @@ class OTTTaxon(object):
             self.line = line
             line_parser(self, line)
 
+    def rank_sorting_number(self):
+        if (self.rank is None) or (self.rank == 'no rank'):
+            return None
+        return _RANK_TO_SORTING_NUMBER[self.rank]
+
     def __str__(self):
         s = 'rank={}'.format(self.rank) if self.rank else ''
         m = 'OTTTaxon: "{}" (id={} | par={} | {})'
@@ -379,6 +418,45 @@ class TaxonTree(object):
             else:
                 curr_taxon.children_refs = None
 
+    def _get_highest_child_rank(self, nd):
+        hr = None
+        for c in nd.children_refs:
+            csn = c.rank_sorting_number()
+            if csn is None:
+                csn = self._get_highest_child_rank(c)
+            if csn is None:
+                continue
+            if hr is None or csn > hr:
+                hr = csn
+        return hr
+
+    def _get_lowest_anc_rank_sorting_number(self, nd):
+        try:
+            par = self.id_to_taxon[nd.par_id]
+        except:
+            return None
+        psn = par.rank_sorting_number()
+        if psn is None:
+            return self._get_lowest_anc_rank_sorting_number(psn)
+        return psn
+
+    def node_is_specimen_typed(self, nd):
+        """Return True for taxa at or below species level."""
+        rsn = nd.rank_sorting_number()
+        if rsn is not None:
+            return rsn <= SPECIES_SORTING_NUMBER
+        csn = self._get_highest_child_rank(nd)
+        if csn is None:
+            raise ValueError("no rank or des rank for {}".format(repr(nd)))
+        if csn >= SPECIES_SORTING_NUMBER:
+            return False
+        asn = self._get_lowest_anc_rank_sorting_number(nd)
+        if asn is None:
+            raise ValueError("no rank or anc rank for {}".format(repr(nd)))
+        if asn <= SPECIES_SORTING_NUMBER:
+            return True
+        raise ValueError("Could not narrow rank for {}".format(repr(nd)))
+
     def get_taxon(self, uid):
         return self.id_to_taxon.get(uid)
 
@@ -388,7 +466,7 @@ class TaxonTree(object):
 
     def leaves(self) -> OTTTaxon:
         for nd in self.preorder():
-            if nd.children_refs is None:
+            if nd.children_refs:
                 yield nd
 
     def preorder(self) -> OTTTaxon:
