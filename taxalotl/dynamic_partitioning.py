@@ -1,19 +1,18 @@
 from __future__ import print_function
 
+import copy
 import os
 import re
-import copy
 from typing import Dict
 
-from peyotl import get_logger, read_as_json, write_as_json, assure_dir_exists
+from peyotl import get_logger
 
-
-from taxalotl.util import get_true_false_repsonse
 from taxalotl.partitions import (get_all_taxdir_and_misc_uncles,
                                  )
 from taxalotl.tax_partition import (TAX_SLICE_CACHE,
                                     get_taxon_partition,
                                     PartitionedTaxDirBase)
+from taxalotl.util import get_true_false_repsonse
 
 _LOG = get_logger(__name__)
 _norm_char_pat = re.compile(r'[-a-zA-Z0-9._]')
@@ -32,7 +31,7 @@ def _escape_odd_char(s):
 def perform_dynamic_separation(ott_res,
                                res,
                                part_key: str,
-                               separation_by_ott:Dict[int,Dict]):
+                               separation_by_ott: Dict[int, Dict]):
     """Called where part_key is a PART_NAME element from the OTT 3 separation taxa."""
     fragment = ott_res.config.get_fragment_from_part_name(part_key)
     try:
@@ -187,6 +186,7 @@ def _assure_sep_dirs(ott_res, fragment, sep_obj):
             _LOG.info('Creating {}'.format(nd))
             os.mkdir(nd)
     return sep_id_to_fn
+
 
 def _general_dynamic_separation_from_obj(ott_res,
                                          res,

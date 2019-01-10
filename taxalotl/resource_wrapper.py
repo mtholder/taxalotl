@@ -588,5 +588,10 @@ class TaxonomyWrapper(ResourceWrapper):
             return {}
         _LOG.info('converting taxonomy from {} to a tree'.format(tax_part.tax_fp))
         tax_forest = tax_part.get_taxa_as_forest()
+        for x in tax_forest.trees:
+            self._post_process_tree(x)
         _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
         return tax_forest
+
+    def _post_process_tree(self, tree):
+        pass

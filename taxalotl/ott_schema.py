@@ -3,7 +3,6 @@
 
 from __future__ import print_function
 
-from typing import Dict, List
 import csv
 import io
 import os
@@ -13,7 +12,7 @@ from peyotl import (add_or_append_to_dict, assure_dir_exists,
                     get_logger,
                     shorter_fp_form,
                     write_as_json)
-
+from .taxon import Taxon
 _LOG = get_logger(__name__)
 
 INP_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n"
@@ -21,40 +20,6 @@ INP_FLAGGED_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflag
 INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\n"
 INP_OTT_SYNONYMS_HEADER = "uid\t|\tname\t|\ttype\t|\t\n"
 FULL_OTT_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tsourceinfo\t|\tuniqname\t|\tflags\t|\t\n"
-
-
-_RANK_TO_SORTING_NUMBER = {
-    "superkingdom": 280,
-    "kingdom": 270,
-    "subkingdom": 260,
-    "superphylum": 250,
-    "phylum": 240,
-    "subphylum": 230,
-    "superclass": 220,
-    "class": 210,
-    "subclass": 200,
-    "infraclass": 190,
-    "cohort": 180,
-    "superorder": 170,
-    "order": 160,
-    "suborder": 150,
-    "infraorder": 140,
-    "parvorder": 130,
-    "superfamily": 120,
-    "family": 110,
-    "subfamily": 100,
-    "tribe": 90,
-    "subtribe": 80,
-    "genus": 70,
-    "subgenus": 60,
-    "species group": 50,
-    "species subgroup": 40,
-    "species": 30,
-    "subspecies": 20,
-    "varietas": 10,
-    "forma": 0,
-}
-SPECIES_SORTING_NUMBER = _RANK_TO_SORTING_NUMBER['species']
 
 
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
@@ -317,245 +282,6 @@ HEADER_TO_LINE_PARSER = {FULL_OTT_HEADER: full_ott_line_parser,
                          }
 
 
-class OTTTaxon(object):
-    _DATT = ('id', 'par_id', 'name', 'rank', 'src_dict', 'flags', 'uniqname')
-
-    def __init__(self, line=None, line_num='<unknown>', line_parser=full_ott_line_parser, d=None):
-        self.id, self.par_id, self.name, self.rank = None, None, None, None
-        self.src_dict, self.flags, self.uniqname = None, None, None
-        if d is not None:
-            self.from_serializable_dict(d)
-        else:
-            self.line_num = line_num
-            self.line = line
-            line_parser(self, line)
-
-    def rank_sorting_number(self):
-        if (self.rank is None) or (self.rank == 'no rank'):
-            return None
-        return _RANK_TO_SORTING_NUMBER[self.rank]
-
-    def __str__(self):
-        s = 'rank={}'.format(self.rank) if self.rank else ''
-        m = 'OTTTaxon: "{}" (id={} | par={} | {})'
-        return m.format(self.name, self.id, self.par_id, s)
-
-    def __repr__(self):
-        return 'OTTTaxon(d={})'.format(self.to_serializable_dict())
-
-    @property
-    def name_that_is_unique(self):
-        return self.uniqname if self.uniqname else self.name
-
-    def from_serializable_dict(self, d):
-        for k, v in d.items():
-            if k == 'flags':
-                v = set(v)
-            elif k == 'src_dict':
-                v = {sk: set(sv) for sk, sv in v.items()}
-            setattr(self, k, v)
-
-    def to_serializable_dict(self):
-        d = {}
-        for k in OTTTaxon._DATT:
-            v = getattr(self, k, None)
-            if v is not None:
-                if k == 'id' or k == 'par_id':
-                    d[k] = v
-                elif v:
-                    if k == 'flags':
-                        if len(v):
-                            d[k] = list(v)
-                            d[k].sort()
-                    elif k == 'src_dict':
-                        ds = {}
-                        for sk, ss in v.items():
-                            sl = list(ss)
-                            sl.sort()
-                            ds[sk] = sl
-                        d[k] = ds
-                    else:
-                        d[k] = v
-        return d
-
-    def get(self, key, default=None):
-        return getattr(self, key, default)
-
-    def __getitem__(self, item):
-        return self.__dict__[item]
-
-
-def write_indented_subtree(out, node, indent_level):
-    out.write('{}{} (id={})\n'.format('  ' * indent_level,
-                                      node.name_that_is_unique,
-                                      node.id))
-    if node.children_refs:
-        for c in node.children_refs:
-            write_indented_subtree(out, c, indent_level=1 + indent_level)
-
-
-class TaxonTree(object):
-    def __init__(self,
-                 root_id: int,
-                 id_to_children_ids: Dict[int, List[int]],
-                 id_to_taxon: Dict[int, OTTTaxon],
-                 taxon_partition=None):
-        self.taxon_partition = taxon_partition
-        self.root = id_to_taxon[root_id]
-        self.root.parent_ref = None
-        self.id_to_taxon = {}
-        to_process = {root_id}
-        while to_process:
-            curr_nd_id = to_process.pop()
-            curr_taxon = id_to_taxon[curr_nd_id]
-            self.id_to_taxon[curr_nd_id] = curr_taxon
-            curr_children_ids = id_to_children_ids.get(curr_nd_id)
-            if curr_children_ids:
-                curr_taxon.children_refs = [id_to_taxon[i] for i in curr_children_ids]
-                for ct in curr_taxon.children_refs:
-                    ct.parent_ref = curr_taxon
-                to_process.update(curr_children_ids)
-            else:
-                curr_taxon.children_refs = None
-
-    def _get_highest_child_rank(self, nd):
-        hr = None
-        for c in nd.children_refs:
-            csn = c.rank_sorting_number()
-            if csn is None:
-                csn = self._get_highest_child_rank(c)
-            if csn is None:
-                continue
-            if hr is None or csn > hr:
-                hr = csn
-        return hr
-
-    def _get_lowest_anc_rank_sorting_number(self, nd):
-        try:
-            par = self.id_to_taxon[nd.par_id]
-        except:
-            return None
-        psn = par.rank_sorting_number()
-        if psn is None:
-            return self._get_lowest_anc_rank_sorting_number(psn)
-        return psn
-
-    def node_rank_sorting_number_range(self, nd):
-        rsn = nd.rank_sorting_number()
-        if rsn is not None:
-            return rsn, rsn
-        csn = self._get_highest_child_rank(nd)
-        if csn is None:
-            raise ValueError("no rank or des rank for {}".format(repr(nd)))
-        asn = self._get_lowest_anc_rank_sorting_number(nd)
-        if asn is None:
-            raise ValueError("no rank or anc rank for {}".format(repr(nd)))
-        return asn, csn
-
-    def node_is_specimen_typed(self, nd):
-        """Return True for taxa at or below species level."""
-        rsn = nd.rank_sorting_number()
-        if rsn is not None:
-            return rsn <= SPECIES_SORTING_NUMBER
-        csn = self._get_highest_child_rank(nd)
-        if csn is None:
-            raise ValueError("no rank or des rank for {}".format(repr(nd)))
-        if csn >= SPECIES_SORTING_NUMBER:
-            return False
-        asn = self._get_lowest_anc_rank_sorting_number(nd)
-        if asn is None:
-            raise ValueError("no rank or anc rank for {}".format(repr(nd)))
-        if asn <= SPECIES_SORTING_NUMBER:
-            return True
-        raise ValueError("Could not narrow rank for {}".format(repr(nd)))
-
-    def get_taxon(self, uid):
-        return self.id_to_taxon.get(uid)
-
-    def postorder(self) -> OTTTaxon:
-        for t in reversed(list(self.preorder())):
-            yield t
-
-    def leaves(self) -> OTTTaxon:
-        for nd in self.preorder():
-            if nd.children_refs:
-                yield nd
-
-    def preorder(self) -> OTTTaxon:
-        curr = self.root
-        if not curr:
-            return
-        yield curr
-        to_process = []
-        if curr.children_refs:
-            to_process.append(list(curr.children_refs))
-        while to_process:
-            cl = to_process[-1]
-            if not cl:
-                to_process.pop(-1)
-            else:
-                curr = cl.pop(0)
-                if curr.children_refs:
-                    to_process.append(list(curr.children_refs))
-                yield curr
-
-    def add_num_tips_below(self):
-        for taxon in self.postorder():
-            if taxon.children_refs is None:
-                taxon.num_tips_below = 1
-            else:
-                taxon.num_tips_below = sum([i.num_tips_below for i in taxon.children_refs])
-
-    def add_update_fields(self):
-        for taxon in self.preorder():
-            taxon.update_status = []
-
-
-    def to_root_gen(self, taxon):
-        if taxon is None:
-            return
-        yield taxon
-        while taxon.par_id:
-            if taxon is self.root:
-                return
-            taxon = self.id_to_taxon[taxon.par_id]
-            yield taxon
-
-class TaxonForest(object):
-    def __init__(self, id_to_taxon, taxon_partition=None):
-        self.taxon_partition = taxon_partition
-        id_to_par = {}
-        id_to_children = {}
-        for taxon_id, taxon in id_to_taxon.items():
-            id_to_par[taxon_id] = taxon.par_id
-            id_to_children.setdefault(taxon.par_id, set()).add(taxon_id)
-        root_pars = set(id_to_children.keys()) - set(id_to_par.keys())
-        roots = set()
-        for rp in root_pars:
-            roots.update(id_to_children[rp])
-        self.roots = {}
-        for r in roots:
-            self.roots[r] = TaxonTree(root_id=r,
-                                      id_to_children_ids=id_to_children,
-                                      id_to_taxon=id_to_taxon,
-                                      taxon_partition=taxon_partition)
-
-    def write_indented(self, out):
-        for r in self.roots.values():
-            write_indented_subtree(out, r.root, indent_level=0)
-
-    @property
-    def trees(self):
-        return tuple(self.roots.values())
-
-    def get_taxon(self, uid):
-        for v in self.roots.values():
-            t = v.get_taxon(uid)
-            if t is not None:
-                return t
-        return None
-
-
 # noinspection PyTypeChecker
 def read_taxonomy_to_get_id_to_fields(tax_dir):
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
@@ -569,7 +295,7 @@ def read_taxonomy_to_get_id_to_fields(tax_dir):
         assert header == expected_header
         id_to_obj = {}
         for n, line in enumerate(iinp):
-            obj = OTTTaxon(line, line_num=1 + n)
+            obj = Taxon(line, line_num=1 + n)
             oid = obj.id
             assert oid not in id_to_obj
             id_to_obj[oid] = obj
@@ -588,7 +314,7 @@ def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
         for n, line in enumerate(iinp):
             if not line.startswith(sri):
                 continue
-            obj = OTTTaxon(line, line_num=1 + n)
+            obj = Taxon(line, line_num=1 + n)
             if root_id == obj.id:
                 return obj
 

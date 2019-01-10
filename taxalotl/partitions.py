@@ -195,10 +195,9 @@ def has_any_partition_dirs(path_pref, res_id):
 def find_partition_dirs_for_taxonomy(path_pref, res_id):
     return [i for i in iter_existing_tax_dirs(path_pref, res_id)]
 
+
 def get_part_dir_from_part_name(res, parts_key):
     return os.path.join(res.partitioned_filepath, res.config.get_fragment_from_part_name(parts_key))
-
-
 
 
 def merge_and_write_taxon_partition_list(tp_list):

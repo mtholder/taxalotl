@@ -72,7 +72,7 @@ class TaxalotlConfig(object):
         assert self.resources_mgr is not None
 
     def get_separator_dict(self):
-        from taxalotl.commands import  SEP_MAPPING, cache_separator_names
+        from taxalotl.commands import SEP_MAPPING, cache_separator_names
         from peyotl import read_as_json
         fn = os.path.join(self.partitioned_dir, SEP_MAPPING)
         if not os.path.exists(fn):

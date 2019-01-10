@@ -250,3 +250,6 @@ class NCBIWrapper(TaxonomyWrapper):
 
     def normalize(self):
         normalize_ncbi(self.unpacked_filepath, self.normalized_filedir, self)
+
+    def _post_process_tree(self, tree):
+        for

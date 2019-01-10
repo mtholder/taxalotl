@@ -2,11 +2,11 @@
 # from __future__ import print_function
 
 import os
+from collections import defaultdict
 
 from peyotl import get_logger
 from peyotl.utility.str_util import StringIO
 
-from taxalotl.util import get_true_false_repsonse
 from taxalotl.ott_schema import (read_taxonomy_to_get_single_taxon,
                                  )
 from taxalotl.partitions import (fill_empty_anc_of_mapping,
@@ -14,8 +14,9 @@ from taxalotl.partitions import (fill_empty_anc_of_mapping,
                                  PREORDER_PART_LIST,
                                  NAME_TO_PARTS_SUBSETS)
 from taxalotl.resource_wrapper import ResourceWrapper, TaxonomyWrapper
-from taxalotl.tax_partition import (get_taxon_partition, get_roots_for_subset, )
-from collections import defaultdict
+from taxalotl.tax_partition import (get_roots_for_subset, )
+from taxalotl.util import get_true_false_repsonse
+
 _LOG = get_logger(__name__)
 
 OTT_PARTMAP = {
@@ -228,13 +229,13 @@ NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
                            'species group', 'species subgroup', 'varietas', 'variety', ])
 MIN_SEP_SIZE = 1000
 
+
 def get_stable_source_keys(taxon):
     all_src_keys = taxon.src_dict.keys()
     filtered = [i for i in all_src_keys if not i.startswith('additions')]
     r = [i for i in filtered if i not in UNSTABLE_SRC_PREFIXES]
     r.sort()
     return r
-
 
 
 def _diagnose_relevant_sources(tree):
@@ -258,10 +259,10 @@ def _diagnose_relevant_sources(tree):
     _LOG.info("Relevant sources appear to be: {}".format(ac_src))
     return frozenset(ac_src)
 
+
 PART_KEY_TO_REL_SRC_SET = {
     'Chordata': frozenset(['gbif', 'irmng', 'ncbi', 'worms']),
 }
-
 
 
 def add_confirmed_sep(nns, tree, list_num_id_taxon):
@@ -315,7 +316,8 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
             m = 'Might try calling _diagnose_relevant_sources for "{}", but in Jan 2019 moved to ' \
                 'making this hard coded in PART_KEY_TO_REL_SRC_SET.'
             raise NotImplementedError(m.format(current_partition_key))
-        _LOG.info("Relevant sources for {} are recorded as to be: {}".format(current_partition_key, ac_src))
+        _LOG.info("Relevant sources for {} are recorded as to be: {}".format(current_partition_key,
+                                                                             ac_src))
         for tree in tax_forest.trees:
             tree.add_num_tips_below()
             assert ac_src
@@ -360,4 +362,3 @@ class OTTaxonomyIdListWrapper(ResourceWrapper):
 
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
-

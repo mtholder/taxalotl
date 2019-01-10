@@ -6,6 +6,7 @@ from peyotl import get_logger
 
 _LOG = get_logger(__name__)
 
+
 def get_true_false_repsonse(p, true_func=None, def_value=False):
     if true_func is None:
         true_func = lambda r: r.lower() == 'y'

@@ -25,6 +25,7 @@ from taxalotl.dynamic_partitioning import (perform_dynamic_separation,
                                            return_sep_obj_copy_with_ott_fields)
 from taxalotl.analyze_update import analyze_update_to_resources
 from taxalotl.util import unlink
+
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
 
@@ -38,7 +39,7 @@ def analyze_update(taxalotl_config, id_list, level_list):
     earlier = taxalotl_config.get_terminalized_res_by_id(eid)
     later = taxalotl_config.get_terminalized_res_by_id(lid)
     if earlier.base_id != later.base_id:
-        m ='Can only analyze updates of the same taxonomy base: {}( base = {}), but {} (base = {})'
+        m = 'Can only analyze updates of the same taxonomy base: {}( base = {}), but {} (base = {})'
         raise ValueError(m.format(eid, earlier.base_id, lid, later.base_id))
     analyze_update_to_resources(taxalotl_config, earlier, later, level_list)
 
@@ -305,7 +306,6 @@ def enforce_new_separators(taxalotl_config, id_list, level_list):
             perform_separation(taxalotl_config, part_name, id_list, NEW_SEP_FILENAME)
 
 
-
 def build_partition_maps(taxalotl_config):
     rw = taxalotl_config.get_terminalized_res_by_id("ott", 'partition')
     if not rw.has_been_partitioned():
@@ -357,6 +357,7 @@ def compare_taxonomies(taxalotl_config, levels):
             m = 'Will compare taxonomies for "{}" based on {}'
             _LOG.info(m.format(level, tax_dir))
             compare_taxonomies_in_dir(taxalotl_config, tax_dir)
+
 
 def remove_sep_artifacts_and_empty_dirs(d):
     dir_to_del = []

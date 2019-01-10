@@ -7,8 +7,10 @@ from contextlib import contextmanager
 
 from peyotl import get_logger, assure_dir_exists, read_as_json, write_as_json
 
-from taxalotl.ott_schema import OTTTaxon, TaxonForest, HEADER_TO_LINE_PARSER
-from taxalotl.util import unlink
+from .taxon import Taxon
+from .tree import TaxonForest
+from .ott_schema import HEADER_TO_LINE_PARSER
+from .util import unlink
 
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
@@ -48,7 +50,7 @@ def _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, fn):
                     k = int(k)
                 except:
                     pass
-                r[k] = OTTTaxon(d=v)
+                r[k] = Taxon(d=v)
     return r
 
 
@@ -221,7 +223,7 @@ class LightTaxonomyHolder(object):
     def line_to_taxon(self, line=None, uid=None):
         if line is None:
             line = self._id_to_line[uid]
-        return OTTTaxon(line, line_parser=HEADER_TO_LINE_PARSER[self.taxon_header])
+        return Taxon(line, line_parser=HEADER_TO_LINE_PARSER[self.taxon_header])
 
     def _transfer_line(self, uid, dest_part,
                        as_root=False):  # type (int, LightTaxonomyHolder, bool) -> None
@@ -613,7 +615,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         id_to_obj = {}
         lp = HEADER_TO_LINE_PARSER[self.taxon_header]
         for line in self._id_to_line.values():
-            obj = OTTTaxon(line, line_parser=lp)
+            obj = Taxon(line, line_parser=lp)
             oid = obj.id
             assert oid not in id_to_obj
             id_to_obj[oid] = obj
@@ -731,7 +733,7 @@ def write_taxon_json(obj, filepath):
         assure_dir_exists(out_dir)
     dtw = {}
     for k, v in obj.items():
-        if isinstance(v, OTTTaxon):
+        if isinstance(v, Taxon):
             dtw[k] = v.to_serializable_dict()
         else:
             dtw[k] = v

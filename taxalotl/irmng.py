@@ -345,17 +345,6 @@ synonyms = {}
 roots = []
 
 
-class Taxon:
-    def __init__(self, id, parentid, name, rank, tstatus, nstatus):
-        self.id = id
-        self.parentid = parentid
-        self.name = name
-        self.rank = rank
-        self.tstatus = tstatus
-        self.nstatus = nstatus
-        self.keep = False
-        self.extinctp = False
-
 
 
 def extinctness_report():
