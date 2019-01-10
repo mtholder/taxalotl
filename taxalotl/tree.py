@@ -47,13 +47,34 @@ class TaxonTree(object):
         ranks_sn_set = {i.best_rank_sort_number for i in self.preorder()}
         ranks_sn_list = list(ranks_sn_set)
         ranks_sn_list.sort()
-        rank_sn_to_indent_n = {i: n for n, i in enumerate(ranks_sn_list)}
-
+        rank_sn2indent_n = {i: n for n, i in enumerate(ranks_sn_list)}
+        lrsl = len(ranks_sn_list)
+        for n, nd in enumerate(self.preorder()):
+            #if n > 20:
+            #    return
+            if n == 0:
+                nd.child_indent = ''
+                indent =''
+            else:
+                par = self.get_taxon(nd.par_id)
+                par_pref = par.child_indent
+                is_first_child = nd is par.children_refs[0]
+                is_last_child = nd is par.children_refs[-1]
+                pni = len(par_pref)
+                indent_num = 2 * (lrsl - 1 - rank_sn2indent_n[nd.best_rank_sort_number])
+                indent_num -= (pni + 1)
+                tail = '-'*indent_num
+                if is_last_child:
+                    my_prompt = '\\' + tail
+                    cs = ' '
+                else:
+                    my_prompt = '+' + tail
+                    cs = '|'
+                nd.child_indent = '{}{}{}'.format(par_pref, cs, ' '*indent_num)
+                indent = '{}{}'.format(par_pref, my_prompt)
+            out_stream.write('{}{}'.format(indent, nd.terse_descrip()))
         for nd in self.preorder():
-            indent_num = 2 * (
-                    len(ranks_sn_list) - 1 - rank_sn_to_indent_n[nd.best_rank_sort_number])
-            out_stream.write(
-                '{}"{}" (id={}, rank={})\n'.format(' ' * indent_num, nd.name, nd.id, nd.rank))
+            del nd.child_indent
 
     def add_best_guess_rank_sort_number(self):
         for nd in self.postorder():

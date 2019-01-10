@@ -28,6 +28,39 @@ class Taxon(object):
     def child_id_dict(self):
         return {c.id: c for c in self.children_refs}
 
+    def terse_descrip(self):
+        m = '"{}" [{}]{}\n'
+        suff = ''
+        r = self.rank
+        if r:
+            suff += ' {}'.format(r)
+        sf = self.sorted_flags
+        f = ' flags={}'.format(','.join(sf)) if sf else ''
+        if f:
+            suff += f
+        return m.format(self.name, self.id, suff)
+
+
+    @property
+    def sorted_flags(self):
+        if not self.flags:
+            return []
+        l = list(self.flags)
+        l.sort()
+        return l
+
+    def flag_as_hybrid(self):
+        self._add_flag('hybrid')
+
+    def flag_as_incertae_sedis(self):
+        self._add_flag('incertae_sedis')
+
+    def _add_flag(self, f):
+        if not self.flags:
+            self.flags = {f}
+        else:
+            self.flags.add(f)
+
     def rank_sorting_number(self):
         if (self.rank is None) or (self.rank == 'no rank'):
             return None
