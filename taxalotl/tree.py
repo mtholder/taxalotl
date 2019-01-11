@@ -80,8 +80,6 @@ class TaxonTree(object):
         for nd in self.postorder():
             if hasattr(nd, 'best_rank_sort_number'):
                 continue
-            if nd.id == 1138017:
-                print(nd.id)
             nrr = self.node_rank_sorting_number_range(nd)
             nd.best_rank_sort_number = nrr[1]
             if not nd.children_refs:
@@ -100,7 +98,7 @@ class TaxonTree(object):
                 csn = self._get_highest_child_rank(c)
             if csn is None:
                 continue
-            if hr is None or csn > hr:
+            if hr is None or csn + 1 > hr:
                 hr = csn + 1
         return hr
 
