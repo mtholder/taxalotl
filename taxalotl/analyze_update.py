@@ -280,8 +280,7 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
     if len(pf.trees) != 1 or len(cf.trees) != 1:
         raise NotImplementedError('Analysis of multi-tree forests not supported, yet')
     prev_tree = pf.trees[0]  # type: TaxonTree
-    prev_tree.write_rank_indented(out_stream)
-    sys.exit('early')
+    # prev_tree.write_rank_indented(out_stream)
     curr_tree = cf.trees[0]  # type: TaxonTree
     update_log.set_prev_curr(prev_tree, curr_tree)
     prev_tree.add_num_tips_below()

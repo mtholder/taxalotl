@@ -255,11 +255,11 @@ class NCBIWrapper(TaxonomyWrapper):
         to_collapse_as_incertae_sedis = []
         for nd in tree.preorder():
             if ' x ' in nd.name:
-                _LOG.info('flagging "{}" as a hybrid'.format(nd.name))
+                # _LOG.info('flagging "{}" as a hybrid'.format(nd.name))
                 nd.flag_as_hybrid()
             if nd.name.lower().startswith('unclassified '):
                 to_collapse_as_incertae_sedis.append(nd)
-                _LOG.info('will collapse "{}"'.format(nd.name))
+                # _LOG.info('will collapse "{}"'.format(nd.name))
         tree.collapsed_incertae_sedis_containers = set(to_collapse_as_incertae_sedis)
         for nd in to_collapse_as_incertae_sedis:
             new_par_id = nd.par_id
