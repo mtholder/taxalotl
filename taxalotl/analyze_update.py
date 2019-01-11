@@ -44,6 +44,8 @@ class UpdateStatus(IntFlag):
     UNDIAGNOSED_CHANGE = 16
     DELETED_TERMINAL = 32  # really just DELETED if not combined with TERMINAL or SYNONYM
     SYN_DELETED = 64
+    PROMOTED_FROM_SYNONYM = 128
+    SUNK_TO_SYNONYM = 256
     # End flags. Start of unions
     NAME_AND_PAR_CHANGED = PAR_CHANGED | NAME_CHANGED
     NEW_INTERNAL = NEW_TERMINAL | INTERNAL
@@ -52,6 +54,10 @@ class UpdateStatus(IntFlag):
     SYN_ADDED = SYNONYM | NEW_TERMINAL
     SYN_CHANGED = SYNONYM | UNDIAGNOSED_CHANGE
     SYN_NAME_CHANGED = SYNONYM | NAME_CHANGED
+    TERMINAL_PROMOTED_FROM_SYNONYM = PROMOTED_FROM_SYNONYM | NEW_TERMINAL
+    INTERNAL_PROMOTED_FROM_SYNONYM = PROMOTED_FROM_SYNONYM | NEW_INTERNAL
+    TERMINAL_SUNK_TO_SYNONYM = SUNK_TO_SYNONYM | DELETED_TERMINAL
+    INTERNAL_SUNK_TO_SYNONYM = SUNK_TO_SYNONYM | DELETED_INTERNAL
 
 
 def del_add_set_diff(old_set, new_set):
@@ -103,6 +109,8 @@ def flag_synonyms_change(f, s):
         f.update_status.setdefault(UpdateStatus.SYN_ADDED, []).append(d)
     for p in changed:
         f.update_status.setdefault(UpdateStatus.SYN_CHANGED, []).append(p)
+    return real_dels, changed, adds
+
 def _has_syn_update(nd):
     for k, nd_list in nd.update_status.items():
         if k & UpdateStatus.SYNONYM:
@@ -184,6 +192,15 @@ class UpdateStatusLog(object):
         self.set_prev_curr(prev_tree, curr_tree)
         self.written_ids = set()
 
+    def improve_status(self, old_stat, new_stat, node_list):
+        to_cull = self.by_status_code.get(old_stat, [])
+        for nd in node_list:
+            us = nd.update_status
+            us[new_stat] = us[old_stat]
+            del us[old_stat]
+            to_cull.remove(nd)
+        self.by_status_code.setdefault(new_stat, []).extend(node_list)
+
     def set_prev_curr(self, prev_tree, curr_tree):
         self.prev_tree, self.curr_tree = prev_tree, curr_tree
 
@@ -219,7 +236,7 @@ class UpdateStatusLog(object):
                 else:
                     nd_c_is_spec_typed = tree.node_is_specimen_typed(nd_child)
                     if nd_c_is_spec_typed:
-                        assert other_tree.node_is_specimen_typed(paired_nd)
+                        assert other_tree.node_is_specimen_typrugoed(paired_nd)
                         rank_cmp, frr, scc = _compare_nd_ranks((tree, nd_child),
                                                                (other_tree, paired_nd))
                         if rank_cmp == NodeRankCmpResult.FIRST_HIGHER:
@@ -290,6 +307,8 @@ class UpdateStatusLog(object):
         status_keys = [(i.value, i) for i in self.by_status_code.keys()]
         status_keys.sort()
         status_keys = [i[1] for i in status_keys]
+        status_keys.remove(UpdateStatus.TERMINAL_SUNK_TO_SYNONYM)
+        status_keys.remove(UpdateStatus.INTERNAL_SUNK_TO_SYNONYM)
         for k in status_keys:
             for nd in self.by_status_code[k]:
                 self._write_nd(nd)
@@ -302,7 +321,11 @@ class UpdateStatusLog(object):
         changed = node_status_flag != UpdateStatus.UNCHANGED
         nsyn_c = _has_syn_update(nd)
         osyn_c = (other_node is not None) and _has_syn_update(other_node)
+        has_sunken = hasattr(nd, 'sunken')
+        has_prev_container = hasattr(nd, 'prev_container')
         if not changed:
+            if has_sunken or has_prev_container:
+                changed = True
             if osyn_c or nsyn_c:
                 changed = True
         if (not changed) and (not even_unchanged):
@@ -310,8 +333,19 @@ class UpdateStatusLog(object):
         if nd.id in self.written_ids:
             return
         self.written_ids.add(nd.id)
-        m = '{}{}: {}. Previous: {}\n'.format(indent, node_status_flag.name, nd, other_node)
+        msg_template = '{}{}: {}. Previous: {}\n'
+        m = msg_template.format(indent, node_status_flag.name, nd, other_node)
         out_stream.write(m)
+        if has_prev_container:
+            for x in nd.prev_container:
+                xnsf, xon = _get_nonsyn_flag_and_other(x)
+                m = msg_template.format('   prev. container: ' + indent, xnsf.name, x, xon)
+                out_stream.write(m)
+        if has_sunken:
+            for x in nd.sunken:
+                xnsf, xon = _get_nonsyn_flag_and_other(x)
+                m = msg_template.format('   ' + indent, xnsf.name, x, xon)
+                out_stream.write(m)
         if nsyn_c:
             self._write_syn_for_nd(nd, indent)
         if node_status_flag == UpdateStatus.UNCHANGED and osyn_c:
@@ -403,12 +437,55 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
             flag_update_status(prev_nd, None, s)
             update_log.add_node(prev_nd)
 
+    del_syn, mod_syn, add_syn  = set(), set(), set()
     for nd in curr_tree.preorder():
         other = _get_nonsyn_flag_and_other(nd)[-1]
         if other is not None:
             if other.synonyms != nd.synonyms:
-                flag_synonyms_change(nd, other)
+                d, m, a = flag_synonyms_change(nd, other)
+                del_syn.update(d)
+                mod_syn.update(m)
+                add_syn.update(a)
         update_log.add_node(nd)
 
+    del_syn_names, mod_syn_names, add_syn_names = {}, {}, {}
+    for d in del_syn:
+        del_syn_names.setdefault(d.name, []).append(d)
+    # for d in mod_syn:
+    #     mod_syn_names.setdefault(d.name, []).append(d)
+    for d in add_syn:
+        add_syn_names.setdefault(d.name, []).append(d)
+
+    for k in [UpdateStatus.NEW_INTERNAL, UpdateStatus.NEW_TERMINAL]:
+        more_specific_status = set()
+        for nd in update_log.by_status_code.get(k, []):
+            if nd.name in del_syn_names:
+                psl = del_syn_names[nd.name]
+                nd.prev_syn = psl
+                for prevsyn in psl:
+                    prev_container = prev_tree.id_to_taxon[prevsyn.valid_tax_id]
+                    if not hasattr(nd, 'prev_container'):
+                        nd.prev_container = []
+                    nd.prev_container.append(prev_container)
+                more_specific_status.add(nd)
+        ns = UpdateStatus.PROMOTED_FROM_SYNONYM | k
+        update_log.improve_status(k, ns, more_specific_status)
+
+    for k in [UpdateStatus.DELETED_TERMINAL, UpdateStatus.DELETED_INTERNAL]:
+        more_specific_status = set()
+        for nd in update_log.by_status_code.get(k, []):
+            if nd.name in add_syn_names:
+                nsl = add_syn_names[nd.name]
+                for new_syn in nsl:
+                    target = curr_tree.id_to_taxon[new_syn.valid_tax_id]
+                    if not hasattr(target, 'sunken'):
+                        target.sunken = []
+                    target.sunken.append(nd)
+                nd.new_syn = nsl
+                more_specific_status.add(nd)
+        ns = UpdateStatus.SUNK_TO_SYNONYM | k
+        update_log.improve_status(k, ns, more_specific_status)
+
+    x = update_log.flush()
     print('done')
-    return update_log.flush()
+    return x
