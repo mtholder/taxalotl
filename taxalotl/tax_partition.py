@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# from __future__ import print_function
 import io
 import os
 from copy import copy
@@ -163,6 +162,73 @@ class PartitionedTaxDirBase(object):
                 n.append(x)
         return n
 
+class Synonym(object):
+    def __init__(self, valid_tax_id, name, syn_type=None, syn_id=None):
+        if syn_type is None:
+            syn_type = 'synonym'
+        self.valid_tax_id = valid_tax_id
+        self.name = name
+        self.syn_type = syn_type
+        self.syn_id = syn_id
+
+    def __repr__(self):
+        sis = ', syn_id={}'.format(self.syn_id) if self.syn_id else ''
+        tis = ', syn_type={}'.format(repr(self.syn_type)) if self.syn_type != 'synonym' else ''
+        m = 'Synonym({}, {}{}{})'
+        return m.format(self.valid_tax_id, repr(self.name), tis, sis)
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __hash__(self):
+        return hash((self.syn_id, self.valid_tax_id, self.name, self.syn_type))
+
+    def __eq__(self, other):
+        if isinstance(other, Synonym):
+            return self.valid_tax_id == other.valid_tax_id \
+                   and self.name == other.name \
+                   and self.syn_type == other.syn_type \
+                   and self.syn_id == self.syn_id
+
+_VALID_SYN_TYPES = {'authority',
+                    'blast name',
+                    'common name',
+                    'equivalent name',
+                    'genbank common name',
+                    'genbank synonym',
+                    'includes',
+                    'misnomer',
+                    'misspelling',
+                    'synonym',
+                    'type material',
+                    }
+IGNORE_SYN_TYPES = {'authority',
+                    'blast name',
+                    'common name',
+                    'genbank common name',
+                    'genbank synonym',
+                    'type material',
+                    }
+
+class SynonymInterpreter(object):
+    def __init__(self, header):
+        if header.endswith('\n'):
+            header = header[:-1]
+        self.fields = [i.strip() for i in header.split('\t|\t') if i.strip()]
+        assert 'uid' in self.fields
+        self._uid_ind = self.fields.index('uid')
+        self._name_ind = self.fields.index('name')
+        self._type_ind = self.fields.index('type')
+
+    def interpret(self, uid, syn_id_line_tuple):
+        syn_id, line = syn_id_line_tuple
+        sl = line.split('\t|\t')
+        suid = sl[self._uid_ind]
+        name = sl[self._name_ind].strip()
+        syn_type = sl[self._type_ind].strip()
+        assert syn_type in _VALID_SYN_TYPES
+        assert uid == int(suid)
+        return Synonym(valid_tax_id=uid, name=name, syn_type=syn_type, syn_id=syn_id)
 
 # noinspection PyProtectedMember
 class LightTaxonomyHolder(object):
@@ -184,6 +250,7 @@ class LightTaxonomyHolder(object):
         self._roots = {}
         self._des_in_other_slices = {}
         self._syn_by_id = {}  # accepted_id -> list of synonym lines
+        self._parsed_syn_by_id = None
         self.taxon_header = None
         self.syn_header = None
         self.treat_syn_as_taxa = False
@@ -194,6 +261,24 @@ class LightTaxonomyHolder(object):
     @property
     def synonyms_by_id(self):
         return copy(self._syn_by_id)
+
+    def parsed_synonyms_by_id(self, ignored_syn_types=None):
+        if self._parsed_syn_by_id is None:
+            p = {}
+            if self._syn_by_id:
+                si = SynonymInterpreter(self.syn_header)
+                for uid, line_stub_list in self._syn_by_id.items():
+                    ps = set()
+                    for i in line_stub_list:
+                        syn = si.interpret(uid, i)
+                        st = syn.syn_type
+                        if ignored_syn_types is None or st not in ignored_syn_types:
+                            ps.add(syn)
+                    if ps:
+                        p[uid] = ps
+            self._parsed_syn_by_id = p
+        return copy(self._parsed_syn_by_id)
+
 
     def _del_data(self):
         for el in LightTaxonomyHolder._DATT:

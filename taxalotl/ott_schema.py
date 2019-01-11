@@ -212,6 +212,7 @@ def int_or_str(s):
         return str(s)
 
 
+
 def full_ott_line_parser(taxon, line):
     try:
         ls = line.split('\t|\t')

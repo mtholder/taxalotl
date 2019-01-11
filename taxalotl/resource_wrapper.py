@@ -529,6 +529,7 @@ class TaxonomyWrapper(ResourceWrapper):
 
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
+        self.part_name_to_tax_part_in_mem = {}
         # print("ET obj = {}".format(obj))
 
     def accumulate_separated_descendants(self, scaffold_dir):
@@ -578,10 +579,18 @@ class TaxonomyWrapper(ResourceWrapper):
             return 'irmng'  # sorry this is hacky...
         return self.base_id
 
+    def get_read_only_tax_part(self, current_partition_key):
+        if not current_partition_key.startswith('/'):
+            current_partition_key = self.config.get_fragment_from_part_name(current_partition_key)
+        tax_part = self.part_name_to_tax_part_in_mem.get(current_partition_key)
+        if tax_part is None:
+            tax_part = get_taxon_partition(self, current_partition_key)
+            tax_part.read_inputs_for_read_only()
+            self.part_name_to_tax_part_in_mem[current_partition_key] = tax_part
+        return tax_part
+
     def get_taxon_forest_for_partition(self, current_partition_key):
-        fragment = self.config.get_fragment_from_part_name(current_partition_key)
-        tax_part = get_taxon_partition(self, fragment)
-        tax_part.read_inputs_for_read_only()
+        tax_part = self.get_read_only_tax_part(current_partition_key)
         if not os.path.isfile(tax_part.tax_fp):
             m = 'Skipping {} due to lack of file at "{}"'
             _LOG.warn(m.format(current_partition_key, tax_part.tax_fp))
@@ -592,6 +601,10 @@ class TaxonomyWrapper(ResourceWrapper):
             self._post_process_tree(x)
         _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
         return tax_forest
+
+    def get_parsed_synonyms_by_id(self, current_partition_key, ignored_syn_types=None):
+        tax_part = self.get_read_only_tax_part(current_partition_key)
+        return tax_part.parsed_synonyms_by_id(ignored_syn_types=ignored_syn_types)
 
     def _post_process_tree(self, tree):
         pass

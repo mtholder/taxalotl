@@ -49,6 +49,16 @@ class Taxon(object):
         l.sort()
         return l
 
+    @property
+    def synonyms(self):
+        if hasattr(self, '_synonyms'):
+            return self._synonyms
+        return set()
+
+    @synonyms.setter
+    def synonyms(self, x):
+        self._synonyms = x
+
     def flag_as_hybrid(self):
         self._add_flag('hybrid')
 

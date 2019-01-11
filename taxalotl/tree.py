@@ -3,10 +3,11 @@
 
 from __future__ import print_function
 from typing import Dict, List
+from peyotl import get_logger
 from .taxon import Taxon
-
 from .taxonomic_ranks import MINIMUM_SORTING_NUMBER, SPECIES_SORTING_NUMBER
 
+_LOG = get_logger(__name__)
 
 def write_indented_subtree(out, node, indent_level):
     out.write('{}{} (id={})\n'.format('  ' * indent_level,
@@ -181,7 +182,7 @@ class TaxonTree(object):
 
     def add_update_fields(self):
         for taxon in self.preorder():
-            taxon.update_status = []
+            taxon.update_status = {}
 
     def to_root_gen(self, taxon):
         if taxon is None:
@@ -193,6 +194,14 @@ class TaxonTree(object):
             taxon = self.id_to_taxon[taxon.par_id]
             yield taxon
 
+    def attach_parsed_synonyms_set(self, syn_dict):
+        for uid, synonym_set in syn_dict.items():
+            try:
+                taxon = self.id_to_taxon[uid]
+            except:
+                _LOG.warn('could not find for target taxon for {}'.format(synonym_set))
+                continue
+            taxon.synonyms = synonym_set
 
 class TaxonForest(object):
     def __init__(self, id_to_taxon, taxon_partition=None):
