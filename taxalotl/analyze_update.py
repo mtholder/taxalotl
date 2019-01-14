@@ -11,7 +11,9 @@ from .config import TaxalotlConfig
 from .tree import TaxonTree
 from .partitions import (PART_NAMES)
 from .resource_wrapper import TaxonomyWrapper
-from .taxonomic_ranks import GENUS_RANK_TO_SORTING_NUMBER, SPECIES_SORTING_NUMBER
+from .taxonomic_ranks import (GENUS_RANK_TO_SORTING_NUMBER,
+                              MINIMUM_HIGHER_TAXON_NUMBER,
+                              SPECIES_SORTING_NUMBER)
 from .tax_partition import IGNORE_SYN_TYPES
 
 _LOG = get_logger(__name__)
@@ -48,8 +50,12 @@ class UpdateStatus(IntFlag):
     SUNK_TO_SYNONYM = 0x100
     PROMOTED_FROM_BELOW_SPECIES = 0x200
     SUNK_TO_BELOW_SPECIES = 0x400
+    CASCADING_NAME_CHANGED = 0x800
+    NEWLY_BARREN = 0x1000
+    OLDY_BARREN = 0x2000
     # End flags. Start of unions
     NAME_AND_PAR_CHANGED = PAR_CHANGED | NAME_CHANGED
+    CASCADE_NAME_AND_PAR_CHANGED = NAME_AND_PAR_CHANGED | CASCADING_NAME_CHANGED
     NEW_INTERNAL = NEW_TERMINAL | INTERNAL
     DELETED_INTERNAL = DELETED_TERMINAL | INTERNAL
     SYNONYM = SYN_DELETED
@@ -190,6 +196,16 @@ def _compare_nd_ranks(first_pair, second_pair):
         return NodeRankCmpResult.SECOND_HIGHER, fir_rr, sec_rr
     return NodeRankCmpResult.OVERLAPPING, fir_rr, sec_rr
 
+def _add_update_flag_bit(nd, flag):
+    '''Adds flag to non-synonym keys'''
+    nus = {}
+    for k, v in nd.update_status.items():
+        if k & UpdateStatus.SYNONYM:
+            nus[k] = v
+        else:
+            nus[flag | k] = v
+    nd.update_status = nus
+
 
 class UpdateStatusLog(object):
     def __init__(self, prev_tree=None, curr_tree=None):
@@ -290,8 +306,44 @@ class UpdateStatusLog(object):
                 _LOG.warn('CLADE ')
                 # self._write_nd(nd, True)
 
+    def _detect_cascading_name_change(self, curr_nd, curr_child):
+        other_node = _get_nonsyn_flag_and_other(curr_child)[1]
+        other_par = self.prev_tree.id_to_taxon[other_node.par_id]
+        if other_par.name == curr_nd.name:
+            return
+        if not other_node.name.startswith(other_par.name):
+            return
+        other_suffix = other_node.name[len(other_par.name):]
+        spliced = curr_nd.name + other_suffix
+        if spliced == curr_child.name:
+            nus = {}
+            for k, v in curr_child.update_status.items():
+                if k & UpdateStatus.SYNONYM:
+                    nus[k] = v
+                else:
+                    nus[UpdateStatus.CASCADING_NAME_CHANGED | k] = v
+            curr_child.update_status = nus
+
+
     def flush(self):
+        self.curr_tree.add_best_guess_rank_sort_number()
+        self.prev_tree.add_best_guess_rank_sort_number()
+
         edit_list = []
+        for nd in self.curr_tree.preorder():
+            if (not nd.children_refs) and nd.best_rank_sort_number >= MINIMUM_HIGHER_TAXON_NUMBER:
+                other = _get_nonsyn_flag_and_other(nd)[1]
+                if other \
+                   and (not other.children_refs) \
+                   and other.best_rank_sort_number >= MINIMUM_HIGHER_TAXON_NUMBER:
+                    _add_update_flag_bit(nd, UpdateStatus.OLDY_BARREN)
+                else:
+                    _add_update_flag_bit(nd, UpdateStatus.NEWLY_BARREN)
+            if hasattr(nd, 'new_children'):
+                for c in nd.new_children:
+                    if _get_nonsyn_flag_and_other(c)[0] & UpdateStatus.NAME_CHANGED:
+                        self._detect_cascading_name_change(nd, c)
+
         for nd in self.curr_tree.preorder():
             ne = self._gen_edit_if_new(nd, {})
             if ne:

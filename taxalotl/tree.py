@@ -127,6 +127,11 @@ class TaxonTree(object):
             raise ValueError("no rank or anc rank for {}".format(repr(nd)))
         return asn - 1, csn + 1
 
+    def node_is_higher_taxon(self, nd):
+        if self.node_is_specimen_typed(nd):
+            return False
+
+
     def node_is_specimen_typed(self, nd):
         """Return True for taxa at or below species level."""
         rsn = nd.rank_sorting_number()
