@@ -37,15 +37,17 @@ def analyze_update_to_resources(taxalotl_config: TaxalotlConfig,
 
 class UpdateStatus(IntFlag):
     UNCHANGED = 0
-    PAR_CHANGED = 1
-    NAME_CHANGED = 2
-    NEW_TERMINAL = 4  # really just NEW if not combined with TERMINAL or SYNONYM
-    INTERNAL = 8
-    UNDIAGNOSED_CHANGE = 16
-    DELETED_TERMINAL = 32  # really just DELETED if not combined with TERMINAL or SYNONYM
-    SYN_DELETED = 64
-    PROMOTED_FROM_SYNONYM = 128
-    SUNK_TO_SYNONYM = 256
+    PAR_CHANGED = 0x01
+    NAME_CHANGED = 0x02
+    NEW_TERMINAL = 0x04  # really just NEW if not combined with TERMINAL or SYNONYM
+    INTERNAL = 0x08
+    UNDIAGNOSED_CHANGE = 0x10
+    DELETED_TERMINAL = 0x20  # really just DELETED if not combined with TERMINAL or SYNONYM
+    SYN_DELETED = 0x40
+    PROMOTED_FROM_SYNONYM = 0x80
+    SUNK_TO_SYNONYM = 0x100
+    PROMOTED_FROM_BELOW_SPECIES = 0x200
+    SUNK_TO_BELOW_SPECIES = 0x400
     # End flags. Start of unions
     NAME_AND_PAR_CHANGED = PAR_CHANGED | NAME_CHANGED
     NEW_INTERNAL = NEW_TERMINAL | INTERNAL
@@ -58,6 +60,7 @@ class UpdateStatus(IntFlag):
     INTERNAL_PROMOTED_FROM_SYNONYM = PROMOTED_FROM_SYNONYM | NEW_INTERNAL
     TERMINAL_SUNK_TO_SYNONYM = SUNK_TO_SYNONYM | DELETED_TERMINAL
     INTERNAL_SUNK_TO_SYNONYM = SUNK_TO_SYNONYM | DELETED_INTERNAL
+
 
 
 def del_add_set_diff(old_set, new_set):
@@ -326,9 +329,9 @@ class UpdateStatusLog(object):
         nsyn_c = _has_syn_update(nd)
         osyn_c = (other_node is not None) and _has_syn_update(other_node)
         has_sunken = hasattr(nd, 'sunken')
-        has_prev_container = hasattr(nd, 'prev_container')
+        has_prev_contained = hasattr(nd, 'previously_contained')
         if not changed:
-            if has_sunken or has_prev_container:
+            if has_sunken or has_prev_contained:
                 changed = True
             if osyn_c or nsyn_c:
                 changed = True
@@ -340,10 +343,10 @@ class UpdateStatusLog(object):
         msg_template = '{}{}: {}. Previous: {}\n'
         m = msg_template.format(indent, node_status_flag.name, nd, other_node)
         out_stream.write(m)
-        if has_prev_container:
-            for x in nd.prev_container:
+        if has_prev_contained:
+            for x in nd.previously_contained:
                 xnsf, xon = _get_nonsyn_flag_and_other(x)
-                m = msg_template.format('   prev. container: ' + indent, xnsf.name, x, xon)
+                m = msg_template.format('   previously contained: ' + indent, xnsf.name, x, xon)
                 out_stream.write(m)
         if has_sunken:
             for x in nd.sunken:
@@ -468,9 +471,12 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
                 nd.prev_syn = psl
                 for prevsyn in psl:
                     prev_container = prev_tree.id_to_taxon[prevsyn.valid_tax_id]
-                    if not hasattr(nd, 'prev_container'):
-                        nd.prev_container = []
-                    nd.prev_container.append(prev_container)
+                    cnd_4_prev_cont = _get_nonsyn_flag_and_other(prev_container)[1]
+                    pcn = cnd_4_prev_cont if cnd_4_prev_cont else prev_container
+                    if not hasattr(pcn, 'previously_contained'):
+                        pcn.previously_contained = []
+                    pcn.previously_contained.append(nd)
+
                 more_specific_status.add(nd)
         ns = UpdateStatus.PROMOTED_FROM_SYNONYM | k
         update_log.improve_status(k, ns, more_specific_status)
