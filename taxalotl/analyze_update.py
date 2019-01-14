@@ -335,6 +335,11 @@ class UpdateStatusLog(object):
         self.__init__(None, None)
 
     def _gen_edit_if_new(self, nd, edit_obj, even_unchanged=False):
+        if not self.node_is_in_curr_tree(nd):
+            return self._gen_prev_tree_nd_edit(nd, edit_obj, even_unchanged=even_unchanged)
+
+        if nd.id == 2267536:
+            pass
         node_status_flag, other_node = _get_nonsyn_flag_and_other(nd)
         changed = node_status_flag != UpdateStatus.UNCHANGED
         nsyn_c = _has_syn_update(nd)
@@ -351,7 +356,6 @@ class UpdateStatusLog(object):
         if (not changed) and (not even_unchanged):
             return edit_obj
         # Keep node from being written twice...
-
         nd_python_id = id(nd)
         if nd_python_id in self.written_ids:
             if isinstance(edit_obj, list):
@@ -385,6 +389,11 @@ class UpdateStatusLog(object):
         return edit_obj
 
     def _gen_prev_tree_nd_edit(self, nd, edit_obj, even_unchanged=False):
+        if self.node_is_in_curr_tree(nd):
+            return self._gen_edit_if_new(nd, edit_obj, even_unchanged=even_unchanged)
+        if nd.id == 2267536:
+            pass
+
         node_status_flag, other_node = _get_nonsyn_flag_and_other(nd)
         changed = node_status_flag & UpdateStatus.DELETED_TERMINAL
         nsyn_c = _has_syn_update(nd)
@@ -396,7 +405,7 @@ class UpdateStatusLog(object):
             if (other_node is None) and nsyn_c:
                 changed = True
         if (not changed) and (not even_unchanged):
-            return
+            return edit_obj
         # Keep node from being written twice...
 
         nd_python_id = id(nd)
@@ -422,13 +431,12 @@ class UpdateStatusLog(object):
             self._write_sub_nd_list(nd, 'lost_children_to', curr_edit_obj)
         if nsyn_c:
             self._write_syn_for_nd(nd, curr_edit_obj)
+        return edit_obj
 
     def _write_sub_nd_list(self, nd, list_attr_name, edit_dict):
-        in_curr_tree = self.node_is_in_curr_tree(nd)
-        to_call = self._gen_edit_if_new if in_curr_tree else self._gen_prev_tree_nd_edit
         n_l = []
         for x in getattr(nd, list_attr_name):
-            to_call(x, n_l, even_unchanged=True)
+            self._gen_edit_if_new(x, n_l, even_unchanged=True)
         if n_l:
             edit_dict[list_attr_name] = n_l
 
@@ -450,7 +458,7 @@ class UpdateStatusLog(object):
 
     def node_is_in_curr_tree(self, nd):
         try:
-            cn_id_match = self.curr_tree.id_to_taxon(nd.id)
+            cn_id_match = self.curr_tree.id_to_taxon[nd.id]
             return cn_id_match is nd
         except:
             pass
@@ -492,7 +500,7 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
     curr_tree.add_num_tips_below()
     prev_tree.add_update_fields()
     curr_tree.add_update_fields()
-    print(prev_tree.root.num_tips_below, '->', curr_tree.root.num_tips_below)
+    _LOG.debug('{} -> {}'.format(prev_tree.root.num_tips_below, curr_tree.root.num_tips_below))
     prev_syn = prev.get_parsed_synonyms_by_id(part_name, ignored_syn_types=IGNORE_SYN_TYPES)
     prev_tree.attach_parsed_synonyms_set(prev_syn)
     curr_syn = curr.get_parsed_synonyms_by_id(part_name, ignored_syn_types=IGNORE_SYN_TYPES)
@@ -609,5 +617,5 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
         update_log.improve_status(k, ns, more_specific_status)
 
     x = update_log.flush()
-    print('done')
+    _LOG.debug('done')
     return x
