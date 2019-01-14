@@ -330,8 +330,9 @@ class UpdateStatusLog(object):
         osyn_c = (other_node is not None) and _has_syn_update(other_node)
         has_sunken = hasattr(nd, 'sunken')
         has_prev_contained = hasattr(nd, 'previously_contained')
+        has_new_children = hasattr(nd, 'new_children')
         if not changed:
-            if has_sunken or has_prev_contained:
+            if has_sunken or has_prev_contained or has_new_children:
                 changed = True
             if osyn_c or nsyn_c:
                 changed = True
@@ -339,10 +340,16 @@ class UpdateStatusLog(object):
             return
         if nd.id in self.written_ids:
             return
+
         self.written_ids.add(nd.id)
         msg_template = '{}{}: {}. Previous: {}\n'
         m = msg_template.format(indent, node_status_flag.name, nd, other_node)
         out_stream.write(m)
+        if has_new_children:
+            for x in nd.new_children:
+                xnsf, xon = _get_nonsyn_flag_and_other(x)
+                m = msg_template.format('   new_child: ' + indent, xnsf.name, x, xon)
+                out_stream.write(m)
         if has_prev_contained:
             for x in nd.previously_contained:
                 xnsf, xon = _get_nonsyn_flag_and_other(x)
@@ -412,30 +419,37 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
     #         for d in adds:
     #             print('Added   SYNONYM    : {} => {}'.format(k, d))
     # sys.exit('hi')
-    for leaf in curr_tree.postorder():
-        lid = leaf.id
+    for cnode in curr_tree.postorder():
+        lid = cnode.id
         prev_nd = prev_tree.id_to_taxon.get(lid)
         if prev_nd is None:
-            s = UpdateStatus.NEW_INTERNAL if leaf.children_refs else UpdateStatus.NEW_TERMINAL
-            flag_update_status(leaf, None, s)
+            s = UpdateStatus.NEW_INTERNAL if cnode.children_refs else UpdateStatus.NEW_TERMINAL
+            flag_update_status(cnode, None, s)
         else:
             psd = prev_nd.to_serializable_dict()
-            lsd = leaf.to_serializable_dict()
+            lsd = cnode.to_serializable_dict()
             same, dma_dicts = del_mod_add_dict_diff(psd, lsd)
             if same:
-                flag_update_status(leaf, prev_nd, UpdateStatus.UNCHANGED)
+                flag_update_status(cnode, prev_nd, UpdateStatus.UNCHANGED)
             else:
                 d, m, a = dma_dicts
+                par_changed = 'par_id' in m
                 if (not d) and (not a):
                     if len(m) == 1:
                         if 'par_id' in m:
-                            flag_update_status(leaf, prev_nd, UpdateStatus.PAR_CHANGED)
+                            flag_update_status(cnode, prev_nd, UpdateStatus.PAR_CHANGED)
                         elif 'name' in m:
-                            flag_update_status(leaf, prev_nd, UpdateStatus.NAME_CHANGED)
+                            flag_update_status(cnode, prev_nd, UpdateStatus.NAME_CHANGED)
                     elif len(m) == 2 and 'par_id' in m and 'name' in m:
-                        flag_update_status(leaf, prev_nd, UpdateStatus.NAME_AND_PAR_CHANGED)
-                if not leaf.update_status:
-                    flag_update_status(leaf, prev_nd, UpdateStatus.UNDIAGNOSED_CHANGE)
+                        flag_update_status(cnode, prev_nd, UpdateStatus.NAME_AND_PAR_CHANGED)
+                if not cnode.update_status:
+                    flag_update_status(cnode, prev_nd, UpdateStatus.UNDIAGNOSED_CHANGE)
+                if par_changed:
+                    new_par = curr_tree.id_to_taxon[cnode.par_id]
+                    if not hasattr(new_par, 'new_children'):
+                        new_par.new_children = []
+                    new_par.new_children.append(cnode)
+                    
 
     for prev_nd in prev_tree.preorder():
         if not prev_nd.update_status:
