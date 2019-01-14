@@ -13,6 +13,7 @@ from peyotl import (add_or_append_to_dict, assure_dir_exists,
                     shorter_fp_form,
                     write_as_json)
 from .taxon import Taxon
+
 _LOG = get_logger(__name__)
 
 INP_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n"
@@ -210,7 +211,6 @@ def int_or_str(s):
         return int(s)
     except:
         return str(s)
-
 
 
 def full_ott_line_parser(taxon, line):

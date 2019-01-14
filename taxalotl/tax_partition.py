@@ -162,6 +162,7 @@ class PartitionedTaxDirBase(object):
                 n.append(x)
         return n
 
+
 class Synonym(object):
     def __init__(self, valid_tax_id, name, syn_type=None, syn_id=None):
         if syn_type is None:
@@ -190,6 +191,7 @@ class Synonym(object):
                    and self.syn_type == other.syn_type \
                    and self.syn_id == self.syn_id
 
+
 _VALID_SYN_TYPES = {'authority',
                     'blast name',
                     'common name',
@@ -210,6 +212,7 @@ IGNORE_SYN_TYPES = {'authority',
                     'type material',
                     }
 
+
 class SynonymInterpreter(object):
     def __init__(self, header):
         if header.endswith('\n'):
@@ -229,6 +232,7 @@ class SynonymInterpreter(object):
         assert syn_type in _VALID_SYN_TYPES
         assert uid == int(suid)
         return Synonym(valid_tax_id=uid, name=name, syn_type=syn_type, syn_id=syn_id)
+
 
 # noinspection PyProtectedMember
 class LightTaxonomyHolder(object):
@@ -278,7 +282,6 @@ class LightTaxonomyHolder(object):
                         p[uid] = ps
             self._parsed_syn_by_id = p
         return copy(self._parsed_syn_by_id)
-
 
     def _del_data(self):
         for el in LightTaxonomyHolder._DATT:
@@ -878,4 +881,3 @@ def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
         outp.write(header)
         for l in ltw:
             outp.write(l)
-

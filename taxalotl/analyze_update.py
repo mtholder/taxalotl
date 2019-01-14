@@ -39,7 +39,7 @@ class UpdateStatus(IntFlag):
     UNCHANGED = 0
     PAR_CHANGED = 1
     NAME_CHANGED = 2
-    NEW_TERMINAL = 4 # really just NEW if not combined with TERMINAL or SYNONYM
+    NEW_TERMINAL = 4  # really just NEW if not combined with TERMINAL or SYNONYM
     INTERNAL = 8
     UNDIAGNOSED_CHANGE = 16
     DELETED_TERMINAL = 32  # really just DELETED if not combined with TERMINAL or SYNONYM
@@ -62,6 +62,7 @@ class UpdateStatus(IntFlag):
 
 def del_add_set_diff(old_set, new_set):
     return old_set.difference(new_set), new_set.difference(old_set)
+
 
 def del_mod_add_dict_diff(oldd, newd):
     same, d, m, a = True, {}, {}, {}
@@ -88,6 +89,7 @@ def flag_update_status(f, s, stat):
     if s is not None:
         s.update_status.setdefault(stat, []).append(f)
 
+
 def flag_synonyms_change(f, s):
     dels, adds = del_add_set_diff(s.synonyms, f.synonyms)
     real_dels = set()
@@ -111,11 +113,13 @@ def flag_synonyms_change(f, s):
         f.update_status.setdefault(UpdateStatus.SYN_CHANGED, []).append(p)
     return real_dels, changed, adds
 
+
 def _has_syn_update(nd):
     for k, nd_list in nd.update_status.items():
         if k & UpdateStatus.SYNONYM:
             return True
     return False
+
 
 def _get_nonsyn_flag_and_other(nd):
     node_status_dict = nd.update_status
@@ -437,7 +441,7 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
             flag_update_status(prev_nd, None, s)
             update_log.add_node(prev_nd)
 
-    del_syn, mod_syn, add_syn  = set(), set(), set()
+    del_syn, mod_syn, add_syn = set(), set(), set()
     for nd in curr_tree.preorder():
         other = _get_nonsyn_flag_and_other(nd)[-1]
         if other is not None:

@@ -9,6 +9,7 @@ from .taxonomic_ranks import MINIMUM_SORTING_NUMBER, SPECIES_SORTING_NUMBER
 
 _LOG = get_logger(__name__)
 
+
 def write_indented_subtree(out, node, indent_level):
     out.write('{}{} (id={})\n'.format('  ' * indent_level,
                                       node.name_that_is_unique,
@@ -51,11 +52,11 @@ class TaxonTree(object):
         rank_sn2indent_n = {i: n for n, i in enumerate(ranks_sn_list)}
         lrsl = len(ranks_sn_list)
         for n, nd in enumerate(self.preorder()):
-            #if n > 20:
+            # if n > 20:
             #    return
             if n == 0:
                 nd.child_indent = ''
-                indent =''
+                indent = ''
             else:
                 par = self.get_taxon(nd.par_id)
                 par_pref = par.child_indent
@@ -64,14 +65,14 @@ class TaxonTree(object):
                 pni = len(par_pref)
                 indent_num = 2 * (lrsl - 1 - rank_sn2indent_n[nd.best_rank_sort_number])
                 indent_num -= (pni + 1)
-                tail = '-'*indent_num
+                tail = '-' * indent_num
                 if is_last_child:
                     my_prompt = '\\' + tail
                     cs = ' '
                 else:
                     my_prompt = '+' + tail
                     cs = '|'
-                nd.child_indent = '{}{}{}'.format(par_pref, cs, ' '*indent_num)
+                nd.child_indent = '{}{}{}'.format(par_pref, cs, ' ' * indent_num)
                 indent = '{}{}'.format(par_pref, my_prompt)
             out_stream.write('{}{}'.format(indent, nd.terse_descrip()))
         for nd in self.preorder():
@@ -202,6 +203,7 @@ class TaxonTree(object):
                 _LOG.warn('could not find for target taxon for {}'.format(synonym_set))
                 continue
             taxon.synonyms = synonym_set
+
 
 class TaxonForest(object):
     def __init__(self, id_to_taxon, taxon_partition=None):

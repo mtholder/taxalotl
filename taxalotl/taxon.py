@@ -40,7 +40,6 @@ class Taxon(object):
             suff += f
         return m.format(self.name, self.id, suff)
 
-
     @property
     def sorted_flags(self):
         if not self.flags:
