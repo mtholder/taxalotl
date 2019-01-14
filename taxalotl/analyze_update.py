@@ -338,8 +338,6 @@ class UpdateStatusLog(object):
         if not self.node_is_in_curr_tree(nd):
             return self._gen_prev_tree_nd_edit(nd, edit_obj, even_unchanged=even_unchanged)
 
-        if nd.id == 2267536:
-            pass
         node_status_flag, other_node = _get_nonsyn_flag_and_other(nd)
         changed = node_status_flag != UpdateStatus.UNCHANGED
         nsyn_c = _has_syn_update(nd)
@@ -359,19 +357,23 @@ class UpdateStatusLog(object):
         nd_python_id = id(nd)
         if nd_python_id in self.written_ids:
             if isinstance(edit_obj, list):
-                edit_obj.append({'id': nd.id})
+                edit_obj.append({'current_idref': nd.id})
             return edit_obj
         self.written_ids.add(nd_python_id)
 
-        curr_edit_obj = {'focal_taxon': nd.to_serializable_dict()}
+        ser_status = node_status_flag.name
+        sd = nd.to_serializable_dict()
+        sd['update_status'] = ser_status
+        curr_edit_obj = edit_obj
         if isinstance(edit_obj, list):
+            curr_edit_obj = {}
             edit_obj.append(curr_edit_obj)
-        else:
-            edit_obj[node_status_flag.name] = curr_edit_obj
-        if other_node is not None:
-            curr_edit_obj['previous_taxon'] = other_node.to_serializable_dict()
-        else:
-            curr_edit_obj['previous_taxon'] = None
+        curr_edit_obj['focal_taxon'] = sd
+        if node_status_flag != UpdateStatus.UNCHANGED:
+            if other_node is not None:
+                curr_edit_obj['previous_taxon'] = other_node.to_serializable_dict()
+            else:
+                curr_edit_obj['previous_taxon'] = None
         if has_new_children:
             self._write_sub_nd_list(nd, 'new_children', curr_edit_obj)
         if has_prev_contained:
@@ -391,8 +393,6 @@ class UpdateStatusLog(object):
     def _gen_prev_tree_nd_edit(self, nd, edit_obj, even_unchanged=False):
         if self.node_is_in_curr_tree(nd):
             return self._gen_edit_if_new(nd, edit_obj, even_unchanged=even_unchanged)
-        if nd.id == 2267536:
-            pass
 
         node_status_flag, other_node = _get_nonsyn_flag_and_other(nd)
         changed = node_status_flag & UpdateStatus.DELETED_TERMINAL
@@ -411,19 +411,23 @@ class UpdateStatusLog(object):
         nd_python_id = id(nd)
         if nd_python_id in self.written_ids:
             if isinstance(edit_obj, list):
-                edit_obj.append({'id': nd.id})
+                edit_obj.append({'previous_idref': nd.id})
             return edit_obj
-        self.written_ids.add(nd_python_id)
 
-        curr_edit_obj = {'focal_taxon_prev': nd.to_serializable_dict()}
+        self.written_ids.add(nd_python_id)
+        ser_status = node_status_flag.name
+        sd = nd.to_serializable_dict()
+        sd['update_status'] = ser_status
+        curr_edit_obj = edit_obj
         if isinstance(edit_obj, list):
+            curr_edit_obj = {}
             edit_obj.append(curr_edit_obj)
-        else:
-            edit_obj[node_status_flag.name] = curr_edit_obj
-        if other_node is not None:
-            curr_edit_obj['curr_taxon'] = other_node.to_serializable_dict()
-        else:
-            curr_edit_obj['curr_taxon'] = None
+        curr_edit_obj['focal_taxon_prev'] = sd
+        if node_status_flag != UpdateStatus.UNCHANGED:
+            if other_node is not None:
+                curr_edit_obj['curr_taxon'] = other_node.to_serializable_dict()
+            else:
+                curr_edit_obj['curr_taxon'] = None
 
         if has_prev_contained:
             self._write_sub_nd_list(nd, 'previously_contained', curr_edit_obj)
@@ -469,6 +473,13 @@ def append_to_optional_attr(obj, attr_name, val):
         setattr(obj, attr_name, [])
     getattr(obj, attr_name).append(val)
 
+def append_to_optional_attr_if_new(obj, attr_name, val):
+    if not hasattr(obj, attr_name):
+        setattr(obj, attr_name, [])
+    atlist = getattr(obj, attr_name)
+    if val not in atlist:
+        atlist.append(val)
+
 def _flag_new_child(new_par, cnode):
     append_to_optional_attr(new_par, 'new_children', cnode)
 
@@ -476,8 +487,8 @@ def _flag_lost_child(old_par, cnode, in_curr_tree=True):
     append_to_optional_attr(old_par, 'lost_children', cnode)
 
 def _flag_par_transfer(old_par, new_par):
-    append_to_optional_attr(new_par, 'took_children_from', old_par)
-    append_to_optional_attr(old_par, 'lost_children_to', new_par)
+    append_to_optional_attr_if_new(new_par, 'took_children_from', old_par)
+    append_to_optional_attr_if_new(old_par, 'lost_children_to', new_par)
 
 def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
                              prev: TaxonomyWrapper,
