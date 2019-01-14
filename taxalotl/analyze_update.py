@@ -291,39 +291,44 @@ class UpdateStatusLog(object):
                 # self._write_nd(nd, True)
 
     def flush(self):
-        curr_tree_par_ids = set()
-        prev_tree_par_ids = set()
-        for status_code, node_list in self.by_status_code.items():
-            if status_code == UpdateStatus.UNCHANGED:
-                continue
-            if status_code in [UpdateStatus.DELETED_TERMINAL, UpdateStatus.DELETED_INTERNAL]:
-                target = prev_tree_par_ids
-            else:
-                target = curr_tree_par_ids
-            for nd in node_list:
-                target.add(nd.par_id)
+        for nd in self.curr_tree.preorder():
+            self._write_curr_tree_nd(nd)
+        for nd in self.prev_tree.preorder():
+            self._write_prev_tree_nd(nd)
 
-        curr_deepest_mod_id = _old_modified_subtree_ids(curr_tree_par_ids, self.curr_tree)
-        prev_deepest_mod_id = _old_modified_subtree_ids(prev_tree_par_ids, self.prev_tree)
+        # curr_tree_par_ids = set()
+        # prev_tree_par_ids = set()
+        # for status_code, node_list in self.by_status_code.items():
+        #     if status_code == UpdateStatus.UNCHANGED:
+        #         continue
+        #     if status_code in [UpdateStatus.DELETED_TERMINAL, UpdateStatus.DELETED_INTERNAL]:
+        #         target = prev_tree_par_ids
+        #     else:
+        #         target = curr_tree_par_ids
+        #     for nd in node_list:
+        #         target.add(nd.par_id)
+        #
+        # curr_deepest_mod_id = _old_modified_subtree_ids(curr_tree_par_ids, self.curr_tree)
+        # prev_deepest_mod_id = _old_modified_subtree_ids(prev_tree_par_ids, self.prev_tree)
 
         # emitted = set()
         # for par_id in curr_deepest_mod_id:
         #     par_nd = self.curr_tree.id_to_taxon[par_id]
         #     self.report_on_altered_contiguous_des(par_nd, True)
 
-        status_keys = [(i.value, i) for i in self.by_status_code.keys()]
-        status_keys.sort()
-        status_keys = [i[1] for i in status_keys]
-        status_keys.remove(UpdateStatus.TERMINAL_SUNK_TO_SYNONYM)
-        status_keys.remove(UpdateStatus.INTERNAL_SUNK_TO_SYNONYM)
-        for k in status_keys:
-            for nd in self.by_status_code[k]:
-                self._write_nd(nd)
+        # status_keys = [(i.value, i) for i in self.by_status_code.keys()]
+        # status_keys.sort()
+        # status_keys = [i[1] for i in status_keys]
+        # status_keys.remove(UpdateStatus.TERMINAL_SUNK_TO_SYNONYM)
+        # status_keys.remove(UpdateStatus.INTERNAL_SUNK_TO_SYNONYM)
+        # for k in status_keys:
+        #     for nd in self.by_status_code[k]:
+        #         self._write_nd(nd)
 
         # Reinitialize...
         self.__init__(None, None)
 
-    def _write_nd(self, nd, even_unchanged=False, indent=''):
+    def _write_curr_tree_nd(self, nd, even_unchanged=False, indent='', top_indent=''):
         node_status_flag, other_node = _get_nonsyn_flag_and_other(nd)
         changed = node_status_flag != UpdateStatus.UNCHANGED
         nsyn_c = _has_syn_update(nd)
@@ -331,39 +336,82 @@ class UpdateStatusLog(object):
         has_sunken = hasattr(nd, 'sunken')
         has_prev_contained = hasattr(nd, 'previously_contained')
         has_new_children = hasattr(nd, 'new_children')
+        has_lost_children = hasattr(nd, 'lost_children')
         if not changed:
-            if has_sunken or has_prev_contained or has_new_children:
+            if has_sunken or has_prev_contained or has_new_children or has_lost_children:
                 changed = True
             if osyn_c or nsyn_c:
                 changed = True
         if (not changed) and (not even_unchanged):
             return
-        if nd.id in self.written_ids:
-            return
+        # Keep node from being written twice...
 
-        self.written_ids.add(nd.id)
-        msg_template = '{}{}: {}. Previous: {}\n'
-        m = msg_template.format(indent, node_status_flag.name, nd, other_node)
+        nd_python_id = id(nd)
+        if nd_python_id in self.written_ids:
+            m = '{}({} see previous output of curr node {})\n'
+            out_stream.write(m.format(indent, top_indent, nd.id))
+            return
+        self.written_ids.add(nd_python_id)
+        msg_template = '{}{}{}: {}. Previous: {}\n'
+        m = msg_template.format(indent, top_indent, node_status_flag.name, nd, other_node)
         out_stream.write(m)
+
+        child_indent = '{}{}'.format(indent, ' '*len(top_indent))
         if has_new_children:
-            for x in nd.new_children:
-                xnsf, xon = _get_nonsyn_flag_and_other(x)
-                m = msg_template.format('   new_child: ' + indent, xnsf.name, x, xon)
-                out_stream.write(m)
+            self._write_sub_nd_list(nd, 'new_children', child_indent)
         if has_prev_contained:
-            for x in nd.previously_contained:
-                xnsf, xon = _get_nonsyn_flag_and_other(x)
-                m = msg_template.format('   previously contained: ' + indent, xnsf.name, x, xon)
-                out_stream.write(m)
+            self._write_sub_nd_list(nd, 'previously_contained', child_indent)
+        if hasattr(nd, 'took_children_from'):
+            self._write_sub_nd_list(nd, 'took_children_from', child_indent)
+        if hasattr(nd, 'lost_children_to'):
+            self._write_sub_nd_list(nd, 'lost_children_to', child_indent)
         if has_sunken:
-            for x in nd.sunken:
-                xnsf, xon = _get_nonsyn_flag_and_other(x)
-                m = msg_template.format('   ' + indent, xnsf.name, x, xon)
-                out_stream.write(m)
+            self._write_sub_nd_list(nd, 'sunken', child_indent)
         if nsyn_c:
             self._write_syn_for_nd(nd, indent)
         if node_status_flag == UpdateStatus.UNCHANGED and osyn_c:
             self._write_syn_for_nd(other_node, indent)
+
+    def _write_prev_tree_nd(self, nd, even_unchanged=False, indent='', top_indent=''):
+        node_status_flag, other_node = _get_nonsyn_flag_and_other(nd)
+        changed = node_status_flag & UpdateStatus.DELETED_TERMINAL
+        nsyn_c = _has_syn_update(nd)
+        has_prev_contained = hasattr(nd, 'previously_contained')
+        has_lost_children = hasattr(nd, 'lost_children')
+        if not changed:
+            if has_prev_contained or has_lost_children:
+                changed = True
+            if (other_node is None) and nsyn_c:
+                changed = True
+        if (not changed) and (not even_unchanged):
+            return
+        # Keep node from being written twice...
+
+        nd_python_id = id(nd)
+        if nd_python_id in self.written_ids:
+            if top_indent:
+                m = '{}({} see previous output of prev node {})\n'
+                out_stream.write(m.format(indent, top_indent, nd.id))
+            return
+        self.written_ids.add(nd_python_id)
+        msg_template = '{}{}Previous {}: {}. Current: {}\n'
+        m = msg_template.format(indent, top_indent, node_status_flag.name, nd, other_node)
+        out_stream.write(m)
+
+        child_indent = '{}{}'.format(indent, ' '*len(top_indent))
+        if has_prev_contained:
+            self._write_sub_nd_list(nd, 'previously_contained', child_indent, in_curr_tree=False)
+        if hasattr(nd, 'lost_children_to'):
+            self._write_sub_nd_list(nd, 'lost_children_to', child_indent, in_curr_tree=False)
+        if nsyn_c:
+            self._write_syn_for_nd(nd, indent)
+
+    def _write_sub_nd_list(self, nd, list_attr_name, indent, in_curr_tree=True):
+        nindent = '{}    '.format(indent)
+        top_indent = '{}:'.format(list_attr_name)
+        to_call = self._write_curr_tree_nd if in_curr_tree else self._write_prev_tree_nd
+        for x in getattr(nd, list_attr_name):
+            to_call(x, even_unchanged=True, indent=nindent, top_indent=top_indent)
 
     def _write_syn_for_nd(self, nd, indent):
         for f in [UpdateStatus.SYN_DELETED, UpdateStatus.SYN_ADDED, UpdateStatus.SYN_CHANGED]:
@@ -372,6 +420,20 @@ class UpdateStatusLog(object):
                 m = '   {}{}: {}\n'.format(indent, f.name, sd)
                 out_stream.write(m)
 
+def append_to_optional_attr(obj, attr_name, val):
+    if not hasattr(obj, attr_name):
+        setattr(obj, attr_name, [])
+    getattr(obj, attr_name).append(val)
+
+def _flag_new_child(new_par, cnode):
+    append_to_optional_attr(new_par, 'new_children', cnode)
+
+def _flag_lost_child(old_par, cnode, in_curr_tree=True):
+    append_to_optional_attr(old_par, 'lost_children', cnode)
+
+def _flag_par_transfer(old_par, new_par):
+    append_to_optional_attr(new_par, 'took_children_from', old_par)
+    append_to_optional_attr(old_par, 'lost_children_to', new_par)
 
 def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
                              prev: TaxonomyWrapper,
@@ -446,10 +508,15 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
                     flag_update_status(cnode, prev_nd, UpdateStatus.UNDIAGNOSED_CHANGE)
                 if par_changed:
                     new_par = curr_tree.id_to_taxon[cnode.par_id]
-                    if not hasattr(new_par, 'new_children'):
-                        new_par.new_children = []
-                    new_par.new_children.append(cnode)
-                    
+                    _flag_new_child(new_par, cnode)
+                    prev_par = curr_tree.id_to_taxon.get(prev_nd.par_id)
+                    prev_par_still_in_curr = True
+                    if prev_par is None:
+                        prev_par_still_in_curr = False
+                        prev_par = prev_tree.id_to_taxon.get(prev_nd.par_id)
+                        assert prev_par is not None
+                    _flag_lost_child(prev_par, cnode, prev_par_still_in_curr)
+                    _flag_par_transfer(prev_par, new_par)
 
     for prev_nd in prev_tree.preorder():
         if not prev_nd.update_status:
@@ -487,10 +554,7 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
                     prev_container = prev_tree.id_to_taxon[prevsyn.valid_tax_id]
                     cnd_4_prev_cont = _get_nonsyn_flag_and_other(prev_container)[1]
                     pcn = cnd_4_prev_cont if cnd_4_prev_cont else prev_container
-                    if not hasattr(pcn, 'previously_contained'):
-                        pcn.previously_contained = []
-                    pcn.previously_contained.append(nd)
-
+                    append_to_optional_attr(pcn, 'previously_contained', nd)
                 more_specific_status.add(nd)
         ns = UpdateStatus.PROMOTED_FROM_SYNONYM | k
         update_log.improve_status(k, ns, more_specific_status)
@@ -502,9 +566,7 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
                 nsl = add_syn_names[nd.name]
                 for new_syn in nsl:
                     target = curr_tree.id_to_taxon[new_syn.valid_tax_id]
-                    if not hasattr(target, 'sunken'):
-                        target.sunken = []
-                    target.sunken.append(nd)
+                    append_to_optional_attr(target, 'sunken', nd)
                 nd.new_syn = nsl
                 more_specific_status.add(nd)
         ns = UpdateStatus.SUNK_TO_SYNONYM | k
