@@ -172,6 +172,17 @@ class Synonym(object):
         self.syn_type = syn_type
         self.syn_id = syn_id
 
+    def to_serializable_dict(self):
+        d =  {'valid_tax_id': self.valid_tax_id,
+              'name': self.name
+             }
+        sis = ', syn_id={}'.format(self.syn_id)
+        if self.syn_id:
+            d['synonym_id'] = self.syn_id
+        if self.syn_type != 'synonym':
+            d['synonym'] = self.syn_type
+        return d
+
     def __repr__(self):
         sis = ', syn_id={}'.format(self.syn_id) if self.syn_id else ''
         tis = ', syn_type={}'.format(repr(self.syn_type)) if self.syn_type != 'synonym' else ''

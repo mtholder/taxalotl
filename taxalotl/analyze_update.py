@@ -5,7 +5,7 @@ import sys
 from enum import IntEnum, IntFlag
 from typing import Dict, List
 
-from peyotl import (get_logger)
+from peyotl import (get_logger, write_as_json)
 
 from .config import TaxalotlConfig
 from .tree import TaxonTree
@@ -291,10 +291,16 @@ class UpdateStatusLog(object):
                 # self._write_nd(nd, True)
 
     def flush(self):
+        edit_list = []
         for nd in self.curr_tree.preorder():
-            self._write_curr_tree_nd(nd)
+            ne = self._gen_edit_if_new(nd, {})
+            if ne:
+                edit_list.append(ne)
         for nd in self.prev_tree.preorder():
-            self._write_prev_tree_nd(nd)
+            ne = self._gen_prev_tree_nd_edit(nd, {})
+            if ne:
+                edit_list.append(ne)
+        write_as_json(edit_list, out_stream, indent='    ', sort_keys=True)
 
         # curr_tree_par_ids = set()
         # prev_tree_par_ids = set()
@@ -328,7 +334,7 @@ class UpdateStatusLog(object):
         # Reinitialize...
         self.__init__(None, None)
 
-    def _write_curr_tree_nd(self, nd, even_unchanged=False, indent='', top_indent=''):
+    def _gen_edit_if_new(self, nd, edit_obj, even_unchanged=False):
         node_status_flag, other_node = _get_nonsyn_flag_and_other(nd)
         changed = node_status_flag != UpdateStatus.UNCHANGED
         nsyn_c = _has_syn_update(nd)
@@ -343,36 +349,42 @@ class UpdateStatusLog(object):
             if osyn_c or nsyn_c:
                 changed = True
         if (not changed) and (not even_unchanged):
-            return
+            return edit_obj
         # Keep node from being written twice...
 
         nd_python_id = id(nd)
         if nd_python_id in self.written_ids:
-            m = '{}({} see previous output of curr node {})\n'
-            out_stream.write(m.format(indent, top_indent, nd.id))
-            return
+            if isinstance(edit_obj, list):
+                edit_obj.append({'id': nd.id})
+            return edit_obj
         self.written_ids.add(nd_python_id)
-        msg_template = '{}{}{}: {}. Previous: {}\n'
-        m = msg_template.format(indent, top_indent, node_status_flag.name, nd, other_node)
-        out_stream.write(m)
 
-        child_indent = '{}{}'.format(indent, ' '*len(top_indent))
+        curr_edit_obj = {'focal_taxon': nd.to_serializable_dict()}
+        if isinstance(edit_obj, list):
+            edit_obj.append(curr_edit_obj)
+        else:
+            edit_obj[node_status_flag.name] = curr_edit_obj
+        if other_node is not None:
+            curr_edit_obj['previous_taxon'] = other_node.to_serializable_dict()
+        else:
+            curr_edit_obj['previous_taxon'] = None
         if has_new_children:
-            self._write_sub_nd_list(nd, 'new_children', child_indent)
+            self._write_sub_nd_list(nd, 'new_children', curr_edit_obj)
         if has_prev_contained:
-            self._write_sub_nd_list(nd, 'previously_contained', child_indent)
+            self._write_sub_nd_list(nd, 'previously_contained', curr_edit_obj)
         if hasattr(nd, 'took_children_from'):
-            self._write_sub_nd_list(nd, 'took_children_from', child_indent)
+            self._write_sub_nd_list(nd, 'took_children_from', curr_edit_obj)
         if hasattr(nd, 'lost_children_to'):
-            self._write_sub_nd_list(nd, 'lost_children_to', child_indent)
+            self._write_sub_nd_list(nd, 'lost_children_to', curr_edit_obj)
         if has_sunken:
-            self._write_sub_nd_list(nd, 'sunken', child_indent)
+            self._write_sub_nd_list(nd, 'sunken', curr_edit_obj)
         if nsyn_c:
-            self._write_syn_for_nd(nd, indent)
+            self._write_syn_for_nd(nd, curr_edit_obj)
         if node_status_flag == UpdateStatus.UNCHANGED and osyn_c:
-            self._write_syn_for_nd(other_node, indent)
+            self._write_syn_for_nd(other_node, curr_edit_obj)
+        return edit_obj
 
-    def _write_prev_tree_nd(self, nd, even_unchanged=False, indent='', top_indent=''):
+    def _gen_prev_tree_nd_edit(self, nd, edit_obj, even_unchanged=False):
         node_status_flag, other_node = _get_nonsyn_flag_and_other(nd)
         changed = node_status_flag & UpdateStatus.DELETED_TERMINAL
         nsyn_c = _has_syn_update(nd)
@@ -389,36 +401,60 @@ class UpdateStatusLog(object):
 
         nd_python_id = id(nd)
         if nd_python_id in self.written_ids:
-            if top_indent:
-                m = '{}({} see previous output of prev node {})\n'
-                out_stream.write(m.format(indent, top_indent, nd.id))
-            return
+            if isinstance(edit_obj, list):
+                edit_obj.append({'id': nd.id})
+            return edit_obj
         self.written_ids.add(nd_python_id)
-        msg_template = '{}{}Previous {}: {}. Current: {}\n'
-        m = msg_template.format(indent, top_indent, node_status_flag.name, nd, other_node)
-        out_stream.write(m)
 
-        child_indent = '{}{}'.format(indent, ' '*len(top_indent))
+        curr_edit_obj = {'focal_taxon_prev': nd.to_serializable_dict()}
+        if isinstance(edit_obj, list):
+            edit_obj.append(curr_edit_obj)
+        else:
+            edit_obj[node_status_flag.name] = curr_edit_obj
+        if other_node is not None:
+            curr_edit_obj['curr_taxon'] = other_node.to_serializable_dict()
+        else:
+            curr_edit_obj['curr_taxon'] = None
+
         if has_prev_contained:
-            self._write_sub_nd_list(nd, 'previously_contained', child_indent, in_curr_tree=False)
+            self._write_sub_nd_list(nd, 'previously_contained', curr_edit_obj)
         if hasattr(nd, 'lost_children_to'):
-            self._write_sub_nd_list(nd, 'lost_children_to', child_indent, in_curr_tree=False)
+            self._write_sub_nd_list(nd, 'lost_children_to', curr_edit_obj)
         if nsyn_c:
-            self._write_syn_for_nd(nd, indent)
+            self._write_syn_for_nd(nd, curr_edit_obj)
 
-    def _write_sub_nd_list(self, nd, list_attr_name, indent, in_curr_tree=True):
-        nindent = '{}    '.format(indent)
-        top_indent = '{}:'.format(list_attr_name)
-        to_call = self._write_curr_tree_nd if in_curr_tree else self._write_prev_tree_nd
+    def _write_sub_nd_list(self, nd, list_attr_name, edit_dict):
+        in_curr_tree = self.node_is_in_curr_tree(nd)
+        to_call = self._gen_edit_if_new if in_curr_tree else self._gen_prev_tree_nd_edit
+        n_l = []
         for x in getattr(nd, list_attr_name):
-            to_call(x, even_unchanged=True, indent=nindent, top_indent=top_indent)
+            to_call(x, n_l, even_unchanged=True)
+        if n_l:
+            edit_dict[list_attr_name] = n_l
 
-    def _write_syn_for_nd(self, nd, indent):
+    def _write_syn_for_nd(self, nd, curr_obj):
         for f in [UpdateStatus.SYN_DELETED, UpdateStatus.SYN_ADDED, UpdateStatus.SYN_CHANGED]:
             sd = nd.update_status.get(f)
             if sd is not None:
-                m = '   {}{}: {}\n'.format(indent, f.name, sd)
-                out_stream.write(m)
+                syn_list = []
+                for i in sd:
+                    if f != UpdateStatus.SYN_CHANGED:
+                        _LOG.warn('i = {}'.format(repr(i)))
+                        syn_list.append(i.to_serializable_dict())
+                    else:
+                        assert len(i) == 2
+                        syn_list.append({'previous': i[0].to_serializable_dict(),
+                                         'current': i[1].to_serializable_dict()})
+                if syn_list:
+                    curr_obj[f.name] = syn_list
+
+    def node_is_in_curr_tree(self, nd):
+        try:
+            cn_id_match = self.curr_tree.id_to_taxon(nd.id)
+            return cn_id_match is nd
+        except:
+            pass
+        return False
 
 def append_to_optional_attr(obj, attr_name, val):
     if not hasattr(obj, attr_name):
