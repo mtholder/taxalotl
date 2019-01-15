@@ -106,26 +106,29 @@ def flag_update_status(f, s, stat):
 
 
 def flag_synonyms_change(f, s):
-    dels, adds = del_add_set_diff(s.synonyms, f.synonyms)
-    real_dels = set()
     changed = set()
-    for d in dels:
-        n = d.name
-        matching_add = None
-        for a in adds:
-            if a.name == n:
-                matching_add = a
-        if matching_add is None:
-            real_dels.add(d)
-        else:
-            changed.add((d, matching_add))
-            adds.remove(matching_add)
-    for d in real_dels:
-        s.update_status.setdefault(UpdateStatus.SYN_DELETED, []).append(d)
+    real_dels = set()
+    if s is None:
+        adds = set(f.synonyms)
+    else:
+        dels, adds = del_add_set_diff(s.synonyms, f.synonyms)
+        for d in dels:
+            n = d.name
+            matching_add = None
+            for a in adds:
+                if a.name == n:
+                    matching_add = a
+            if matching_add is None:
+                real_dels.add(d)
+            else:
+                changed.add((d, matching_add))
+                adds.remove(matching_add)
+        for d in real_dels:
+            s.update_status.setdefault(UpdateStatus.SYN_DELETED, []).append(d)
+        for p in changed:
+            f.update_status.setdefault(UpdateStatus.SYN_CHANGED, []).append(p)
     for d in adds:
         f.update_status.setdefault(UpdateStatus.SYN_ADDED, []).append(d)
-    for p in changed:
-        f.update_status.setdefault(UpdateStatus.SYN_CHANGED, []).append(p)
     return real_dels, changed, adds
 
 
@@ -695,7 +698,11 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
     del_syn, mod_syn, add_syn = set(), set(), set()
     for nd in curr_tree.preorder():
         other = _get_nonsyn_flag_and_other(nd)[-1]
-        if other is not None:
+        if other is None:
+            a = flag_synonyms_change(nd, None)[2]
+            add_syn.update(a)
+
+        else:
             if other.synonyms != nd.synonyms:
                 d, m, a = flag_synonyms_change(nd, other)
                 del_syn.update(d)
