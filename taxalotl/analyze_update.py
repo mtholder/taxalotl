@@ -23,7 +23,7 @@ out_stream = sys.stdout
 
 SEP_NAMES = '__separator_names__.json'
 SEP_MAPPING = '__separator_names_to_dir__.json'
-
+UPDATE_ANALYSIS_FILENAME = '__update_analysis__.json'
 
 def analyze_update_to_resources(taxalotl_config: TaxalotlConfig,
                                 prev: TaxonomyWrapper,
@@ -401,7 +401,7 @@ class UpdateStatusLog(object):
             edit_ids.add(key)
             edit['edit_id'] = key
 
-        fp = os.path.join(tax_dir, '__update_analysis.json')
+        fp = os.path.join(tax_dir, UPDATE_ANALYSIS_FILENAME)
         with open(fp, 'w', encoding='utf-8') as outf:
             for opts in [outf, out_stream]:
                 write_as_json(edit_list, opts, indent='  ', sort_keys=True)
