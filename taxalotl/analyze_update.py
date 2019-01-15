@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import sys
+import os
 from enum import IntEnum, IntFlag
 from typing import Dict, List
 
@@ -342,7 +343,7 @@ class UpdateStatusLog(object):
             curr_child.update_status = nus
 
 
-    def flush(self):
+    def flush(self, tax_dir):
         self.curr_tree.add_best_guess_rank_sort_number()
         self.prev_tree.add_best_guess_rank_sort_number()
 
@@ -400,7 +401,10 @@ class UpdateStatusLog(object):
             edit_ids.add(key)
             edit['edit_id'] = key
 
-        write_as_json(edit_list, out_stream, indent='  ', sort_keys=True)
+        fp = os.path.join(tax_dir, '__update_analysis.json')
+        with open(fp, 'w', encoding='utf-8') as outf:
+            for opts in [outf, out_stream]:
+                write_as_json(edit_list, opts, indent='  ', sort_keys=True)
 
         # curr_tree_par_ids = set()
         # prev_tree_par_ids = set()
@@ -554,7 +558,7 @@ class UpdateStatusLog(object):
                 tsyn = []
                 for i in sd:
                     if f != UpdateStatus.SYN_CHANGED:
-                        _LOG.warn('i = {}'.format(repr(i)))
+                        # _LOG.warn('i = {}'.format(repr(i)))
                         tsyn.append(i.to_serializable_dict())
                     else:
                         assert len(i) == 2
@@ -735,6 +739,5 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
         ns = UpdateStatus.SUNK_TO_SYNONYM | k
         update_log.improve_status(k, ns, more_specific_status)
 
-    x = update_log.flush()
-    _LOG.debug('done')
+    x = update_log.flush(cf.taxon_partition.input_taxdir)
     return x
