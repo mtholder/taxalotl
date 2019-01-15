@@ -55,7 +55,7 @@ class UpdateStatus(IntFlag):
     SUNK_TO_BELOW_SPECIES =       0x400
     CASCADING_NAME_CHANGED =      0x800
     NEWLY_BARREN =               0x1000
-    OLDY_BARREN =                0x2000
+    OLDLY_BARREN =               0x2000
     ELEVATED_TO_SP =             0x4000
     DEMOTED_TO_INFRA_SP =        0x8000
     # End flags. Start of unions
@@ -224,7 +224,8 @@ def _alter_update_flag(nd, flag):
 
 
 class UpdateStatusLog(object):
-    def __init__(self, prev_tree=None, curr_tree=None):
+    def __init__(self, prev_tree=None, curr_tree=None, tag=''):
+        self.tag = tag
         self.in_order = []
         self.by_status_code = {}  # type: Dict[UpdateStatus, List]
         self.prev_tree, self.curr_tree = None, None
@@ -371,7 +372,7 @@ class UpdateStatusLog(object):
                 if other \
                    and (not other.children_refs) \
                    and other.best_rank_sort_number >= MINIMUM_HIGHER_TAXON_NUMBER:
-                    _add_update_flag_bit(nd, UpdateStatus.OLDY_BARREN)
+                    _add_update_flag_bit(nd, UpdateStatus.OLDLY_BARREN)
                 else:
                     _add_update_flag_bit(nd, UpdateStatus.NEWLY_BARREN)
             if hasattr(nd, 'new_children'):
@@ -387,7 +388,19 @@ class UpdateStatusLog(object):
             ne = self._gen_prev_tree_nd_edit(nd, {})
             if ne:
                 edit_list.append(ne)
-        write_as_json(edit_list, out_stream, indent='    ', sort_keys=True)
+        edit_ids = set()
+        for edit in edit_list:
+            ft = edit.get('focal_taxon')
+            if ft is None:
+                pt = edit['focal_taxon_prev']
+                key = '{}_edit_prev_{}'.format(self.tag, pt['id'])
+            else:
+                key = '{}_edit_{}'.format(self.tag, ft['id'])
+            assert key not in edit_ids
+            edit_ids.add(key)
+            edit['edit_id'] = key
+
+        write_as_json(edit_list, out_stream, indent='  ', sort_keys=True)
 
         # curr_tree_par_ids = set()
         # prev_tree_par_ids = set()
@@ -532,20 +545,27 @@ class UpdateStatusLog(object):
             edit_dict[list_attr_name] = n_l
 
     def _write_syn_for_nd(self, nd, curr_obj):
-        for f in [UpdateStatus.SYN_DELETED, UpdateStatus.SYN_ADDED, UpdateStatus.SYN_CHANGED]:
+        syn_list = []
+        for n, f in enumerate([UpdateStatus.SYN_DELETED,
+                               UpdateStatus.SYN_ADDED,
+                               UpdateStatus.SYN_CHANGED]):
             sd = nd.update_status.get(f)
             if sd is not None:
-                syn_list = []
+                tsyn = []
                 for i in sd:
                     if f != UpdateStatus.SYN_CHANGED:
                         _LOG.warn('i = {}'.format(repr(i)))
-                        syn_list.append(i.to_serializable_dict())
+                        tsyn.append(i.to_serializable_dict())
                     else:
                         assert len(i) == 2
-                        syn_list.append({'previous': i[0].to_serializable_dict(),
-                                         'current': i[1].to_serializable_dict()})
-                if syn_list:
-                    curr_obj[f.name] = syn_list
+                        tsyn.append({'previous': i[0].to_serializable_dict(),
+                                     'current': i[1].to_serializable_dict()})
+                if tsyn:
+                    for i in tsyn:
+                        i['update_status'] = f.name
+                    syn_list.extend(tsyn)
+        if syn_list:
+            curr_obj['synonyms'] = syn_list
 
     def node_is_in_curr_tree(self, nd):
         try:
@@ -593,7 +613,8 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
     prev_tree = pf.trees[0]  # type: TaxonTree
     # prev_tree.write_rank_indented(out_stream)
     curr_tree = cf.trees[0]  # type: TaxonTree
-    update_log.set_prev_curr(prev_tree, curr_tree)
+    update_log.tag = '{}_update_from_{}'.format(curr.id, prev.id)
+    update_log.set_prev_curr(prev_tree, curr_tree, )
     prev_tree.add_num_tips_below()
     curr_tree.add_num_tips_below()
     prev_tree.add_update_fields()
