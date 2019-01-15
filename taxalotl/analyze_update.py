@@ -367,7 +367,7 @@ class UpdateStatusLog(object):
                                 if self.prev_tree.does_first_contain_second(other_genus, other):
                                     _alter_update_flag(nd, UpdateStatus.DEMOTED_TO_INFRA_SP)
                 if _get_nonsyn_flag_and_other(nd)[0] == UpdateStatus.UNDIAGNOSED_CHANGE:
-                    raise ValueError('UNDIAGNOSED_CHANGE for {} and {}'.format(nd, other))
+                    _LOG.warn('persistent UNDIAGNOSED_CHANGE for {} and {}'.format(nd, other))
             if (not nd.children_refs) and nd.best_rank_sort_number >= MINIMUM_HIGHER_TAXON_NUMBER:
                 if other \
                    and (not other.children_refs) \
@@ -393,9 +393,9 @@ class UpdateStatusLog(object):
             ft = edit.get('focal_taxon')
             if ft is None:
                 pt = edit['focal_taxon_prev']
-                key = '{}_edit_prev_{}'.format(self.tag, pt['id'])
+                key = '{}_|edit|_prev_{}'.format(self.tag, pt['id'])
             else:
-                key = '{}_edit_{}'.format(self.tag, ft['id'])
+                key = '{}_|edit|_{}'.format(self.tag, ft['id'])
             assert key not in edit_ids
             edit_ids.add(key)
             edit['edit_id'] = key
@@ -613,7 +613,7 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
     prev_tree = pf.trees[0]  # type: TaxonTree
     # prev_tree.write_rank_indented(out_stream)
     curr_tree = cf.trees[0]  # type: TaxonTree
-    update_log.tag = '{}_update_from_{}'.format(curr.id, prev.id)
+    update_log.tag = '{}_|update_from|_{}_|for|_{}'.format(curr.id, prev.id, part_name)
     update_log.set_prev_curr(prev_tree, curr_tree, )
     prev_tree.add_num_tips_below()
     curr_tree.add_num_tips_below()

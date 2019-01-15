@@ -203,7 +203,8 @@ class Synonym(object):
                    and self.syn_id == self.syn_id
 
 
-_VALID_SYN_TYPES = {'authority',
+_VALID_SYN_TYPES = {'acronym',
+                    'authority',
                     'blast name',
                     'common name',
                     'equivalent name',
@@ -215,7 +216,8 @@ _VALID_SYN_TYPES = {'authority',
                     'synonym',
                     'type material',
                     }
-IGNORE_SYN_TYPES = {'authority',
+IGNORE_SYN_TYPES = {'acronym',
+                    'authority',
                     'blast name',
                     'common name',
                     'genbank common name',
@@ -240,7 +242,9 @@ class SynonymInterpreter(object):
         suid = sl[self._uid_ind]
         name = sl[self._name_ind].strip()
         syn_type = sl[self._type_ind].strip()
-        assert syn_type in _VALID_SYN_TYPES
+        if syn_type not in _VALID_SYN_TYPES:
+            m = 'synonym_type "{}" not recognized in for ({}, "{}")'
+            raise ValueError(m.format(syn_type, uid, name))
         assert uid == int(suid)
         return Synonym(valid_tax_id=uid, name=name, syn_type=syn_type, syn_id=syn_id)
 

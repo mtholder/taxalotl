@@ -108,8 +108,9 @@ class TaxonTree(object):
             if not nd.children_refs:
                 continue
             for c in nd.children_refs:
-                if c.best_rank_sort_number >= nd.best_rank_sort_number:
-                    raise ValueError('rank conflict {} and child {}'.format(nd, c))
+                while c.best_rank_sort_number >= nd.best_rank_sort_number:
+                    _LOG.warn('rank conflict {} and child {}, bumping parent up...'.format(nd, c))
+                    nd.best_rank_sort_number += 1
 
     def _get_highest_child_rank(self, nd):
         if not nd.children_refs:
