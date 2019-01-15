@@ -5,7 +5,9 @@ from __future__ import print_function
 from typing import Dict, List
 from peyotl import get_logger
 from .taxon import Taxon
-from .taxonomic_ranks import MINIMUM_SORTING_NUMBER, SPECIES_SORTING_NUMBER
+from .taxonomic_ranks import (GENUS_RANK_TO_SORTING_NUMBER,
+                              MINIMUM_SORTING_NUMBER,
+                              SPECIES_SORTING_NUMBER)
 
 _LOG = get_logger(__name__)
 
@@ -77,6 +79,25 @@ class TaxonTree(object):
             out_stream.write('{}{}'.format(indent, nd.terse_descrip()))
         for nd in self.preorder():
             del nd.child_indent
+
+    def does_first_contain_second(self, other_genus, other):
+        while True:
+            if other is other_genus:
+                return True
+            try:
+                other = self.id_to_taxon[other.par_id]
+            except:
+                return False
+
+
+    def find_genus_for_alpha(self, nd):
+        if nd.best_rank_sort_number == GENUS_RANK_TO_SORTING_NUMBER:
+            return nd
+        try:
+            p = self.id_to_taxon[nd.par_id]
+        except:
+            return None
+        return self.find_genus_for_alpha(p)
 
     def add_best_guess_rank_sort_number(self):
         for nd in self.postorder():

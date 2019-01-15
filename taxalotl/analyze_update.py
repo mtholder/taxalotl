@@ -12,6 +12,7 @@ from .tree import TaxonTree
 from .partitions import (PART_NAMES)
 from .resource_wrapper import TaxonomyWrapper
 from .taxonomic_ranks import (GENUS_RANK_TO_SORTING_NUMBER,
+                              MAX_INFRASPECIFIC_NUMBER,
                               MINIMUM_HIGHER_TAXON_NUMBER,
                               SPECIES_SORTING_NUMBER)
 from .tax_partition import IGNORE_SYN_TYPES
@@ -38,21 +39,25 @@ def analyze_update_to_resources(taxalotl_config: TaxalotlConfig,
 
 
 class UpdateStatus(IntFlag):
-    UNCHANGED = 0
-    PAR_CHANGED = 0x01
-    NAME_CHANGED = 0x02
-    NEW_TERMINAL = 0x04  # really just NEW if not combined with TERMINAL or SYNONYM
-    INTERNAL = 0x08
-    UNDIAGNOSED_CHANGE = 0x10
-    DELETED_TERMINAL = 0x20  # really just DELETED if not combined with TERMINAL or SYNONYM
-    SYN_DELETED = 0x40
-    PROMOTED_FROM_SYNONYM = 0x80
-    SUNK_TO_SYNONYM = 0x100
+    UNCHANGED =                       0
+    PAR_CHANGED =                  0x01
+    NAME_CHANGED =                 0x02
+    # really just NEW if not combined with TERMINAL or SYNONYM
+    NEW_TERMINAL =                 0x04
+    INTERNAL =                     0x08
+    UNDIAGNOSED_CHANGE =           0x10
+    # really just DELETED if not combined with TERMINAL or SYNONYM
+    DELETED_TERMINAL =             0x20
+    SYN_DELETED =                  0x40
+    PROMOTED_FROM_SYNONYM =        0x80
+    SUNK_TO_SYNONYM =             0x100
     PROMOTED_FROM_BELOW_SPECIES = 0x200
-    SUNK_TO_BELOW_SPECIES = 0x400
-    CASCADING_NAME_CHANGED = 0x800
-    NEWLY_BARREN = 0x1000
-    OLDY_BARREN = 0x2000
+    SUNK_TO_BELOW_SPECIES =       0x400
+    CASCADING_NAME_CHANGED =      0x800
+    NEWLY_BARREN =               0x1000
+    OLDY_BARREN =                0x2000
+    ELEVATED_TO_SP =             0x4000
+    DEMOTED_TO_INFRA_SP =        0x8000
     # End flags. Start of unions
     NAME_AND_PAR_CHANGED = PAR_CHANGED | NAME_CHANGED
     CASCADE_NAME_AND_PAR_CHANGED = NAME_AND_PAR_CHANGED | CASCADING_NAME_CHANGED
@@ -206,6 +211,17 @@ def _add_update_flag_bit(nd, flag):
             nus[flag | k] = v
     nd.update_status = nus
 
+def _alter_update_flag(nd, flag):
+    '''Adds flag to non-synonym keys'''
+    nus = {}
+    for k, v in nd.update_status.items():
+        if k & UpdateStatus.SYNONYM:
+            nus[k] = v
+        else:
+            nus[flag] = v
+    nd.update_status = nus
+
+
 
 class UpdateStatusLog(object):
     def __init__(self, prev_tree=None, curr_tree=None):
@@ -331,8 +347,27 @@ class UpdateStatusLog(object):
 
         edit_list = []
         for nd in self.curr_tree.preorder():
+            stat_flag, other = _get_nonsyn_flag_and_other(nd)
+            if stat_flag == UpdateStatus.UNDIAGNOSED_CHANGE:
+                ranks_differ = nd.best_rank_sort_number != other.best_rank_sort_number
+                if ranks_differ:
+                    if nd.best_rank_sort_number == SPECIES_SORTING_NUMBER:
+                        if other.best_rank_sort_number <= MAX_INFRASPECIFIC_NUMBER:
+                            genus_nd = self.curr_tree.find_genus_for_alpha(nd)
+                            if genus_nd:
+                                other_genus = _get_nonsyn_flag_and_other(genus_nd)[1]
+                                if self.prev_tree.does_first_contain_second(other_genus, other):
+                                    _alter_update_flag(nd, UpdateStatus.ELEVATED_TO_SP)
+                    elif other.best_rank_sort_number == SPECIES_SORTING_NUMBER:
+                        if nd.best_rank_sort_number <= MAX_INFRASPECIFIC_NUMBER:
+                            genus_nd = self.curr_tree.find_genus_for_alpha(nd)
+                            if genus_nd:
+                                other_genus = _get_nonsyn_flag_and_other(genus_nd)[1]
+                                if self.prev_tree.does_first_contain_second(other_genus, other):
+                                    _alter_update_flag(nd, UpdateStatus.DEMOTED_TO_INFRA_SP)
+                if _get_nonsyn_flag_and_other(nd)[0] == UpdateStatus.UNDIAGNOSED_CHANGE:
+                    raise ValueError('UNDIAGNOSED_CHANGE for {} and {}'.format(nd, other))
             if (not nd.children_refs) and nd.best_rank_sort_number >= MINIMUM_HIGHER_TAXON_NUMBER:
-                other = _get_nonsyn_flag_and_other(nd)[1]
                 if other \
                    and (not other.children_refs) \
                    and other.best_rank_sort_number >= MINIMUM_HIGHER_TAXON_NUMBER:
