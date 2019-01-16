@@ -245,6 +245,8 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     proj_out = os.path.join(destination, 'projection.tsv')
     if not os.path.exists(proj_out):
         proj_in = os.path.join(source, 'taxon.txt')
+        if not os.path.exists(proj_in):
+            proj_in = os.path.join(source, 'Taxon.tsv')
         write_gbif_projection_file(proj_in, proj_out)
     itd = InterimTaxonomyData()
     to_remove, to_ignore, paleos = read_gbif_projection(proj_out, itd)
