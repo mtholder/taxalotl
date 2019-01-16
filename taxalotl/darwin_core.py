@@ -10,6 +10,7 @@ from __future__ import print_function
 import io
 import os
 import re
+import xml.etree.ElementTree as ET
 
 from peyotl import (assure_dir_exists,
                     get_logger)
@@ -59,21 +60,28 @@ def canonical_name(name):
     return canon if haz else name
 
 
-def write_gbif_projection_file(source, destination):
+def write_gbif_projection_file(source, destination, fields2index):
     i = 0
+    sci_ind = fields2index['scientificName']
+    tax_id = fields2index['id']
+    pnu_ind = fields2index['parentNameUsageID']
+    anu_ind = fields2index['acceptedNameUsageID']
+    tr_ind = fields2index['taxonRank']
+    ts_ind = fields2index['taxonomicStatus']
+    nat_ind = fields2index['nameAccordingTo']
     with io.open(source, 'rU', encoding='utf-8') as infile:
         with io.open(destination, 'w', encoding='utf-8') as outfile:
             for line in infile:
                 row = line.split('\t')
-                scientific = row[6]
+                scientific = row[sci_ind]
                 canenc = canonical_name(scientific)
-                row_el = [row[1],  # taxonID
-                          row[3],  # parentNameUsageID
-                          row[4],  # acceptedNameUsageID
+                row_el = [row[tax_id],  # taxonID
+                          row[pnu_ind],  # parentNameUsageID
+                          row[anu_ind],  # acceptedNameUsageID
                           canenc,  # canonicalName
-                          row[7],  # taxonRank
-                          row[10],  # taxonomicStatus
-                          row[2],  # nameAccordingTo / datasetID
+                          row[tr_ind],  # taxonRank
+                          row[ts_ind],  # taxonomicStatus
+                          row[nat_ind],  # nameAccordingTo / datasetID
                           ]
                 row_el = [x.strip() for x in row_el]
                 row_str = u"\t".join(row_el)
@@ -84,14 +92,14 @@ def write_gbif_projection_file(source, destination):
                 i += 1
 
 
-def read_gbif_projection(proj_filepath, itd):
-    col_taxon_id = 0
-    col_par_name_usage_id = 1
-    col_accepted_name_usage_id = 2
-    col_canonical_name = 3
-    col_taxon_rank = 4
-    col_taxonomic_status = 5
-    col_name_according_to = 6
+def read_gbif_projection(proj_filepath, itd, field_to_index):
+    col_taxon_id = field_to_index['id']
+    col_par_name_usage_id = field_to_index['parentNameUsageID']
+    col_accepted_name_usage_id = field_to_index['acceptedNameUsageID']
+    col_canonical_name = field_to_index['canonicalName']
+    col_taxon_rank = field_to_index['taxonRank']
+    col_taxonomic_status = field_to_index['taxonomicStatus']
+    col_name_according_to = field_to_index['nameAccordingTo']
     not_doubtful = {
         8407745: "Hierococcyx"
     }
@@ -107,14 +115,18 @@ def read_gbif_projection(proj_filepath, itd):
     count = 0
     n_syn = 0
     with io.open(proj_filepath, 'rU', encoding='utf-8') as inp:
-        for row in inp:
+        for line_num, row in enumerate(inp):
             fields = row.split('\t')
             # acceptedNameUsageID
             syn_target_id_string = fields[col_accepted_name_usage_id].strip()
             is_synonym = False
             if syn_target_id_string:
                 is_synonym = True
-            taxon_id = int(fields[col_taxon_id])
+            try:
+                taxon_id = int(fields[col_taxon_id])
+            except:
+                if line_num == 0:
+                    continue
             name = fields[col_canonical_name].strip()
             assert name
             source = fields[col_name_according_to].strip()
@@ -142,7 +154,7 @@ def read_gbif_projection(proj_filepath, itd):
                 to_remove.add(taxon_id)
                 continue
             if tstatus != 'accepted' and taxon_id not in not_doubtful:
-                m = "Unexpected non accepted: {} {} {} {}".format(taxon_id,
+                m = "Unexpected non accepted: id={} name=\"{}\" tstatus={} source={}".format(taxon_id,
                                                                   name,
                                                                   tstatus,
                                                                   source)
@@ -242,14 +254,38 @@ def add_fake_root(itd):
 # noinspection PyUnusedLocal
 def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     assure_dir_exists(destination)
+    manifest_fp = os.path.join(source, 'meta.xml')
+    manifest_root = ET.parse(manifest_fp).getroot()
+    core_paths = []
+    field2index = {}
+    for el in manifest_root.findall('{http://rs.tdwg.org/dwc/text/}core'):
+        for sub in el:
+            if sub.tag.endswith('}id'):
+                field2index['id'] = int(sub.attrib['index'])
+            elif sub.tag.endswith('}field'):
+                nns = os.path.split(sub.attrib['term'])[-1]
+                field2index[nns] = int(sub.attrib['index'])
+        for f in el.findall('{http://rs.tdwg.org/dwc/text/}files'):
+            for loc in f.findall('{http://rs.tdwg.org/dwc/text/}location'):
+                core_paths.append(loc.text.strip())
+    if len(core_paths) != 1:
+        raise ValueError('Did not find a single core path in DwC file ("{}") found: {}'.format(manifest_fp, core_paths))
+    taxon_fn = core_paths[0]
     proj_out = os.path.join(destination, 'projection.tsv')
     if not os.path.exists(proj_out):
-        proj_in = os.path.join(source, 'taxon.txt')
-        if not os.path.exists(proj_in):
-            proj_in = os.path.join(source, 'Taxon.tsv')
-        write_gbif_projection_file(proj_in, proj_out)
+        proj_in = os.path.join(source, taxon_fn)
+        write_gbif_projection_file(proj_in, proj_out, field2index)
+    homemade = {'id': 0,
+                'parentNameUsageID': 1,
+                'acceptedNameUsageID': 2,
+                'canonicalName': 3,
+                'taxonRank': 4,
+                'taxonomicStatus': 5,
+                'nameAccordingTo': 6,
+                }
+
     itd = InterimTaxonomyData()
-    to_remove, to_ignore, paleos = read_gbif_projection(proj_out, itd)
+    to_remove, to_ignore, paleos = read_gbif_projection(proj_out, itd, homemade)
     add_fake_root(itd)
     remove_if_tips(itd, to_remove)
     o_to_ignore = find_orphaned(itd)
