@@ -39,4 +39,22 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
                              res: TaxonomyWrapper,
                              part_name: str):
     fragment = taxalotl_config.get_fragment_from_part_name(part_name)
-    print(fragment)
+    _LOG.info('align for {} for {}'.format(fragment, res.id))
+    ott_forest = ott_res.get_taxon_forest_for_partition(part_name)
+    _LOG.info('{} trees in OTT for this level'.format(len(ott_forest.trees)))
+    res_forest = res.get_taxon_forest_for_partition(part_name)
+    if res_forest:
+        _LOG.info('{} already separated for {}'.format(res.id, part_name))
+        return
+    while not res_forest:
+        fragment = os.path.split(fragment)[0]
+        higher_part_name = os.path.split(fragment)[-1]
+        if higher_part_name == 'partitioned':
+            raise ValueError('Could not find any parition for {}'.format(res.id))
+        res_forest = res.get_taxon_forest_for_partition(higher_part_name)
+        if res_forest:
+            _LOG.info('{} trees for {} at {}'.format(len(res_forest.trees), res.id, higher_part_name))
+        else:
+            _LOG.info('no trees for {} at {}'.format(res.id, higher_part_name))
+
+
