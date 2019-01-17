@@ -9,6 +9,7 @@ from peyotl import (get_logger, read_as_json)
 
 from taxalotl import TaxalotlConfig
 from taxalotl.commands import (accumulate_separated_descendants,
+                               align,
                                analyze_update,
                                build_partition_maps,
                                cache_separator_names,
@@ -43,7 +44,9 @@ res_indep_cmds = ['build-partition-maps',
 # Commands that take any resource ID
 res_dep_cmds = ['accumulate-separated-descendants',
                 'analyze-update',
+                'align',
                 'check-partition',
+                'clean-partition',
                 'download',
                 'enforce-new-separators',
                 'info',
@@ -74,6 +77,8 @@ def main_post_parse(args):
     try:
         if args.which == 'analyze-update':
             analyze_update(taxalotl_config, args.resources, [args.level])
+        elif args.which == 'align':
+            align(taxalotl_config, args.resources, [args.level])
         elif args.which == 'clean-partition':
             clean_resources(taxalotl_config, 'partition', args.resources)
         elif args.which == 'clean-separation':
@@ -224,6 +229,13 @@ def main():
     enf_sep_p.add_argument('resources', nargs="*", help="IDs of the resources to separate")
     _add_level_arg(enf_sep_p)
     enf_sep_p.set_defaults(which="enforce-new-separators")
+    # Align
+    align_p = subp.add_parser('align',
+                                help="Attempts to align a new (parititioned) resource to the latest OTT for a level")
+    align_p.add_argument('resources', nargs="*", help="IDs of the resources to separate")
+    _add_level_arg(align_p)
+    align_p.set_defaults(which="align")
+
     # ACCUMULATE-SEPARATED-DESCENDANTS
     accum_sep_des_p = subp.add_parser('accumulate-separated-descendants',
                                       help="Should be run after enforce-separators and before compare-taxonomies")

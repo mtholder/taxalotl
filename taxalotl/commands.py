@@ -24,6 +24,7 @@ from taxalotl.tax_partition import (use_tax_partitions, get_taxonomies_for_dir)
 from taxalotl.dynamic_partitioning import (perform_dynamic_separation,
                                            return_sep_obj_copy_with_ott_fields)
 from taxalotl.analyze_update import analyze_update_to_resources
+from taxalotl.align import align_resource
 from taxalotl.util import unlink
 
 _LOG = get_logger(__name__)
@@ -32,6 +33,12 @@ out_stream = sys.stdout
 SEP_NAMES = '__separator_names__.json'
 SEP_MAPPING = '__separator_names_to_dir__.json'
 
+def align(taxalotl_config, id_list, level_list):
+    assert len(id_list) == 1
+    eid = id_list[0]
+    ott_res = taxalotl_config.get_terminalized_res_by_id('ott')
+    res = taxalotl_config.get_terminalized_res_by_id(eid)
+    align_resource(taxalotl_config, ott_res, res, level_list)
 
 def analyze_update(taxalotl_config, id_list, level_list):
     assert len(id_list) == 2
