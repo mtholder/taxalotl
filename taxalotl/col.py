@@ -5,37 +5,41 @@ import io
 from peyotl import (get_logger, shorter_fp_form)
 
 from taxalotl.resource_wrapper import TaxonomyWrapper
-
+from .darwin_core import normalize_darwin_core_taxonomy
 _LOG = get_logger(__name__)
 
 COL_PARTMAP = {
-    'Archaea': frozenset([33524792]),
-    'Bacteria': frozenset([33521420]),
-    'Eukaryota': frozenset([33521288, 33521351, 33521293, 33521595, 33523363]),
-    'Archaeplastida': frozenset([33521293]),
-    'Glaucophyta': frozenset([33531372]),
-    'Rhodophyta': frozenset([33531376]),
-    'Chloroplastida': frozenset([33521294, 33522836, 33522993, 33531380, 33531384, 33534508]),
-    'Fungi': frozenset([33521351]),
-    'Metazoa': frozenset([33521288]),
-    'Annelida': frozenset([33521477]),
-    'Arthropoda': frozenset([33521342]),
-    'Malacostraca': frozenset([33521356]),
-    'Arachnida': frozenset([33521366]),
-    'Insecta': frozenset([33521474]),
-    'Diptera': frozenset([33521519]),
-    'Coleoptera': frozenset([33521475]),
-    'Lepidoptera': frozenset([33521695]),
-    'Hymenoptera': frozenset([33521644]),
-    'Bryozoa': frozenset([33524015]),
-    'Chordata': frozenset([33521289]),
-    'Cnidaria': frozenset([33522061]),
-    'Ctenophora': frozenset([33521313]),
-    'Mollusca': frozenset([33521301]),
-    'Nematoda': frozenset([33526516]),
-    'Platyhelminthes': frozenset([33521309]),
-    'Porifera': frozenset([33527549]),
-    'Viruses': frozenset([33521407]),
+    'Archaea': frozenset([52435722]),
+    'Bacteria': frozenset([52433432]),
+    'Eukaryota': frozenset([52433499, 52435027, 52433974, 52433370]),
+    'Archaeplastida': frozenset([52433499]),
+    'Fungi': frozenset([52433393]),
+    'Metazoa': frozenset([52433370]),
+    'Viruses': frozenset([52433426]),
+
+    'Glaucophyta': frozenset([52444130]),
+    'Rhodophyta': frozenset([52444134]),
+    'Chloroplastida': frozenset([52442327, 52442210, 52442148, 52434330, 52434201, 52433500, ]),
+
+    'Annelida': frozenset([52433489]),
+    'Arthropoda': frozenset([52433375]),
+
+    'Malacostraca': frozenset([52433389]),
+    'Arachnida': frozenset([52433402]),
+    'Insecta': frozenset([52433376]),
+    'Diptera': frozenset([52433521]),
+    'Coleoptera': frozenset([52433486]),
+    'Lepidoptera': frozenset([52433663]),
+    'Hymenoptera': frozenset([52433621]),
+
+    'Bryozoa': frozenset([52442814]),
+    'Chordata': frozenset([52433371]),
+    'Cnidaria': frozenset([52433398]),
+    'Ctenophora': frozenset([52443092]),
+    'Mollusca': frozenset([52440786]),
+    'Nematoda': frozenset([52436787]),
+    'Platyhelminthes': frozenset([52443117]),
+    'Porifera': frozenset([52442836]),
 }
 
 
@@ -58,10 +62,11 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
       7. header for synonyms file (or None)
     
     """
+    assert False
     complete_taxon_fp = tax_part.tax_fp
     syn_fp = tax_part.input_synonyms_filepath
     assert not syn_fp
-    syn_by_id = tax_part.syn_by_id
+    syn_by_id = tax_part._syn_by_id
     ptp = shorter_fp_form(complete_taxon_fp)
     with io.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
         iinp = iter(inp)
@@ -86,7 +91,11 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
                 col_id, accept_id, par_id = ls[0], ls[4], ls[5]
                 col_id = int(col_id)
                 if accept_id:
-                    accept_id = int(accept_id)
+                    try:
+                        accept_id = int(accept_id)
+                    except:
+                        if n == 0:
+                            continue
                     syn_by_id.setdefault(accept_id, []).append((col_id, line))
                 else:
                     tax_part.read_taxon_line(col_id, par_id, line)
@@ -97,9 +106,9 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
 
 # noinspection PyAbstractClass
 class CoLTaxonomyWrapper(TaxonomyWrapper):
-    taxon_filename = 'taxa.txt'
-    synonyms_filename = None
-    partition_parsing_fn = staticmethod(partition_col_by_root_id)
+    taxon_filename = 'taxonomy.tsv'
+    # synonyms_filename = None
+    # partition_parsing_fn = staticmethod(partition_col_by_root_id)
     schema = {"http://rs.tdwg.org/dwc/"}
 
     def __init__(self, obj, parent=None, refs=None):
@@ -107,7 +116,10 @@ class CoLTaxonomyWrapper(TaxonomyWrapper):
 
     @property
     def partition_source_dir(self):
-        return self.unpacked_filepath
+        return self.normalized_filedir
 
     def get_primary_partition_map(self):
         return COL_PARTMAP
+
+    def normalize(self):
+        normalize_darwin_core_taxonomy(self.unpacked_filepath, self.normalized_filedir, self)

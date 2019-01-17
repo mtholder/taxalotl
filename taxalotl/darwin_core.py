@@ -92,7 +92,7 @@ def write_gbif_projection_file(source, destination, fields2index):
                 i += 1
 
 
-def read_gbif_projection(proj_filepath, itd, field_to_index):
+def read_gbif_projection(proj_filepath, itd, field_to_index, do_gbif_checks):
     col_taxon_id = field_to_index['id']
     col_par_name_usage_id = field_to_index['parentNameUsageID']
     col_accepted_name_usage_id = field_to_index['acceptedNameUsageID']
@@ -153,12 +153,9 @@ def read_gbif_projection(proj_filepath, itd, field_to_index):
             if tstatus == 'synonym' or (tstatus == 'doubtful' and taxon_id not in not_doubtful):
                 to_remove.add(taxon_id)
                 continue
-            if tstatus != 'accepted' and taxon_id not in not_doubtful:
-                m = "Unexpected non accepted: id={} name=\"{}\" tstatus={} source={}".format(taxon_id,
-                                                                  name,
-                                                                  tstatus,
-                                                                  source)
-                raise RuntimeError(m)
+            if do_gbif_checks and (tstatus != 'accepted' and taxon_id not in not_doubtful):
+                m = "Unexpected non accepted: id={} name=\"{}\" tstatus={} source={}"
+                raise RuntimeError(m.format(taxon_id, name, tstatus, source))
             rank = fields[col_taxon_rank].strip()
             if rank in ranks_to_ignore:
                 to_ignore.add(taxon_id)
@@ -285,7 +282,8 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
                 }
 
     itd = InterimTaxonomyData()
-    to_remove, to_ignore, paleos = read_gbif_projection(proj_out, itd, homemade)
+    to_remove, to_ignore, paleos = read_gbif_projection(proj_out, itd, homemade,
+                                                        do_gbif_checks=isinstance(res_wrapper, GBIFWrapper))
     add_fake_root(itd)
     remove_if_tips(itd, to_remove)
     o_to_ignore = find_orphaned(itd)
