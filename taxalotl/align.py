@@ -34,18 +34,53 @@ def align_resource(taxalotl_config: TaxalotlConfig,
     for part_name in level_list:
         align_for_level(taxalotl_config, ott_res, res, part_name)
 
+
+def _get_findable_names(leaf, tree):
+    r = []
+    if leaf.best_rank_sort_number > SPECIES_SORTING_NUMBER:
+        return r
+    findability_score = 10*len(leaf.src_dict) - len(leaf.synonyms)
+    r.append((findability_score, id(leaf), leaf))
+    while leaf.best_rank_sort_number < SPECIES_SORTING_NUMBER:
+        try:
+            leaf = tree.id_to_taxon[leaf.par_id]
+        except:
+            break
+        if leaf.best_rank_sort_number <= SPECIES_SORTING_NUMBER:
+            findability_score = 10 * len(leaf.src_dict) - len(leaf.synonyms)
+            r.append((findability_score, id(leaf), leaf))
+    return r
+
+
 def align_for_level(taxalotl_config: TaxalotlConfig,
                     ott_res: TaxonomyWrapper,
-                             res: TaxonomyWrapper,
-                             part_name: str):
+                    res: TaxonomyWrapper,
+                    part_name: str):
     fragment = taxalotl_config.get_fragment_from_part_name(part_name)
     _LOG.info('align for {} for {}'.format(fragment, res.id))
     ott_forest = ott_res.get_taxon_forest_for_partition(part_name)
-    _LOG.info('{} trees in OTT for this level'.format(len(ott_forest.trees)))
+    assert len(ott_forest.trees) == 1
+    ott_tree = ott_forest.trees[0]
+    prev_syn = ott_res.get_parsed_synonyms_by_id(part_name)
+    ott_tree.attach_parsed_synonyms_set(prev_syn)
+    ott_tree.add_best_guess_rank_sort_number()
+    scored_leaves = []
+    for n, leaf in enumerate(ott_tree.leaves()):
+        scored_leaves.extend(_get_findable_names(leaf, ott_tree))
+    scored_leaves.sort(reverse=True)
+    ott_leaf_label_list = []
+    ott_lls = set()
+    for i in scored_leaves:
+        n = i[2].name
+        if n not in ott_lls:
+            ott_leaf_label_list.append(n)
+            ott_lls.add(n)
+    _LOG.info('Will look for {} <= species taxa names...'.format(len(ott_leaf_label_list)))
     res_forest = res.get_taxon_forest_for_partition(part_name)
     if res_forest:
         _LOG.info('{} already separated for {}'.format(res.id, part_name))
         return
+    higher_part_name = part_name
     while not res_forest:
         fragment = os.path.split(fragment)[0]
         higher_part_name = os.path.split(fragment)[-1]
@@ -56,5 +91,53 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
             _LOG.info('{} trees for {} at {}'.format(len(res_forest.trees), res.id, higher_part_name))
         else:
             _LOG.info('no trees for {} at {}'.format(res.id, higher_part_name))
+    tot_leaves = set()
+    for tree_ind, slice_tree in enumerate(res_forest.trees):
+        res_syn = res.get_parsed_synonyms_by_id(higher_part_name)
+        slice_tree.attach_parsed_synonyms_set(res_syn)
+        slice_tree.add_best_guess_rank_sort_number()
+        n = 0
+        for n, nd in enumerate(slice_tree.postorder()):
+            if nd.children_refs:
+                nd.found_names = set()
+                for c in nd.children_refs:
+                    nd.found_names.update(c.found_names)
+            else:
+                nd.found_names = set()
+                if nd.name in ott_lls:
+                    nd.found_names.add(nd.name)
+                    # _LOG.debug('found "{}"'.format(nd.name))
+        root_found = slice_tree.root.found_names
+        pf = tot_leaves.intersection(root_found)
+        if pf:
+            m = 'Leaves {} found in multiple trees for {} at {}'
+            raise ValueError(m.format(pf, res.id, higher_part_name))
+        tot_leaves.update(root_found)
+        m = 'Found {}/{} names in tree_ind={} for {} at {}'
+        _LOG.info(m.format(len(root_found), len(ott_lls), tree_ind, res.id, higher_part_name))
+        
+        if len(root_found) > 0:
+            curr_node = slice_tree.root
+            some_overlap = []
+            while True:
+                next_node = None
+                some_overlap = []
+                for c in curr_node.children_refs:
+                    if c.found_names == curr_node.found_names:
+                        _LOG.info('Moving tipward from {} to {}'.format(curr_node.name, c.name))
+                        next_node = c
+                        break
+                    else:
+                        if c.found_names:
+                            some_overlap.append(c)
+                        _LOG.info('  {} has {} relevant names'.format(c.name, len(c.found_names)))
+                if next_node:
+                    curr_node = next_node
+                else:
+                    break
+            _LOG.info('MRCA of tips is {}'.format(curr_node.name))
+
+    sys.exit('early')
+
 
 

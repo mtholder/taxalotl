@@ -29,6 +29,7 @@ _RANK_TO_SORTING_NUMBER = {
     "species subgroup": 40,
     "species": 30,
     "subspecies": 20,
+    "infraspecies": 15,
     "varietas": 10,
     "forma": 0,
 }

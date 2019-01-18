@@ -203,7 +203,7 @@ class Synonym(object):
                    and self.syn_id == self.syn_id
 
 
-_VALID_SYN_TYPES = {'acronym',
+_VALID_SYN_TYPES = {'acronym', 'ambiguous synonym',
                     'authority',
                     'blast name',
                     'common name',
@@ -211,9 +211,10 @@ _VALID_SYN_TYPES = {'acronym',
                     'genbank common name',
                     'genbank synonym',
                     'homotypic synonym',
-                    'includes',
+                    'includes', 'misapplied name',
                     'misnomer',
                     'misspelling',
+                    'orthographia',
                     'proparte synonym',
                     'synonym',
                     'type material',

@@ -180,7 +180,7 @@ class TaxonTree(object):
 
     def leaves(self) -> Taxon:
         for nd in self.preorder():
-            if nd.children_refs:
+            if not nd.children_refs:
                 yield nd
 
     def preorder(self) -> Taxon:
