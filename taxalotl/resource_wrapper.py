@@ -608,3 +608,26 @@ class TaxonomyWrapper(ResourceWrapper):
 
     def _post_process_tree(self, tree):
         pass
+
+    def collapse_incertae_sedis_by_name_prefix(self, tree, prefix):
+        to_collapse_as_incertae_sedis = []
+        for nd in tree.preorder():
+            if ' x ' in nd.name:
+                # _LOG.info('flagging "{}" as a hybrid'.format(nd.name))
+                nd.flag_as_hybrid()
+            if nd.name.lower().startswith(prefix):
+                to_collapse_as_incertae_sedis.append(nd)
+                # _LOG.info('will collapse "{}"'.format(nd.name))
+        self.collapse_as_incertae_sedis(tree, to_collapse_as_incertae_sedis)
+
+    def collapse_as_incertae_sedis(self, tree, to_collapse_as_incertae_sedis):
+        tree.collapsed_incertae_sedis_containers = set(to_collapse_as_incertae_sedis)
+        for nd in to_collapse_as_incertae_sedis:
+            new_par_id = nd.par_id
+            new_par = tree.get_taxon(new_par_id)
+            if new_par:
+                new_par.children_refs.remove(nd)
+                new_par.children_refs.extend(nd.children_refs)
+            for c in nd.children_refs:
+                c.par_id = new_par_id
+                c.flag_as_incertae_sedis()

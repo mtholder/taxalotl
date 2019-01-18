@@ -5,6 +5,7 @@ import sys
 import os
 from enum import IntEnum, IntFlag
 from typing import Dict, List
+import copy
 
 from peyotl import (get_logger, write_as_json)
 
@@ -99,14 +100,18 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
         n = 0
         for n, nd in enumerate(slice_tree.postorder()):
             if nd.children_refs:
-                nd.found_names = set()
+                nd.found_names, nd.unfound_names = set(), set()
                 for c in nd.children_refs:
                     nd.found_names.update(c.found_names)
+                    nd.unfound_names.update(c.unfound_names)
             else:
                 nd.found_names = set()
+                nd.unfound_names = set()
                 if nd.name in ott_lls:
                     nd.found_names.add(nd.name)
                     # _LOG.debug('found "{}"'.format(nd.name))
+                else:
+                    nd.unfound_names.add(nd.name)
         root_found = slice_tree.root.found_names
         pf = tot_leaves.intersection(root_found)
         if pf:
@@ -115,28 +120,42 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
         tot_leaves.update(root_found)
         m = 'Found {}/{} names in tree_ind={} for {} at {}'
         _LOG.info(m.format(len(root_found), len(ott_lls), tree_ind, res.id, higher_part_name))
-        
+
+        only_overlap = []
+        mainly_overlap = []
         if len(root_found) > 0:
             curr_node = slice_tree.root
-            some_overlap = []
+            curr_found_names = copy.copy(curr_node.found_names)
             while True:
                 next_node = None
                 some_overlap = []
                 for c in curr_node.children_refs:
-                    if c.found_names == curr_node.found_names:
+                    if c.found_names == curr_found_names:
                         _LOG.info('Moving tipward from {} to {}'.format(curr_node.name, c.name))
                         next_node = c
                         break
                     else:
                         if c.found_names:
                             some_overlap.append(c)
-                        _LOG.info('  {} has {} relevant names'.format(c.name, len(c.found_names)))
+                            if not c.unfound_names:
+                                only_overlap.append(c)
+                            elif len(c.found_names) > len(c.unfound_names):
+                                mainly_overlap.append(c)
+                            m = '  {} has {} relevant names and {} irrelevant'
+                            _LOG.info(m.format(c.name, len(c.found_names), len(c.unfound_names)))
                 if next_node:
                     curr_node = next_node
                 else:
                     break
             _LOG.info('MRCA of tips is {}'.format(curr_node.name))
-
+            to_move = only_overlap + mainly_overlap
+            if not to_move:
+                to_move = [curr_node]
+            for node in to_move:
+                m = 'Moving {} ({} rel./ {} irrel).'
+                _LOG.info(m.format(node.name, len(node.found_names), len(node.unfound_names)))
+                if node.unfound_names and len(node.unfound_names) < 20:
+                    print(node.unfound_names)
     sys.exit('early')
 
 

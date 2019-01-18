@@ -123,3 +123,7 @@ class CoLTaxonomyWrapper(TaxonomyWrapper):
 
     def normalize(self):
         normalize_darwin_core_taxonomy(self.unpacked_filepath, self.normalized_filedir, self)
+
+    def _post_process_tree(self, tree):
+        self.collapse_incertae_sedis_by_name_prefix(tree, 'not assigned')
+
