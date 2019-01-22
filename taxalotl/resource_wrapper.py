@@ -609,6 +609,9 @@ class TaxonomyWrapper(ResourceWrapper):
     def _post_process_tree(self, tree):
         pass
 
+    def post_process_interim_tax_data(self, interim_tax_data):
+        pass
+
     def collapse_incertae_sedis_by_name_prefix(self, tree, prefix):
         to_collapse_as_incertae_sedis = []
         for nd in tree.preorder():
@@ -631,3 +634,34 @@ class TaxonomyWrapper(ResourceWrapper):
             for c in nd.children_refs:
                 c.par_id = new_par_id
                 c.flag_as_incertae_sedis()
+
+    def collapse_as_incertae_sedis_interim_tax_data(self, interim_tax_data, prefix):
+        if interim_tax_data.names_interpreted_as_changes:
+            return
+        container_id_to_par_id = {}
+        for old_id, name in interim_tax_data.to_name.items():
+            if name.lower().startswith(prefix):
+                container_id_to_par_id[old_id] = interim_tax_data.to_par[old_id]
+        if container_id_to_par_id:
+            # deal with possibility of nested containters
+            while True:
+                new_cont_map = {}
+                for k, v in container_id_to_par_id.items():
+                    if v in container_id_to_par_id:
+                        new_cont_map[k] = container_id_to_par_id[v]
+                if new_cont_map:
+                    container_id_to_par_id.update(new_cont_map)
+                else:
+                    break
+
+            new_par_id = {}
+            for old_id, par_id in interim_tax_data.to_par.items():
+                np = container_id_to_par_id.get(par_id)
+                if np:
+                    new_par_id[old_id] = np
+            for old_id, new_par in new_par_id.items():
+                interim_tax_data.to_children[new_par].append(old_id)
+                interim_tax_data.to_par[old_id] = new_par
+                interim_tax_data.to_flags.setdefault(old_id, []).append('incertae_sedis')
+            interim_tax_data.del_ids(container_id_to_par_id.keys())
+        interim_tax_data.names_interpreted_as_changes = True

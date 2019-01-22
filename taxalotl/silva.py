@@ -63,6 +63,7 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
     itd = InterimTaxonomyData()
     part_name_to_silva_id = parse_silva_taxon_file(expect_tax_fp, preferred, acc_to_trim, itd)
     _LOG.info('{} taxonomy IDs read'.format(len(itd.to_par)))
+    res_wrapper.post_process_interim_tax_data(itd)
     itd.write_to_dir(destination)
     mapping_file = os.path.join(destination, GEN_MAPPING_FILENAME)
     write_as_json(part_name_to_silva_id, mapping_file, indent=2, separators=(',', ': '))

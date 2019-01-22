@@ -17,7 +17,8 @@ from .taxonomic_ranks import (GENUS_RANK_TO_SORTING_NUMBER,
                               MAX_INFRASPECIFIC_NUMBER,
                               MINIMUM_HIGHER_TAXON_NUMBER,
                               SPECIES_SORTING_NUMBER)
-from .tax_partition import IGNORE_SYN_TYPES
+from .tax_partition import get_taxon_partition
+from .util import get_true_false_repsonse
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -80,8 +81,17 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
     res_forest = res.get_taxon_forest_for_partition(part_name)
     if res_forest:
         _LOG.info('{} already separated for {}'.format(res.id, part_name))
-        return
+        assert len(res_forest.trees) == 1
+        rt = res_forest.trees[0]
+    else:
+        rt = separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, res, part_name)
+    sys.exit('rt = {}'.format(rt))
+
+def separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, res, part_name):
+    fragment = taxalotl_config.get_fragment_from_part_name(part_name)
+    orig_fragment = fragment
     higher_part_name = part_name
+    res_forest = None
     while not res_forest:
         fragment = os.path.split(fragment)[0]
         higher_part_name = os.path.split(fragment)[-1]
@@ -93,6 +103,7 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
         else:
             _LOG.info('no trees for {} at {}'.format(res.id, higher_part_name))
     tot_leaves = set()
+    to_move_ids = set()
     for tree_ind, slice_tree in enumerate(res_forest.trees):
         res_syn = res.get_parsed_synonyms_by_id(higher_part_name)
         slice_tree.attach_parsed_synonyms_set(res_syn)
@@ -150,13 +161,29 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
             _LOG.info('MRCA of tips is {}'.format(curr_node.name))
             to_move = only_overlap + mainly_overlap
             if not to_move:
-                to_move = [curr_node]
-            for node in to_move:
-                m = 'Moving {} ({} rel./ {} irrel).'
-                _LOG.info(m.format(node.name, len(node.found_names), len(node.unfound_names)))
-                if node.unfound_names and len(node.unfound_names) < 20:
-                    print(node.unfound_names)
-    sys.exit('early')
+                to_move_ids.add(curr_node.id)
+            else:
+                mtmplate = '  moving {} ({} relevant/ {} irrelevant) names;'
+                msg_list = ['Perform separation by']
+                for node in to_move:
+                    m = mtmplate.format(node.name, len(node.found_names), len(node.unfound_names))
+                    msg_list.append(m)
+                msg_list.append('?  Enter y to confirm:')
+                prompt = '\n'.join(msg_list)
+                if not get_true_false_repsonse(prompt, def_value=True):
+                    return None
+                to_move_ids.update({i.id for i in to_move})
+    if not to_move_ids:
+        return None
+    from taxalotl.dynamic_partitioning import perform_dynamic_separation
+    root_ott_taxon = ott_tree.root
+    new_sep_val = {
+        "name": root_ott_taxon.name,
+        "uniqname": root_ott_taxon.name_that_is_unique,
+        "src_dict": {res.base_id: list(to_move_ids)}
+    }
+    sbo = {root_ott_taxon.id: new_sep_val}
+    perform_dynamic_separation(ott_res, res, higher_part_name, separation_by_ott=sbo)
 
 
 

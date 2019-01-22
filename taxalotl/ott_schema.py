@@ -99,6 +99,7 @@ def write_ott_taxonomy_tsv(out_fp,
                            id_to_children,
                            id_to_rank,
                            id_to_name,
+                           id_to_flags,
                            has_syn_dict,
                            details_log,
                            extinct_known=None):
@@ -107,6 +108,8 @@ def write_ott_taxonomy_tsv(out_fp,
     allows for the synonyms.tsv file to be written in a similar order, which makes browsing it
     easier.
     """
+    if extinct_known is None:
+        extinct_known = {}
     if has_syn_dict is None:
         has_syn_dict = {}
     syn_id_order = []
@@ -114,7 +117,7 @@ def write_ott_taxonomy_tsv(out_fp,
     num_internals_written = 0
     rn = list(root_nodes)
     rn.sort()
-    header = INP_OTT_TAXONOMY_HEADER if extinct_known is None else INP_FLAGGED_OTT_TAXONOMY_HEADER
+    header = INP_FLAGGED_OTT_TAXONOMY_HEADER
     with io.open(out_fp, 'w', encoding='utf-8') as out:
         out.write(header)
         # need to print id, parent id, and name
@@ -142,12 +145,17 @@ def write_ott_taxonomy_tsv(out_fp,
                         stack.extend(children)
                     else:
                         num_tips_written += 1
-                    fields = [str(curr_id), spar_id, name, rank, '']
-                    if extinct_known is not None:
-                        ev = extinct_known.get(curr_id)
-                        if ev:
-                            fields[-1] = 'extinct'
-                        fields.append('')
+                    flags = id_to_flags.get(curr_id, '')
+                    if flags and not isinstance(flags, str):
+                        flags = ','.join(flags)
+                    ev = extinct_known.get(curr_id)
+                    if ev:
+                        if flags:
+                            flags = '{},extinct'.format(flags)
+                        else:
+                            flags = 'extinct'
+                    fields = [str(curr_id), spar_id, name, rank, flags]
+                    fields.append('')
                     try:
                         out.write(u'{}\n'.format(u'\t|\t'.join(fields)))
                     except:
@@ -331,11 +339,13 @@ class InterimTaxonomyData(object):
         self.root_nodes = set()  # set of IDs
         self.to_name = {}  # ID -> name
         self.name_to_ids = {}  # name to
+        self.to_flags = {} # ID -> flags
         self.synonyms = {}
         self.repeated_names = set()
         self.extinct_known = None
         self.syn_id_to_valid = None
         self.extra_blob = None
+        self.names_interpreted_as_changes = False
 
     def finalize(self):
         self.details_log['num_forwards'] = len(self.forwards)
@@ -371,6 +381,7 @@ class InterimTaxonomyData(object):
                                       self.to_children,
                                       self.to_rank,
                                       self.to_name,
+                                      self.to_flags,
                                       self.synonyms,
                                       self.details_log,
                                       self.extinct_known)

@@ -34,4 +34,5 @@ def normalize_newick(unpacked_fp, normalized_fp, resource_wrapper):
         children = nd.children
         if children:
             itd.to_children[nd.taxon_id] = [c.taxon_id for c in children]
+    resource_wrapper.post_process_interim_tax_data(itd)
     itd.write_to_dir(normalized_fp)

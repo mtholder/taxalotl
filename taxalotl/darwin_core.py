@@ -293,6 +293,7 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     with open(os.path.join(destination, 'paleo.tsv'), 'w') as paleofile:
         for taxon_id in paleos:
             paleofile.write('{}\n'.format(taxon_id))
+    res_wrapper.post_process_interim_tax_data(itd)
     itd.write_to_dir(destination)
 
 

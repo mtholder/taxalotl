@@ -312,6 +312,7 @@ def normalize_irmng(source, destination, res_wrapper):
     itd = read_irmng_file(i_file)
     fix_irmng(itd)
     read_extinct_info(prof_file, itd)
+    res_wrapper.post_process_interim_tax_data(itd)
     itd.write_to_dir(destination)
 
 

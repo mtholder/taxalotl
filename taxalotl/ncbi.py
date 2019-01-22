@@ -237,6 +237,7 @@ def normalize_ncbi(source, destination, res_wrapper):
     deal_with_adj_taxa_with_same_names(itd)
     # Decorate the names of environmental samples
     deal_with_ncbi_env_samples_names(itd)
+    res_wrapper.post_process_interim_tax_data(itd)
     itd.write_to_dir(destination)
 
 
@@ -254,4 +255,6 @@ class NCBIWrapper(TaxonomyWrapper):
     def _post_process_tree(self, tree):
         self.collapse_incertae_sedis_by_name_prefix(tree, 'unclassified ')
 
+    def post_process_interim_tax_data(self, interim_tax_data):
+        self.collapse_as_incertae_sedis_interim_tax_data(interim_tax_data, 'unclassified')
 
