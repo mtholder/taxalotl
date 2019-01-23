@@ -46,16 +46,19 @@ def _register_name(tup_list, name_to_ott_id_list, leaf, name, ott_id):
     tup_list.append((find_score, id(leaf), name))
     name_to_ott_id_list.setdefault(name, set()).add(ott_id)
 
-def _get_findable_names(leaf, tree, name_to_ott_id_list, node_filter, include_synonyms):
+def _get_findable_names(leaf, tree, name_to_ott_id_list, nd_filter, include_synonyms):
+    if nd_filter == NodeFilter.SPECIES and leaf.best_rank_sort_number != SPECIES_SORTING_NUMBER:
+        return []
+    if leaf.best_rank_sort_number > SPECIES_SORTING_NUMBER and nd_filter == NodeFilter.SP_OR_BELOW:
+        return []
+    if nd_filter == NodeFilter.TIP and leaf.children_refs:
+        return []
     r = []
-    if leaf.best_rank_sort_number > SPECIES_SORTING_NUMBER:
-        if node_filter in (NodeFilter.SPECIES, NodeFilter.SP_OR_BELOW):
-            return r
     _register_name(r, name_to_ott_id_list, leaf, leaf.name, leaf.id)
     if include_synonyms:
         for syn in leaf.synonyms:
             _register_name(r, name_to_ott_id_list, leaf, syn.name, leaf.id)
-    if node_filter == NodeFilter.SP_OR_BELOW:
+    if nd_filter == NodeFilter.SP_OR_BELOW:
         while leaf.best_rank_sort_number < SPECIES_SORTING_NUMBER:
             try:
                 leaf = tree.id_to_taxon[leaf.par_id]
@@ -120,25 +123,42 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
 
 def align_trees_for_level(ott_res, ott_tree, res, part_name, non_incert_trees, incert_trees):
     assert len(non_incert_trees) == 1 # should be NotImplementedError
-    tup = get_findable_names(ott_tree, node_filter=NodeFilter.SPECIES, include_synonyms=False)
-    ott_leaf_label_list, ott_lls, name_to_ott_id_set = tup
+    sp_tup = get_findable_names(ott_tree, node_filter=NodeFilter.SPECIES, include_synonyms=False)
+    sp_ott_ls = sp_tup[1]
     print('non_incert_trees =', non_incert_trees)
     print('incert_trees =', incert_trees)
-    all_trees = non_incert_trees + incert_trees
-    for tree in all_trees:
-        attach_synonyms_and_find_strict_name_matches(res, tree, part_name, ott_lls)
+    tree_l = non_incert_trees + incert_trees
+    for tree in tree_l:
+        attach_synonyms_and_find_strict_name_matches(res, tree, part_name, sp_ott_ls)
+        for nd in tree.postorder():
+            nd.match_status = None
     found_tip_names = {}
-    for tree in all_trees:
+
+    _new_match_stat(tree_l, sp_ott_ls, MatchStatus.VALID_SP_OTT_VALID_SP, NodeFilter.SPECIES, False)
+    _new_match_stat(tree_l, sp_ott_ls, MatchStatus.SYN_SP_OTT_VALID_SP, NodeFilter.SPECIES, True)
+    _new_match_stat(tree_l, sp_ott_ls, MatchStatus.VALID_INF_OTT_VALID_SP, NodeFilter.SP_OR_BELOW, False)
+    _new_match_stat(tree_l, sp_ott_ls, MatchStatus.SYN_INF_OTT_VALID_SP, NodeFilter.SP_OR_BELOW, True)
+    infsp_tup = get_findable_names(ott_tree, node_filter=NodeFilter.SP_OR_BELOW, include_synonyms=False)
+    infsp_ott_ls = infsp_tup[1]
+    _new_match_stat(tree_l, infsp_ott_ls, MatchStatus.VALID_SP_OTT_VALID_INF, NodeFilter.SPECIES, False)
+    _new_match_stat(tree_l, infsp_ott_ls, MatchStatus.SYN_SP_OTT_VALID_INF, NodeFilter.SPECIES, True)
+    _new_match_stat(tree_l, infsp_ott_ls, MatchStatus.VALID_INF_OTT_VALID_INF, NodeFilter.SP_OR_BELOW,
+                    False)
+    _new_match_stat(tree_l, infsp_ott_ls, MatchStatus.SYN_INF_OTT_VALID_INF, NodeFilter.SP_OR_BELOW, True)
+
+
+def _new_match_stat(tree_l, ott_lls, match_stat, nd_filter, check_synonyms):
+    for tree in tree_l:
         mark_found_unfound_name_matches(tree,
                                         ott_lls,
-                                        nd_filter=NodeFilter.SPECIES,
-                                        check_synonyms=False)
+                                        nd_filter=nd_filter,
+                                        check_synonyms=check_synonyms)
         for nd in tree.postorder():
-            if nd.matched_to_name is None:
-                nd.match_status = None
-            else:
-                nd.match_status = MatchStatus.VALID_SP_OTT_VALID_SP
-                print('Species to species valid name match "{}"'.format(nd.name))
+            if nd.match_status is None and nd.matched_to_name is not None:
+                nd.match_status = match_stat
+                m = '{} match for "{}" (valid = "{}")'
+                print(m.format(match_stat.name, nd.matched_to_name, nd.name))
+
 
 class MatchStatus(IntFlag):
     EXT_VALID =  0x001
@@ -152,6 +172,14 @@ class MatchStatus(IntFlag):
     OTT_INF_SP = 0x100
     OTT_CLADE =  0x200
     VALID_SP_OTT_VALID_SP = EXT_VALID | OTT_VALID | EXT_SP | OTT_SP
+    SYN_SP_OTT_VALID_SP = EXT_SYN | OTT_VALID | EXT_SP | OTT_SP
+    VALID_INF_OTT_VALID_SP = EXT_VALID | OTT_VALID | EXT_INF_SP | OTT_SP
+    SYN_INF_OTT_VALID_SP = EXT_SYN | OTT_VALID | EXT_INF_SP | OTT_SP
+    VALID_SP_OTT_VALID_INF = EXT_VALID | OTT_VALID | EXT_SP | OTT_INF_SP
+    SYN_SP_OTT_VALID_INF = EXT_SYN | OTT_VALID | EXT_SP | OTT_INF_SP
+    VALID_INF_OTT_VALID_INF = EXT_VALID | OTT_VALID | EXT_INF_SP | OTT_INF_SP
+    SYN_INF_OTT_VALID_INF = EXT_SYN | OTT_VALID | EXT_INF_SP | OTT_INF_SP
+
 
 def attach_synonyms_and_find_strict_name_matches(res, tree, part_name, ott_lls):
     res_syn = res.get_parsed_synonyms_by_id(part_name)
