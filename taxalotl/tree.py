@@ -222,12 +222,13 @@ class TaxonTree(object):
             taxon = self.id_to_taxon[taxon.par_id]
             yield taxon
 
-    def attach_parsed_synonyms_set(self, syn_dict):
+    def attach_parsed_synonyms_set(self, syn_dict, warn_missing_target=True):
         for uid, synonym_set in syn_dict.items():
             try:
                 taxon = self.id_to_taxon[uid]
             except:
-                _LOG.warn('could not find for target taxon for {}'.format(synonym_set))
+                if warn_missing_target:
+                    _LOG.warn('could not find target taxon for {}'.format(synonym_set))
                 continue
             taxon.synonyms = synonym_set
 

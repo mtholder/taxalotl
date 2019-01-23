@@ -23,6 +23,11 @@ from .util import get_true_false_repsonse
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
 
+class NodeFilter(IntEnum):
+    SPECIES = 1
+    SP_OR_BELOW = 2
+    TIP = 3
+
 def align_resource(taxalotl_config: TaxalotlConfig,
                    ott_res: TaxonomyWrapper,
                    res: TaxonomyWrapper,
@@ -36,23 +41,49 @@ def align_resource(taxalotl_config: TaxalotlConfig,
     for part_name in level_list:
         align_for_level(taxalotl_config, ott_res, res, part_name)
 
+def _register_name(tup_list, name_to_ott_id_list, leaf, name, ott_id):
+    find_score = 10 * len(leaf.src_dict) - len(leaf.synonyms)
+    tup_list.append((find_score, id(leaf), name))
+    name_to_ott_id_list.setdefault(name, set()).add(ott_id)
 
-def _get_findable_names(leaf, tree):
+def _get_findable_names(leaf, tree, name_to_ott_id_list, node_filter, include_synonyms):
     r = []
     if leaf.best_rank_sort_number > SPECIES_SORTING_NUMBER:
-        return r
-    findability_score = 10*len(leaf.src_dict) - len(leaf.synonyms)
-    r.append((findability_score, id(leaf), leaf))
-    while leaf.best_rank_sort_number < SPECIES_SORTING_NUMBER:
-        try:
-            leaf = tree.id_to_taxon[leaf.par_id]
-        except:
-            break
-        if leaf.best_rank_sort_number <= SPECIES_SORTING_NUMBER:
-            findability_score = 10 * len(leaf.src_dict) - len(leaf.synonyms)
-            r.append((findability_score, id(leaf), leaf))
+        if node_filter in (NodeFilter.SPECIES, NodeFilter.SP_OR_BELOW):
+            return r
+    _register_name(r, name_to_ott_id_list, leaf, leaf.name, leaf.id)
+    if include_synonyms:
+        for syn in leaf.synonyms:
+            _register_name(r, name_to_ott_id_list, leaf, syn.name, leaf.id)
+    if node_filter == NodeFilter.SP_OR_BELOW:
+        while leaf.best_rank_sort_number < SPECIES_SORTING_NUMBER:
+            try:
+                leaf = tree.id_to_taxon[leaf.par_id]
+            except:
+                break
+            if leaf.best_rank_sort_number <= SPECIES_SORTING_NUMBER:
+                _register_name(r, name_to_ott_id_list, leaf, leaf.name, leaf.id)
+                if include_synonyms:
+                    for syn in leaf.synonyms:
+                        _register_name(r, name_to_ott_id_list, leaf, syn.name, leaf.id)
     return r
 
+def get_findable_names(ott_tree, node_filter=NodeFilter.SP_OR_BELOW, include_synonyms=False):
+    scored_nodes = []
+    name_to_ott_id_set = {}
+    gen = ott_tree.leaves if node_filter != NodeFilter.SPECIES else ott_tree.postorder
+    for node in gen():
+        x = _get_findable_names(node, ott_tree, name_to_ott_id_set, node_filter, include_synonyms)
+        scored_nodes.extend(x)
+    scored_nodes.sort(reverse=True)
+    ott_leaf_label_list = []
+    ott_lls = set()
+    for i in scored_nodes:
+        n = i[2]
+        if n not in ott_lls:
+            ott_leaf_label_list.append(n)
+            ott_lls.add(n)
+    return ott_leaf_label_list, ott_lls, name_to_ott_id_set
 
 def align_for_level(taxalotl_config: TaxalotlConfig,
                     ott_res: TaxonomyWrapper,
@@ -66,26 +97,106 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
     prev_syn = ott_res.get_parsed_synonyms_by_id(part_name)
     ott_tree.attach_parsed_synonyms_set(prev_syn)
     ott_tree.add_best_guess_rank_sort_number()
-    scored_leaves = []
-    for n, leaf in enumerate(ott_tree.leaves()):
-        scored_leaves.extend(_get_findable_names(leaf, ott_tree))
-    scored_leaves.sort(reverse=True)
-    ott_leaf_label_list = []
-    ott_lls = set()
-    for i in scored_leaves:
-        n = i[2].name
-        if n not in ott_lls:
-            ott_leaf_label_list.append(n)
-            ott_lls.add(n)
+
+    ott_leaf_label_list, ott_lls, name_to_ott_id_set = get_findable_names(ott_tree)
+
     _LOG.info('Will look for {} <= species taxa names...'.format(len(ott_leaf_label_list)))
     res_forest = res.get_taxon_forest_for_partition(part_name)
     if res_forest:
         _LOG.info('{} already separated for {}'.format(res.id, part_name))
-        assert len(res_forest.trees) == 1
-        rt = res_forest.trees[0]
     else:
-        rt = separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, res, part_name)
-    sys.exit('rt = {}'.format(rt))
+        separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, res, part_name)
+        res_forest = res.get_taxon_forest_for_partition(part_name)
+        if not res_forest:
+            m = 'Failed to separate {} for {}'
+            raise ValueError(m.format(res.id, part_name))
+    non_incert_trees, incert_trees = [], []
+    for tree in res_forest.trees:
+        if tree.root.flags and 'incertae_sedis' in tree.root.flags:
+            incert_trees.append(tree)
+        else:
+            non_incert_trees.append(tree)
+    align_trees_for_level(ott_res, ott_tree, res, part_name, non_incert_trees, incert_trees)
+
+def align_trees_for_level(ott_res, ott_tree, res, part_name, non_incert_trees, incert_trees):
+    assert len(non_incert_trees) == 1 # should be NotImplementedError
+    tup = get_findable_names(ott_tree, node_filter=NodeFilter.SPECIES, include_synonyms=False)
+    ott_leaf_label_list, ott_lls, name_to_ott_id_set = tup
+    print('non_incert_trees =', non_incert_trees)
+    print('incert_trees =', incert_trees)
+    all_trees = non_incert_trees + incert_trees
+    for tree in all_trees:
+        attach_synonyms_and_find_strict_name_matches(res, tree, part_name, ott_lls)
+    found_tip_names = {}
+    for tree in all_trees:
+        mark_found_unfound_name_matches(tree,
+                                        ott_lls,
+                                        nd_filter=NodeFilter.SPECIES,
+                                        check_synonyms=False)
+        for nd in tree.postorder():
+            if nd.matched_to_name is None:
+                nd.match_status = None
+            else:
+                nd.match_status = MatchStatus.VALID_SP_OTT_VALID_SP
+                print('Species to species valid name match "{}"'.format(nd.name))
+
+class MatchStatus(IntFlag):
+    EXT_VALID =  0x001
+    EXT_SYN =    0x002
+    OTT_VALID =  0x004
+    OTT_SYN =    0x008
+    EXT_SP =     0x010
+    EXT_INF_SP = 0x020
+    EXT_CLADE =  0x040
+    OTT_SP =     0x080
+    OTT_INF_SP = 0x100
+    OTT_CLADE =  0x200
+    VALID_SP_OTT_VALID_SP = EXT_VALID | OTT_VALID | EXT_SP | OTT_SP
+
+def attach_synonyms_and_find_strict_name_matches(res, tree, part_name, ott_lls):
+    res_syn = res.get_parsed_synonyms_by_id(part_name)
+    tree.attach_parsed_synonyms_set(res_syn, warn_missing_target=False)
+    tree.add_best_guess_rank_sort_number()
+    mark_found_unfound_name_matches(tree, ott_lls)
+
+
+def mark_found_unfound_name_matches(tree,
+                                    ott_lls,
+                                    nd_filter=NodeFilter.TIP,
+                                    check_synonyms=False):
+    for nd in tree.postorder():
+        if nd_filter == NodeFilter.TIP:
+            do_name_check = not nd.children_refs
+            do_des_union = not do_name_check
+        elif nd_filter == NodeFilter.SPECIES:
+            do_name_check = nd.best_rank_sort_number == SPECIES_SORTING_NUMBER
+            do_des_union = nd.best_rank_sort_number > SPECIES_SORTING_NUMBER
+        else:
+            assert nd_filter == NodeFilter.SP_OR_BELOW
+            do_name_check = nd.best_rank_sort_number <= SPECIES_SORTING_NUMBER
+            do_des_union = bool(nd.children_refs)
+        nd.found_names, nd.unfound_names = set(), set()
+        nd.matched_to_name = None
+        if do_name_check:
+            found = False
+            if nd.name in ott_lls:
+                nd.found_names.add(nd.name)
+                nd.matched_to_name = nd.name
+            else:
+                if check_synonyms:
+                    for syn in nd.synonyms:
+                        if syn.name in ott_lls:
+                            nd.found_names.add(syn.name)
+                            nd.matched_to_name = syn.name
+                            break
+            if nd.matched_to_name is None:
+                nd.unfound_names.add(nd.name)
+        if do_des_union:
+            if nd.children_refs:
+                for c in nd.children_refs:
+                    nd.found_names.update(c.found_names)
+                    nd.unfound_names.update(c.unfound_names)
+
 
 def separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, res, part_name):
     fragment = taxalotl_config.get_fragment_from_part_name(part_name)
@@ -105,29 +216,12 @@ def separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, r
     tot_leaves = set()
     to_move_ids = set()
     for tree_ind, slice_tree in enumerate(res_forest.trees):
-        res_syn = res.get_parsed_synonyms_by_id(higher_part_name)
-        slice_tree.attach_parsed_synonyms_set(res_syn)
-        slice_tree.add_best_guess_rank_sort_number()
-        n = 0
-        for n, nd in enumerate(slice_tree.postorder()):
-            if nd.children_refs:
-                nd.found_names, nd.unfound_names = set(), set()
-                for c in nd.children_refs:
-                    nd.found_names.update(c.found_names)
-                    nd.unfound_names.update(c.unfound_names)
-            else:
-                nd.found_names = set()
-                nd.unfound_names = set()
-                if nd.name in ott_lls:
-                    nd.found_names.add(nd.name)
-                    # _LOG.debug('found "{}"'.format(nd.name))
-                else:
-                    nd.unfound_names.add(nd.name)
+        attach_synonyms_and_find_strict_name_matches(res, slice_tree, higher_part_name, ott_lls)
         root_found = slice_tree.root.found_names
         pf = tot_leaves.intersection(root_found)
         if pf:
             m = 'Leaves {} found in multiple trees for {} at {}'
-            raise ValueError(m.format(pf, res.id, higher_part_name))
+            raise ValueError(m.format(pf, res.id, part_name))
         tot_leaves.update(root_found)
         m = 'Found {}/{} names in tree_ind={} for {} at {}'
         _LOG.info(m.format(len(root_found), len(ott_lls), tree_ind, res.id, higher_part_name))
