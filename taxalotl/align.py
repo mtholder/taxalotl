@@ -145,7 +145,10 @@ def align_trees_for_level(ott_res, ott_tree, res, part_name, non_incert_trees, i
     _new_match_stat(tree_l, infsp_ott_ls, MatchStatus.VALID_INF_OTT_VALID_INF, NodeFilter.SP_OR_BELOW,
                     False)
     _new_match_stat(tree_l, infsp_ott_ls, MatchStatus.SYN_INF_OTT_VALID_INF, NodeFilter.SP_OR_BELOW, True)
-
+    for tree in tree_l:
+        for nd in tree.postorder():
+            if nd.best_rank_sort_number <= SPECIES_SORTING_NUMBER and nd.match_status is None:
+                print('Still unmatched: {}'.format(str(nd)))
 
 def _new_match_stat(tree_l, ott_lls, match_stat, nd_filter, check_synonyms):
     for tree in tree_l:
@@ -156,8 +159,12 @@ def _new_match_stat(tree_l, ott_lls, match_stat, nd_filter, check_synonyms):
         for nd in tree.postorder():
             if nd.match_status is None and nd.matched_to_name is not None:
                 nd.match_status = match_stat
-                m = '{} match for "{}" (valid = "{}")'
-                print(m.format(match_stat.name, nd.matched_to_name, nd.name))
+                if nd.name != nd.matched_to_name:
+                    m = '{} match for "{}" (valid = "{}")'
+                    print(m.format(match_stat.name, nd.matched_to_name, nd.name))
+                else:
+                    m = '{} match for "{}"'
+                    print(m.format(match_stat.name, nd.matched_to_name))
 
 
 class MatchStatus(IntFlag):
