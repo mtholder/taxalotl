@@ -33,9 +33,13 @@ _upper = u"A-ZÄÁÅÁÁÇČÐĎĐÉÉÎİŁŘŠŚŞȘÔØÖÔÓÜÚŽ"
 _epithet = u" +[%s0-9.-]+" % _lower
 
 # Matches a canonical name
-_canon_re = u"[A-ZÖ{x}-]+(|{e}|{e}{e}|{e}{e}{e})".format(x=_lower, e=_epithet)
+_genus_re = u"[A-ZÖ{x}-]+".format(x=_lower)
+_epithets_re = u"(|{e}|{e}{e}|{e}{e}{e})".format(e=_epithet)
+_canon_re = u"{}{}".format(_genus_re, _epithets_re)
 _auth_re = u" +(d'|von |van |de |dem |der |da |del |di |le |f\\. |[{}(])(..|\\.).*".format(_upper)
+_with_subg = u"{g} \\({g}\\){e}".format(g=_genus_re, e=_epithets_re)
 _trimmer = re.compile(u"({})({})".format(_canon_re, _auth_re))
+_subg_trimmer = re.compile(u"({})({})".format(_with_subg, _auth_re))
 _year_re = re.compile(u".*, [12][0-9][0-9][0-9?]\\)?")
 _has_digit = re.compile(u".*[0-9].*")
 
@@ -45,10 +49,25 @@ def canonical_name(name):
         return name
     if u' virus ' in name or name.endswith(' virus'):
         return name
-    m = _trimmer.match(name)
-    if m is None:
-        return name
-    canon = m.group(1)
+    m = _subg_trimmer.match(name)
+    if m is not None:
+        canon = m.group(1)
+        cs = canon.split('(')
+        nc = None
+        if len(cs) == 2:
+            g = cs[0].strip()
+            el = cs[1].split(')')
+            if len(el) == 2:
+                e = el[1].strip()
+                nc = '{} {}'.format(g, e)
+        if nc is None:
+            raise RuntimeError('Could not parse name with subgenus:\n"{}"'.format(name))
+        canon = nc
+    else:
+        m = _trimmer.match(name)
+        if m is None:
+            return name
+        canon = m.group(1)
     # group 1 = canonical name
     # group 2 = epithet(s)
     # group 3 = authority
@@ -74,8 +93,9 @@ def write_gbif_projection_file(source, destination, fields2index):
             for line in infile:
                 row = line.split('\t')
                 scientific = row[sci_ind]
+                tax_id_str = row[tax_id]
                 canenc = canonical_name(scientific)
-                row_el = [row[tax_id],  # taxonID
+                row_el = [tax_id_str,
                           row[pnu_ind],  # parentNameUsageID
                           row[anu_ind],  # acceptedNameUsageID
                           canenc,  # canonicalName
@@ -127,6 +147,7 @@ def read_gbif_projection(proj_filepath, itd, field_to_index, do_gbif_checks):
             except:
                 if line_num == 0:
                     continue
+                raise
             name = fields[col_canonical_name].strip()
             assert name
             source = fields[col_name_according_to].strip()
