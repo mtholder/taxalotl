@@ -3,7 +3,7 @@
 
 from __future__ import print_function
 
-from .taxonomic_ranks import _RANK_TO_SORTING_NUMBER
+from .taxonomic_ranks import RANK_TO_SORTING_NUMBER
 
 
 # end taxonomic ranks
@@ -44,9 +44,9 @@ class Taxon(object):
     def sorted_flags(self):
         if not self.flags:
             return []
-        l = list(self.flags)
-        l.sort()
-        return l
+        flist = list(self.flags)
+        flist.sort()
+        return flist
 
     @property
     def synonyms(self):
@@ -73,7 +73,7 @@ class Taxon(object):
     def rank_sorting_number(self):
         if (self.rank is None) or self.rank.startswith('no rank'):
             return None
-        return _RANK_TO_SORTING_NUMBER[self.rank]
+        return RANK_TO_SORTING_NUMBER[self.rank]
 
     def __str__(self):
         s = 'rank={}'.format(self.rank) if self.rank else ''

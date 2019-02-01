@@ -8,6 +8,7 @@ _LOG = get_logger(__name__)
 
 INTERACTIVE_MODE = False
 
+
 def get_true_false_repsonse(p, true_func=None, def_value=False):
     if not INTERACTIVE_MODE:
         _LOG.warn('non-interactive mode. Answering {} to "{}"'.format(def_value, p))

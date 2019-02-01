@@ -25,6 +25,7 @@ SEP_NAMES = '__separator_names__.json'
 SEP_MAPPING = '__separator_names_to_dir__.json'
 UPDATE_ANALYSIS_FILENAME = '__update_analysis__.json'
 
+
 def analyze_update_to_resources(taxalotl_config: TaxalotlConfig,
                                 prev: TaxonomyWrapper,
                                 curr: TaxonomyWrapper,
@@ -40,25 +41,25 @@ def analyze_update_to_resources(taxalotl_config: TaxalotlConfig,
 
 
 class UpdateStatus(IntFlag):
-    UNCHANGED =                       0
-    PAR_CHANGED =                  0x01
-    NAME_CHANGED =                 0x02
+    UNCHANGED = 0
+    PAR_CHANGED = 0x01
+    NAME_CHANGED = 0x02
     # really just NEW if not combined with TERMINAL or SYNONYM
-    NEW_TERMINAL =                 0x04
-    INTERNAL =                     0x08
-    UNDIAGNOSED_CHANGE =           0x10
+    NEW_TERMINAL = 0x04
+    INTERNAL = 0x08
+    UNDIAGNOSED_CHANGE = 0x10
     # really just DELETED if not combined with TERMINAL or SYNONYM
-    DELETED_TERMINAL =             0x20
-    SYN_DELETED =                  0x40
-    PROMOTED_FROM_SYNONYM =        0x80
-    SUNK_TO_SYNONYM =             0x100
+    DELETED_TERMINAL = 0x20
+    SYN_DELETED = 0x40
+    PROMOTED_FROM_SYNONYM = 0x80
+    SUNK_TO_SYNONYM = 0x100
     PROMOTED_FROM_BELOW_SPECIES = 0x200
-    SUNK_TO_BELOW_SPECIES =       0x400
-    CASCADING_NAME_CHANGED =      0x800
-    NEWLY_BARREN =               0x1000
-    OLDLY_BARREN =               0x2000
-    ELEVATED_TO_SP =             0x4000
-    DEMOTED_TO_INFRA_SP =        0x8000
+    SUNK_TO_BELOW_SPECIES = 0x400
+    CASCADING_NAME_CHANGED = 0x800
+    NEWLY_BARREN = 0x1000
+    OLDLY_BARREN = 0x2000
+    ELEVATED_TO_SP = 0x4000
+    DEMOTED_TO_INFRA_SP = 0x8000
     # End flags. Start of unions
     NAME_AND_PAR_CHANGED = PAR_CHANGED | NAME_CHANGED
     CASCADE_NAME_AND_PAR_CHANGED = NAME_AND_PAR_CHANGED | CASCADING_NAME_CHANGED
@@ -72,7 +73,6 @@ class UpdateStatus(IntFlag):
     INTERNAL_PROMOTED_FROM_SYNONYM = PROMOTED_FROM_SYNONYM | NEW_INTERNAL
     TERMINAL_SUNK_TO_SYNONYM = SUNK_TO_SYNONYM | DELETED_TERMINAL
     INTERNAL_SUNK_TO_SYNONYM = SUNK_TO_SYNONYM | DELETED_INTERNAL
-
 
 
 def del_add_set_diff(old_set, new_set):
@@ -205,8 +205,9 @@ def _compare_nd_ranks(first_pair, second_pair):
         return NodeRankCmpResult.SECOND_HIGHER, fir_rr, sec_rr
     return NodeRankCmpResult.OVERLAPPING, fir_rr, sec_rr
 
+
 def _add_update_flag_bit(nd, flag):
-    '''Adds flag to non-synonym keys'''
+    """Adds flag to non-synonym keys"""
     nus = {}
     for k, v in nd.update_status.items():
         if k & UpdateStatus.SYNONYM:
@@ -215,8 +216,9 @@ def _add_update_flag_bit(nd, flag):
             nus[flag | k] = v
     nd.update_status = nus
 
+
 def _alter_update_flag(nd, flag):
-    '''Adds flag to non-synonym keys'''
+    """Adds flag to non-synonym keys"""
     nus = {}
     for k, v in nd.update_status.items():
         if k & UpdateStatus.SYNONYM:
@@ -224,7 +226,6 @@ def _alter_update_flag(nd, flag):
         else:
             nus[flag] = v
     nd.update_status = nus
-
 
 
 class UpdateStatusLog(object):
@@ -345,7 +346,6 @@ class UpdateStatusLog(object):
                     nus[UpdateStatus.CASCADING_NAME_CHANGED | k] = v
             curr_child.update_status = nus
 
-
     def flush(self, tax_dir):
         self.curr_tree.add_best_guess_rank_sort_number()
         self.prev_tree.add_best_guess_rank_sort_number()
@@ -374,8 +374,8 @@ class UpdateStatusLog(object):
                     _LOG.warn('persistent UNDIAGNOSED_CHANGE for {} and {}'.format(nd, other))
             if (not nd.children_refs) and nd.best_rank_sort_number >= MINIMUM_HIGHER_TAXON_NUMBER:
                 if other \
-                   and (not other.children_refs) \
-                   and other.best_rank_sort_number >= MINIMUM_HIGHER_TAXON_NUMBER:
+                        and (not other.children_refs) \
+                        and other.best_rank_sort_number >= MINIMUM_HIGHER_TAXON_NUMBER:
                     _add_update_flag_bit(nd, UpdateStatus.OLDLY_BARREN)
                 else:
                     _add_update_flag_bit(nd, UpdateStatus.NEWLY_BARREN)
@@ -582,10 +582,12 @@ class UpdateStatusLog(object):
             pass
         return False
 
+
 def append_to_optional_attr(obj, attr_name, val):
     if not hasattr(obj, attr_name):
         setattr(obj, attr_name, [])
     getattr(obj, attr_name).append(val)
+
 
 def append_to_optional_attr_if_new(obj, attr_name, val):
     if not hasattr(obj, attr_name):
@@ -594,15 +596,19 @@ def append_to_optional_attr_if_new(obj, attr_name, val):
     if val not in atlist:
         atlist.append(val)
 
+
 def _flag_new_child(new_par, cnode):
     append_to_optional_attr(new_par, 'new_children', cnode)
+
 
 def _flag_lost_child(old_par, cnode, in_curr_tree=True):
     append_to_optional_attr(old_par, 'lost_children', cnode)
 
+
 def _flag_par_transfer(old_par, new_par):
     append_to_optional_attr_if_new(new_par, 'took_children_from', old_par)
     append_to_optional_attr_if_new(old_par, 'lost_children_to', new_par)
+
 
 def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
                              prev: TaxonomyWrapper,
@@ -746,5 +752,4 @@ def analyze_update_for_level(taxalotl_config: TaxalotlConfig,
         ns = UpdateStatus.SUNK_TO_SYNONYM | k
         update_log.improve_status(k, ns, more_specific_status)
 
-    x = update_log.flush(cf.taxon_partition.input_taxdir)
-    return x
+    return update_log.flush(cf.taxon_partition.input_taxdir)

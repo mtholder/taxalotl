@@ -173,10 +173,9 @@ class Synonym(object):
         self.syn_id = syn_id
 
     def to_serializable_dict(self):
-        d =  {'valid_tax_id': self.valid_tax_id,
-              'name': self.name
+        d = {'valid_tax_id': self.valid_tax_id,
+             'name': self.name
              }
-        sis = ', syn_id={}'.format(self.syn_id)
         if self.syn_id:
             d['synonym_id'] = self.syn_id
         if self.syn_type != 'synonym':
@@ -824,7 +823,8 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             _LOG.debug("write not needed for {} no records".format(self.fragment))
             syn_id_order = []
         else:
-            syn_id_order = _write_d_as_tsv(self.write_taxon_header, dh._id_to_line, dh._id_order, dest)
+            syn_id_order = _write_d_as_tsv(self.write_taxon_header, dh._id_to_line, dh._id_order,
+                                           dest)
         if not dh._roots:
             _LOG.debug('No root ids need to be written to "{}"'.format(roots_file))
         else:

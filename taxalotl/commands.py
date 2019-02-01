@@ -33,12 +33,14 @@ out_stream = sys.stdout
 SEP_NAMES = '__separator_names__.json'
 SEP_MAPPING = '__separator_names_to_dir__.json'
 
+
 def align(taxalotl_config, id_list, level_list):
     assert len(id_list) == 1
     eid = id_list[0]
     ott_res = taxalotl_config.get_terminalized_res_by_id('ott')
     res = taxalotl_config.get_terminalized_res_by_id(eid)
     align_resource(taxalotl_config, ott_res, res, level_list)
+
 
 def analyze_update(taxalotl_config, id_list, level_list):
     assert len(id_list) == 2

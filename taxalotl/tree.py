@@ -47,7 +47,6 @@ class TaxonTree(object):
 
     def write_rank_indented(self, out_stream):
         self.add_best_guess_rank_sort_number()
-        rr = self.root.best_rank_sort_number
         ranks_sn_set = {i.best_rank_sort_number for i in self.preorder()}
         ranks_sn_list = list(ranks_sn_set)
         ranks_sn_list.sort()
@@ -88,7 +87,6 @@ class TaxonTree(object):
                 other = self.id_to_taxon[other.par_id]
             except:
                 return False
-
 
     def find_genus_for_alpha(self, nd):
         if nd.best_rank_sort_number == GENUS_RANK_TO_SORTING_NUMBER:
@@ -152,7 +150,6 @@ class TaxonTree(object):
     def node_is_higher_taxon(self, nd):
         if self.node_is_specimen_typed(nd):
             return False
-
 
     def node_is_specimen_typed(self, nd):
         """Return True for taxa at or below species level."""
