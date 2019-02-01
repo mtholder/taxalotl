@@ -88,6 +88,7 @@ def write_gbif_projection_file(source, destination, fields2index):
     tr_ind = fields2index['taxonRank']
     ts_ind = fields2index['taxonomicStatus']
     nat_ind = fields2index['nameAccordingTo']
+    is_extinct_ind = fields2index.get('isExtinct')
     with io.open(source, 'rU', encoding='utf-8') as infile:
         with io.open(destination, 'w', encoding='utf-8') as outfile:
             for line in infile:

@@ -109,6 +109,7 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
         _LOG.info('{} already separated for {}'.format(res.id, part_name))
     else:
         separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, res, part_name)
+        raise NotImplementedError('Required separation has been completed. Sorry at this point you have to re-run the align command')
         res_forest = res.get_taxon_forest_for_partition(part_name)
         if not res_forest:
             m = 'Failed to separate {} for {}'
