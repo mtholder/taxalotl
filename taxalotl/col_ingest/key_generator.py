@@ -5,7 +5,8 @@ import re
 from peyotl import get_logger
 from datetime import datetime
 
-from .col_db_model import (AccordingTo, Authority,
+from taxalotl.col_ingest.col_db_model import (AccordingTo,
+                                              Authority,
                            CoLLink,
                            Dataset, Description,
                            Edge,

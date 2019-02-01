@@ -5,10 +5,10 @@ import sys
 from datetime import datetime
 from peyotl import get_logger
 from sqlalchemy import create_engine
-from .col_db_model import Base
+from taxalotl.col_ingest.col_db_model import Base
 
-from .col_parser import CoLDumpParser, ParseCondenser
-from .key_generator import replace_values_with_keys, parse_name_parts
+from taxalotl.col_ingest.col_parser import CoLDumpParser, ParseCondenser
+from taxalotl.col_ingest.key_generator import replace_values_with_keys, parse_name_parts
 
 begin_ingest_datetime = None
 NUM_SYN_INGESTED, NUM_VALID_INGESTED, FIRST_INGESTED = 0, 0, None
