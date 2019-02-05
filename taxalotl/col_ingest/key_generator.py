@@ -215,7 +215,8 @@ def _gen_taxon_name(value):
 
 
 def _gen_rank_fields(value):
-    return {'rank': value[0], 'sorting_number': value[1]}
+    return {'rank': value[0],
+            'sorting_number': value[1]}
 
 
 def gen_rank_fk(engine, parser, record_iter):
@@ -338,41 +339,45 @@ def _gen_taxon_kwargs(taxon_tup):
     return {'name_fk': taxon_tup[0],
             'rank_fk': taxon_tup[1],
             'tax_sup_info_fk': taxon_tup[2],
+            'max_des_pk': taxon_tup[3],
+            'dump_tax_id': taxon_tup[4]
             }
 
 
 def _gen_edge_kwargs(edge_tup):
     # sync with indices in gen_taxon_fk
-    return {'parent_fk': edge_tup[0],
-            'child_fk': edge_tup[1],
+    return {'parent_fk': edge_tup[1]
             }
 
 
 def gen_taxon_fk(engine, parser, record_iter):
     taxon_tup_to_key = {}
-    next_key = 0
     tax_id_to_pk = {}
     edges = {}
-    next_edge_key = 0
     for rec in record_iter:
+        col_rec_id = rec[parser.taxonID_idx]
+        new_rec_id = rec[parser.entry_trav_int_idx]
         assert rec[parser.acceptedNameUsageID_idx] is None
         tup = (rec[parser.scientificName_idx],  # name
                rec[parser.taxonRank_idx],  # rank
                rec[parser.taxon_supp_inf_idx],  # tax_supp_info
+               rec[parser.exit_trav_int_idx],
+               col_rec_id
                )
-        key = taxon_tup_to_key.setdefault(tup, next_key)
-        if next_key == key:
-            next_key += 1
-        rec_id = rec[parser.taxonID_idx]
-        tax_id_to_pk[rec_id] = key
+        key = taxon_tup_to_key.setdefault(tup, new_rec_id)
+        if new_rec_id != key:
+            m = 'Valid taxa repeated data: traversal indices = {} and {}'
+            raise ValueError(m.format(key, new_rec_id))
+        tax_id_to_pk[col_rec_id] = key
         par_id = rec[parser.parentNameUsageID_idx]
         if par_id is not None:
             assert par_id in tax_id_to_pk
             par_key = tax_id_to_pk[par_id]
-            etup = (par_key, key)
-            ekey = edges.setdefault(etup, next_edge_key)
-            if ekey == next_edge_key:
-                next_edge_key += 1
+            etup = (new_rec_id, par_key)
+            ekey = edges.setdefault(etup, new_rec_id)
+            if ekey != new_rec_id:
+                m = 'Edge of valid taxa repeated data: traversal indices = {} and {}'
+                raise ValueError(m.format(ekey, new_rec_id))
         del rec[:]
     _add_orm_objs(engine, taxon_tup_to_key, Taxon, kwarg_fn=_gen_taxon_kwargs)
     _add_orm_objs(engine, edges, Edge, kwarg_fn=_gen_edge_kwargs)

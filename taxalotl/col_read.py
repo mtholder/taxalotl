@@ -36,10 +36,14 @@ def taxon_from_name(session, name, allow_trailing_words=False):
                 if len(frag_lists) > 3:
                     tnqa.append(TaxonName.word_4_fk == frag_lists[3][0].pk)
     else:
-        tnqa.append(TaxonName.word_2_fk == frag_lists[1][0].pk if len(frag_lists) > 1 else None)
-        tnqa.append(TaxonName.word_3_fk == frag_lists[2][0].pk if len(frag_lists) > 2 else None)
-        tnqa.append(TaxonName.word_4_fk == frag_lists[3][0].pk if len(frag_lists) > 3 else None)
-    return [session.query(NameFragment).get(i.word_1_fk).word for i in session.query(TaxonName).filter(and_(*tnqa)).all()]
+        val2 = frag_lists[1][0].pk if len(frag_lists) > 1 else None
+        tnqa.append(TaxonName.word_2_fk == val2)
+        val3 = frag_lists[2][0].pk if len(frag_lists) > 2 else None
+        tnqa.append(TaxonName.word_3_fk == val3)
+        val4 = frag_lists[3][0].pk if len(frag_lists) > 3 else None
+        tnqa.append(TaxonName.word_4_fk == val4)
+    name_matches = session.query(TaxonName).filter(and_(*tnqa)).all()
+    return [session.query(Taxon).filter(Taxon.name_fk == i.pk).all() for i in name_matches]
 
 if __name__ == '__main__':
     import sys

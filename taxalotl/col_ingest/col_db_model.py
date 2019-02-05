@@ -89,7 +89,7 @@ class Rank(Base):
     __tablename__ = 'rank'
     pk = Column(Integer, primary_key=True)
     rank = Column(String)
-    sorting_number = Column(Integer, nullable=True)
+    sorting_number = Column(Integer, nullable=False)
 
 
 class TaxonSuppInfo(Base):
@@ -126,7 +126,8 @@ class Taxon(Base):
     name_fk = Column(Integer, ForeignKey('taxon_name.pk'))
     rank_fk = Column(Integer, ForeignKey('rank.pk'), nullable=True)
     tax_sup_info_fk = Column(Integer, ForeignKey('taxon_supp_info.pk'), nullable=True)
-
+    max_des_pk = Column(Integer, nullable=False)
+    dump_tax_id = Column(Integer, nullable=False, unique=True)
 
 class Synonym(Base):
     __tablename__ = 'synonym'
@@ -139,5 +140,4 @@ class Synonym(Base):
 class Edge(Base):
     __tablename__ = 'edge'
     pk = Column(Integer, primary_key=True)
-    parent_fk = Column(Integer, ForeignKey('taxon.pk'))
-    child_fk = Column(Integer, ForeignKey('taxon.pk'))
+    parent_fk = Column(Integer, ForeignKey('taxon.pk'), nullable=False)
