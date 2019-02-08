@@ -12,13 +12,22 @@ from .taxonomic_ranks import (GENUS_RANK_TO_SORTING_NUMBER,
 _LOG = get_logger(__name__)
 
 
-def write_indented_subtree(out, node, indent_level):
-    out.write('{}{} (id={})\n'.format('  ' * indent_level,
-                                      node.name_that_is_unique,
-                                      node.id))
+def write_indented_subtree(out, node, indent_level, taboo_flags=None):
+    nf = node.flags
+    if taboo_flags and nf and (not taboo_flags.isdisjoint(nf)):
+        return
+    f = ' (flags={})'.format(','.join(nf)) if nf else ''
+    out.write('{}{} (id={}){}\n'.format('  ' * indent_level,
+                                        node.name_that_is_unique,
+                                        node.id,
+                                        f))
     if node.children_refs:
-        for c in node.children_refs:
-            write_indented_subtree(out, c, indent_level=1 + indent_level)
+        scr = [(i.name_that_is_unique, i) for i in node.children_refs]
+        scr.sort()
+        for uname, c in scr:
+            write_indented_subtree(out, c,
+                                   indent_level=1 + indent_level,
+                                   taboo_flags=taboo_flags)
 
 
 class TaxonTree(object):
@@ -249,9 +258,9 @@ class TaxonForest(object):
                                       id_to_taxon=id_to_taxon,
                                       taxon_partition=taxon_partition)
 
-    def write_indented(self, out):
+    def write_indented(self, out, taboo_flags=None):
         for r in self.roots.values():
-            write_indented_subtree(out, r.root, indent_level=0)
+            write_indented_subtree(out, r.root, indent_level=0, taboo_flags=taboo_flags)
 
     @property
     def trees(self):

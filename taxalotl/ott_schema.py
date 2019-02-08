@@ -284,6 +284,7 @@ def flag_after_rank_parser(taxon, line):
 
 
 HEADER_TO_LINE_PARSER = {FULL_OTT_HEADER: full_ott_line_parser,
+                         '': full_ott_line_parser,
                          INP_OTT_TAXONOMY_HEADER: full_ott_line_parser,
                          INP_FLAGGED_OTT_TAXONOMY_HEADER: flag_after_rank_parser,
                          INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER: flag_after_rank_parser,

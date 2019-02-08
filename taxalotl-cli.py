@@ -22,6 +22,7 @@ from taxalotl.commands import (accumulate_separated_descendants,
                                normalize_resources,
                                partition_resources,
                                pull_otifacts,
+                               show_tree,
                                status_of_resources,
                                unpack_resources,
                                SEP_NAMES,
@@ -52,6 +53,7 @@ res_dep_cmds = ['accumulate-separated-descendants',
                 'info',
                 'normalize',
                 'partition',
+                'show-tree',
                 'status',
                 'unpack',
                 ]
@@ -119,6 +121,8 @@ def main_post_parse(args):
             if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
                 raise RuntimeError('--level should be one of "{}"'.format('", "'.join(PART_NAMES)))
             info_on_resources(taxalotl_config, args.resources, [args.level])
+        elif args.which == 'show_tree':
+            show_tree(taxalotl_config, args.resources, [args.level])
         elif args.which == 'all':
             m = 'Currently you must enter a command to run. Use the --help option or see the Tutorial.md\n'
             sys.stdout.write(m)
@@ -258,6 +262,13 @@ def main():
                               help="remove the results the diagnose-new-separator for a resource.")
     _add_level_arg(clean_s_p)
     clean_s_p.set_defaults(which='clean-separation')
+
+    # Align
+    show_tree_p = subp.add_parser('show-tree',
+                                help="writes an ascii representation of the taxonomy for a level")
+    show_tree_p.add_argument('resources', nargs="*", help="IDs of the resources to separate")
+    _add_level_arg(show_tree_p)
+    show_tree_p.set_defaults(which="show_tree")
 
     # Handle --show-completions differently from the others, because
     #   argparse does not help us out here... at all

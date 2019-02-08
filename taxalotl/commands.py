@@ -33,6 +33,20 @@ out_stream = sys.stdout
 SEP_NAMES = '__separator_names__.json'
 SEP_MAPPING = '__separator_names_to_dir__.json'
 
+def show_tree(taxalotl_config, id_list, level_list):
+    assert len(id_list) == 1
+    normally_hidden = frozenset(['barren',
+                                 'extinct',
+                                 'major_rank_conflict',
+                                 'major_rank_conflict_inherited',
+                                 'not_otu',
+                                 'was_container',
+                                 ])
+    for res_id in id_list:
+        for part_name in level_list:
+            fragment = taxalotl_config.get_fragment_from_part_name(part_name)
+            tf = taxalotl_config.forest_for_fragment(res_id, fragment)
+            tf.write_indented(out_stream, taboo_flags=normally_hidden)
 
 def align(taxalotl_config, id_list, level_list):
     assert len(id_list) == 1

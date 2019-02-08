@@ -177,3 +177,10 @@ class TaxalotlConfig(object):
                 touset.add(t)
                 terms_of_use.append(t)
         return urls, terms_of_use
+
+    def forest_for_fragment(self, res_id, fragment):
+        from .tax_partition import get_taxon_partition
+        res = self.get_terminalized_res_by_id(res_id)
+        tp = get_taxon_partition(res, fragment)
+        tp.read_inputs_for_read_only()
+        return tp.get_taxa_as_forest()

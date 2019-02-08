@@ -18,6 +18,7 @@ def get_frag_from_dir(taxalotl_conf, tax_dir):
     return f
 
 
+
 def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
     fragment = get_frag_from_dir(taxalotl_conf, tax_dir)
     _LOG.info("fragment = {}".format(fragment))
