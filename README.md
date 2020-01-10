@@ -128,4 +128,7 @@ The package is named after [_Ambystoma mexicanum_](https://en.wikipedia.org/wiki
 and the fact that there are a lot o' taxa...
 and the whole Open Tree of Life thing...
 
+However, see https://www.youtube.com/watch?v=Ka0Fj6P3T-w on the correct pronunciation
+  of "Axolotl" (and some other Nahuatl words).
+
 It might become `Taxolotl` instead of `Taxalotl`.
