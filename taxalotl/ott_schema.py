@@ -3,10 +3,11 @@
 
 from __future__ import print_function
 
+import tempfile
+import shutil
 import csv
 import io
 import os
-import tempfile
 
 from peyotl import (add_or_append_to_dict, assure_dir_exists,
                     get_logger,
@@ -426,7 +427,7 @@ class InterimTaxonomyData(object):
             sfp = os.path.join(d, f)
             if os.path.exists(sfp):
                 dfp = os.path.join(destination, f)
-                os.rename(sfp, dfp)
+                shutil.move(sfp, dfp)
         os.rmdir(d)
 
     def del_ids(self, id_list):

@@ -25,6 +25,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ##############################################################################
+import shutil
 import io
 import os
 import sys
@@ -53,7 +54,7 @@ class UploadCommand(Command):
         if os.path.exists(pd):
             self.status('Renaming moving previous dist to prevdist')
             prevd = os.path.join(here, 'prevdist')
-            os.rename(pd, prevd)
+            shutil.move(pd, prevd)
         self.status('Building Source and Wheel (universal) distribution…')
         os.system('{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
         self.status('Uploading the package to PyPI via Twine…')
