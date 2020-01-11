@@ -155,8 +155,7 @@ def write_ott_taxonomy_tsv(out_fp,
                             flags = '{},extinct'.format(flags)
                         else:
                             flags = 'extinct'
-                    fields = [str(curr_id), spar_id, name, rank, flags]
-                    fields.append('')
+                    fields = [str(curr_id), spar_id, name, rank, flags, '']
                     try:
                         out.write(u'{}\n'.format(u'\t|\t'.join(fields)))
                     except:
@@ -340,7 +339,7 @@ class InterimTaxonomyData(object):
         self.root_nodes = set()  # set of IDs
         self.to_name = {}  # ID -> name
         self.name_to_ids = {}  # name to
-        self.to_flags = {} # ID -> flags
+        self.to_flags = {}  # ID -> flags
         self.synonyms = {}
         self.repeated_names = set()
         self.extinct_known = None

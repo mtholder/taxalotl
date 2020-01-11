@@ -38,7 +38,8 @@ def get_resource_wrapper(raw, refs, parent=None):
         if rt == wt.resource_type and (st in wt.schema):
             # _LOG.debug('get_resource_wrapper.calling wrapper_types wt={}'.format(wt))
             return wt(raw, parent=parent, refs=refs)
-    # m = "resource_type, schema = ({}, {}) not recognized for {}, using AbstractResourceWrapper...".format(rt, st, raw['id'])
+    # m = "resource_type, schema = ({}, {}) not recognized for {}, using AbstractResourceWrapper..." \
+    #     .format(rt, st, raw['id'])
     # _LOG.info(m)
     return AbstractResourceWrapper(raw, parent=parent, refs=refs)
 

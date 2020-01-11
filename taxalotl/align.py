@@ -23,10 +23,12 @@ from .util import get_true_false_repsonse
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
 
+
 class NodeFilter(IntEnum):
     SPECIES = 1
     SP_OR_BELOW = 2
     TIP = 3
+
 
 def align_resource(taxalotl_config: TaxalotlConfig,
                    ott_res: TaxonomyWrapper,
@@ -41,10 +43,12 @@ def align_resource(taxalotl_config: TaxalotlConfig,
     for part_name in level_list:
         align_for_level(taxalotl_config, ott_res, res, part_name)
 
+
 def _register_name(tup_list, name_to_ott_id_list, leaf, name, ott_id):
     find_score = 10 * len(leaf.src_dict) - len(leaf.synonyms)
     tup_list.append((find_score, id(leaf), name))
     name_to_ott_id_list.setdefault(name, set()).add(ott_id)
+
 
 def _get_findable_names(leaf, tree, name_to_ott_id_list, nd_filter, include_synonyms):
     if nd_filter == NodeFilter.SPECIES and leaf.best_rank_sort_number != SPECIES_SORTING_NUMBER:
@@ -71,6 +75,7 @@ def _get_findable_names(leaf, tree, name_to_ott_id_list, nd_filter, include_syno
                         _register_name(r, name_to_ott_id_list, leaf, syn.name, leaf.id)
     return r
 
+
 def get_findable_names(ott_tree, node_filter=NodeFilter.SP_OR_BELOW, include_synonyms=False):
     scored_nodes = []
     name_to_ott_id_set = {}
@@ -87,6 +92,7 @@ def get_findable_names(ott_tree, node_filter=NodeFilter.SP_OR_BELOW, include_syn
             ott_leaf_label_list.append(n)
             ott_lls.add(n)
     return ott_leaf_label_list, ott_lls, name_to_ott_id_set
+
 
 def align_for_level(taxalotl_config: TaxalotlConfig,
                     ott_res: TaxonomyWrapper,
@@ -121,8 +127,9 @@ def align_for_level(taxalotl_config: TaxalotlConfig,
             non_incert_trees.append(tree)
     align_trees_for_level(ott_res, ott_tree, res, part_name, non_incert_trees, incert_trees)
 
+
 def align_trees_for_level(ott_res, ott_tree, res, part_name, non_incert_trees, incert_trees):
-    assert len(non_incert_trees) == 1 # should be NotImplementedError
+    assert len(non_incert_trees) == 1  # should be NotImplementedError
     sp_tup = get_findable_names(ott_tree, node_filter=NodeFilter.SPECIES, include_synonyms=False)
     sp_ott_ls = sp_tup[1]
     print('non_incert_trees =', non_incert_trees)
@@ -150,6 +157,7 @@ def align_trees_for_level(ott_res, ott_tree, res, part_name, non_incert_trees, i
             if nd.best_rank_sort_number <= SPECIES_SORTING_NUMBER and nd.match_status is None:
                 print('Still unmatched: {}'.format(str(nd)))
 
+
 def _new_match_stat(tree_l, ott_lls, match_stat, nd_filter, check_synonyms):
     for tree in tree_l:
         mark_found_unfound_name_matches(tree,
@@ -168,16 +176,16 @@ def _new_match_stat(tree_l, ott_lls, match_stat, nd_filter, check_synonyms):
 
 
 class MatchStatus(IntFlag):
-    EXT_VALID =  0x001
-    EXT_SYN =    0x002
-    OTT_VALID =  0x004
-    OTT_SYN =    0x008
-    EXT_SP =     0x010
+    EXT_VALID = 0x001
+    EXT_SYN = 0x002
+    OTT_VALID = 0x004
+    OTT_SYN = 0x008
+    EXT_SP = 0x010
     EXT_INF_SP = 0x020
-    EXT_CLADE =  0x040
-    OTT_SP =     0x080
+    EXT_CLADE = 0x040
+    OTT_SP = 0x080
     OTT_INF_SP = 0x100
-    OTT_CLADE =  0x200
+    OTT_CLADE = 0x200
     VALID_SP_OTT_VALID_SP = EXT_VALID | OTT_VALID | EXT_SP | OTT_SP
     SYN_SP_OTT_VALID_SP = EXT_SYN | OTT_VALID | EXT_SP | OTT_SP
     VALID_INF_OTT_VALID_SP = EXT_VALID | OTT_VALID | EXT_INF_SP | OTT_SP
@@ -313,6 +321,3 @@ def separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, r
     }
     sbo = {root_ott_taxon.id: new_sep_val}
     perform_dynamic_separation(ott_res, res, higher_part_name, separation_by_ott=sbo)
-
-
-

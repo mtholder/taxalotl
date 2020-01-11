@@ -10,6 +10,7 @@ from __future__ import print_function
 import io
 import os
 import re
+# noinspection PyPep8Naming
 import xml.etree.ElementTree as ET
 
 from peyotl import (assure_dir_exists,

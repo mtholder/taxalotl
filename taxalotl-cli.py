@@ -56,7 +56,7 @@ res_dep_cmds = ['accumulate-separated-descendants',
                 'unpack',
                 ]
 # Commands that take an resource ID for a class of input resource (no version number suffix).
-ver_inp_res_dep_cmds = [ ]
+ver_inp_res_dep_cmds = []
 all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 
 
@@ -67,6 +67,7 @@ def _validate_level_arg(taxalotl_config, level):
             sn = set(NAME_TO_PARTS_SUBSETS.keys()).union(sep_dict.keys())
             raise RuntimeError('--level should be one of "{}"'.format('", "'.join(sn)))
     return True
+
 
 def main_post_parse(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config)
@@ -134,6 +135,7 @@ def main_post_parse(args):
 
 def _add_level_arg(parser, req=False):
     parser.add_argument("--level", default=None, required=req, help="The highest taxon to work on.")
+
 
 def main():
     import argparse
@@ -231,7 +233,7 @@ def main():
     enf_sep_p.set_defaults(which="enforce-new-separators")
     # Align
     align_p = subp.add_parser('align',
-                                help="Attempts to align a new (parititioned) resource to the latest OTT for a level")
+                              help="Attempts to align a new (parititioned) resource to the latest OTT for a level")
     align_p.add_argument('resources', nargs="*", help="IDs of the resources to separate")
     _add_level_arg(align_p)
     align_p.set_defaults(which="align")
@@ -255,7 +257,7 @@ def main():
     clean_p.set_defaults(which='clean-partition')
     # CLEAN-PARTITION
     clean_s_p = subp.add_parser('clean-separation',
-                              help="remove the results the diagnose-new-separator for a resource.")
+                                help="remove the results the diagnose-new-separator for a resource.")
     _add_level_arg(clean_s_p)
     clean_s_p.set_defaults(which='clean-separation')
 
@@ -285,8 +287,8 @@ def main():
             comp_list.extend(all_cmds)
         else:
             if sel_cmd in res_dep_cmds \
-              or sel_cmd in ['compare-taxonomies'] \
-              or sel_cmd in ver_inp_res_dep_cmds:
+                    or sel_cmd in ['compare-taxonomies'] \
+                    or sel_cmd in ver_inp_res_dep_cmds:
                 # From Ned Batchelder's answer on http://stackoverflow.com/a/14728477
                 class ArgumentParserError(Exception):
                     pass

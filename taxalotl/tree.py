@@ -89,7 +89,6 @@ class TaxonTree(object):
             except:
                 return False
 
-
     def find_genus_for_alpha(self, nd):
         if nd.best_rank_sort_number == GENUS_RANK_TO_SORTING_NUMBER:
             return nd
@@ -152,7 +151,6 @@ class TaxonTree(object):
     def node_is_higher_taxon(self, nd):
         if self.node_is_specimen_typed(nd):
             return False
-
 
     def node_is_specimen_typed(self, nd):
         """Return True for taxa at or below species level."""

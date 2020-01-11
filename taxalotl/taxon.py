@@ -15,6 +15,7 @@ class Taxon(object):
         self.id, self.par_id, self.name, self.rank = None, None, None, None
         self.src_dict, self.flags, self.uniqname = None, None, None
         self.children_refs = None
+        self._synonyms = None
         if d is not None:
             self.from_serializable_dict(d)
         else:
@@ -44,9 +45,9 @@ class Taxon(object):
     def sorted_flags(self):
         if not self.flags:
             return []
-        l = list(self.flags)
-        l.sort()
-        return l
+        tmp = list(self.flags)
+        tmp.sort()
+        return tmp
 
     @property
     def synonyms(self):

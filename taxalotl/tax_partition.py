@@ -173,8 +173,8 @@ class Synonym(object):
         self.syn_id = syn_id
 
     def to_serializable_dict(self):
-        d =  {'valid_tax_id': self.valid_tax_id,
-              'name': self.name
+        d = {'valid_tax_id': self.valid_tax_id,
+             'name': self.name
              }
         sis = ', syn_id={}'.format(self.syn_id)
         if self.syn_id:
@@ -902,5 +902,5 @@ def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
     _LOG.info('Writing {} records to "{}"'.format(x, dest_path))
     with io.open(dest_path, 'w', encoding='utf-8') as outp:
         outp.write(header)
-        for l in ltw:
-            outp.write(l)
+        for line in ltw:
+            outp.write(line)
