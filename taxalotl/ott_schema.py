@@ -73,10 +73,6 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
         iinp = iter(inp)
         try:
             tax_part.taxon_header = next(iinp)
-            if tax_part.taxon_header != FULL_OTT_HEADER:
-                if repr(tax_part.taxon_header) != repr(FULL_OTT_HEADER):
-                    import sys
-                    sys.exit("{} != {}".format(repr(tax_part.taxon_header), repr(FULL_OTT_HEADER)))
         except StopIteration:
             return
         for n, line in enumerate(iinp):
