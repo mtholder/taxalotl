@@ -5,6 +5,7 @@ import io
 import json
 import os
 from .resource_wrapper import AbstractResourceWrapper
+from .util import OutFile
 
 from peyotl import (get_logger)
 
@@ -21,7 +22,7 @@ def read_resource_file(fp):
 
 
 def write_resources_file(obj, fp):
-    with io.open(fp, 'w', encoding='utf-8') as outp:
+    with OutFile(fp) as outp:
         json.dump(obj, outp, indent=2, sort_keys=True, separators=(',', ': '))
 
 

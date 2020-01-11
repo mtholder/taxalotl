@@ -14,6 +14,7 @@ from peyotl import (add_or_append_to_dict, assure_dir_exists,
                     shorter_fp_form,
                     write_as_json)
 from .taxon import Taxon
+from .util import OutFile
 
 _LOG = get_logger(__name__)
 
@@ -61,6 +62,7 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
                     raise
     except:
         _LOG.exception("Exception parsing \"{}\"".format(syn_fp))
+
 
 def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
     complete_taxon_fp = tax_part.tax_fp
@@ -121,7 +123,7 @@ def write_ott_taxonomy_tsv(out_fp,
     rn = list(root_nodes)
     rn.sort()
     header = INP_FLAGGED_OTT_TAXONOMY_HEADER
-    with io.open(out_fp, 'w', encoding='utf-8') as out:
+    with OutFile(out_fp) as out:
         out.write(header)
         # need to print id, parent id, and name
         for root_id in rn:
@@ -175,7 +177,7 @@ def write_ott_synonyms_tsv(out_fp,
                            id_order,
                            details_log):
     num_syn_written = 0
-    with io.open(out_fp, 'w', encoding='utf-8') as out:
+    with OutFile(out_fp) as out:
         out.write(INP_OTT_SYNONYMS_HEADER)
         for nd_id in id_order:
             syn_list = id_to_name_name_type_list[nd_id]
@@ -187,7 +189,7 @@ def write_ott_synonyms_tsv(out_fp,
 
 
 def write_ott_forwards(out_fp, forwarded_dict):
-    with io.open(out_fp, 'w', encoding='utf-8') as out:
+    with OutFile(out_fp) as out:
         for key, value in forwarded_dict.items():
             out.write('{}\t{}\n'.format(key, value))
 
@@ -320,6 +322,7 @@ def read_taxonomy_to_get_id_to_fields(tax_dir):
         _LOG.exception("Error reading {}".format(fp))
         raise
 
+
 def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
     sri = str(root_id)
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
@@ -339,6 +342,7 @@ def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
     except:
         _LOG.exception('Error reading {}'.format(fp))
         raise
+
 
 class InterimTaxonomyData(object):
     def __init__(self):

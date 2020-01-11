@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup as Soup
 from peyotl import (assure_dir_exists, get_logger, download_large_file)
 
 from taxalotl.resource_wrapper import TaxonomyWrapper
+from .util import OutFile
 
 _LOG = get_logger(__name__)
 DOMAIN = "http://www.theplantlist.org"
@@ -191,13 +192,13 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
     j = '\t|\t'
     taxon_fp = os.path.join(out_dir, 'taxonomy.tsv')
     assure_dir_exists(out_dir)
-    with io.open(taxon_fp, 'w', encoding='utf-8') as outp:
+    with OutFile(taxon_fp) as outp:
         outp.write('{}\n'.format(j.join(['uid', 'parent_uid', 'name', 'rank', 'flags'])))
         outp.write('{}\n'.format(j.join(id_to_line[fam_name])))
         for i in id_order:
             outp.write(_gen_line(id_to_line[i]))
     not_accepted_fp = os.path.join(out_dir, 'not-accepted.tsv')
-    with io.open(not_accepted_fp, 'w', encoding='utf-8') as outp:
+    with OutFile(not_accepted_fp) as outp:
         outp.write('{}\n'.format(j.join(['uid', 'name', 'rank', 'flags'])))
         for i in illegit_ids:
             line_el = id_to_line[i]
@@ -230,7 +231,6 @@ class PlantListWrapper(TaxonomyWrapper):
                 _LOG.debug("Download from {} to {} completed.".format(u, dfp))
         for dfp in top_files:
             scrape_families_from_higher_group(dd, dfp)
-        open(self.download_filepath, 'w')
 
     def normalize(self):
         dd = self.unpacked_filepath

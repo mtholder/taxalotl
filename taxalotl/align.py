@@ -1,23 +1,18 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import sys
-import os
-from enum import IntEnum, IntFlag
-from typing import Dict, List
 import copy
+import os
+import sys
+from enum import IntEnum, IntFlag
+from typing import List
 
-from peyotl import (get_logger, write_as_json)
+from peyotl import (get_logger)
 
 from .config import TaxalotlConfig
-from .tree import TaxonTree
 from .partitions import (PART_NAMES)
 from .resource_wrapper import TaxonomyWrapper
-from .taxonomic_ranks import (GENUS_RANK_TO_SORTING_NUMBER,
-                              MAX_INFRASPECIFIC_NUMBER,
-                              MINIMUM_HIGHER_TAXON_NUMBER,
-                              SPECIES_SORTING_NUMBER)
-from .tax_partition import get_taxon_partition
+from .taxonomic_ranks import (SPECIES_SORTING_NUMBER)
 from .util import get_true_false_repsonse
 
 _LOG = get_logger(__name__)

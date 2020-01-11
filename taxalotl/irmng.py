@@ -380,7 +380,7 @@ def write_irmng():
         taxfile.write('%s\t|\t%s\t|\t%s\t|\t%s\t|\t%s\t|\t\n' % (
         taxon.id, parentid, taxon.name, taxon.rank, flags))
 
-    with open(taxonomy_file_name, 'w') as taxfile:
+    with OutFile(taxonomy_file_name) as taxfile:
         print
         'Writing %s' % taxonomy_file_name
         taxfile.write('%s\t|\t%s\t|\t%s\t|\t%s\t|\t%s\t|\t\n' % (
@@ -390,7 +390,7 @@ def write_irmng():
             if taxon.keep:
                 write_taxon(taxon, taxfile)
 
-    with open(synonyms_file_name, 'w') as synfile:
+    with OutFile(synonyms_file_name) as synfile:
         print
         'Writing %s' % synonyms_file_name
         synfile.write('uid\t|\tname\t|\ttype\t|\t\n')

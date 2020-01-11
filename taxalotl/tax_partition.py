@@ -1,15 +1,14 @@
 #!/usr/bin/env python
-import io
 import os
-from copy import copy
 from contextlib import contextmanager
+from copy import copy
 
 from peyotl import get_logger, assure_dir_exists, read_as_json, write_as_json
 
+from .ott_schema import HEADER_TO_LINE_PARSER
 from .taxon import Taxon
 from .tree import TaxonForest
-from .ott_schema import HEADER_TO_LINE_PARSER
-from .util import unlink
+from .util import unlink, OutFile
 
 INP_TAXONOMY_DIRNAME = '__inputs__'
 MISC_DIRNAME = '__misc__'
@@ -867,7 +866,7 @@ def _write_d_as_tsv(header, dict_to_write, id_order, dest_path):
     pd = os.path.split(dest_path)[0]
     assure_dir_exists(pd)
     _LOG.info('Writing {} tax records to "{}"'.format(len(dict_to_write), dest_path))
-    with io.open(dest_path, 'w', encoding='utf-8') as outp:
+    with OutFile(dest_path) as outp:
         outp.write(header)
         for i in id_order:
             el = dict_to_write.get(i)
@@ -901,7 +900,7 @@ def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
     pd = os.path.split(dest_path)[0]
     assure_dir_exists(pd)
     _LOG.info('Writing {} syn. records to "{}"'.format(x, dest_path))
-    with io.open(dest_path, 'w', encoding='utf-8') as outp:
+    with OutFile(dest_path) as outp:
         outp.write(header)
         for line in ltw:
             outp.write(line)

@@ -17,6 +17,7 @@ from .taxonomic_ranks import (GENUS_RANK_TO_SORTING_NUMBER,
                               MINIMUM_HIGHER_TAXON_NUMBER,
                               SPECIES_SORTING_NUMBER)
 from .tax_partition import IGNORE_SYN_TYPES
+from .util import OutFile
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -405,7 +406,7 @@ class UpdateStatusLog(object):
             edit['edit_id'] = key
 
         fp = os.path.join(tax_dir, UPDATE_ANALYSIS_FILENAME)
-        with open(fp, 'w', encoding='utf-8') as outf:
+        with OutFile(fp) as outf:
             for opts in [outf, out_stream]:
                 write_as_json(edit_list, opts, indent='  ', sort_keys=True)
 

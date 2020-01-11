@@ -23,7 +23,7 @@ from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_misc_inp_taxdir,
                                  get_taxon_partition, )
 from taxalotl.tax_partition import TAX_SLICE_CACHE
-from taxalotl.util import unlink
+from taxalotl.util import unlink, OutFile
 
 _LOG = get_logger(__name__)
 
@@ -127,7 +127,7 @@ def copy_and_add_ott_headers(unpacked_dirp, normalized_dirp, resource_wrapper):
         if os.path.isfile(tf):
             content = io.open(tf, 'rU', encoding='utf-8').read()
             outfp = os.path.join(normalized_dirp, fn)
-            with io.open(outfp, 'w', encoding='utf-8') as out:
+            with OutFile(outfp) as out:
                 out.write(header)
                 out.write(content)
 
@@ -144,7 +144,7 @@ def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
         if os.path.isfile(tf):
             outfp = os.path.join(normalized_dirp, fn)
             with io.open(tf, 'rU', encoding='utf-8') as inp:
-                with io.open(outfp, 'w', encoding='utf-8') as out:
+                with OutFile(outfp) as out:
                     for line in inp:
                         ls = line.split('\t')
                         out.write('\t|\t'.join(ls))
@@ -160,7 +160,7 @@ def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):
         shutil.copyfile(inpfp, outfp)
     else:
         with io.open(inpfp, 'rU', encoding='utf-8') as inp:
-            with io.open(outfp, 'w', encoding='utf-8') as outp:
+            with OutFile(outfp) as outp:
                 for line in inp:
                     ls = line.strip()
                     if not ls:
@@ -422,7 +422,7 @@ class ResourceWrapper(FromOTifacts):
         if self.url.startswith("ftp://"):
             _LOG.debug("Starting FTP download from {} to {}".format(self.url, dfp))
             with urllib.request.urlopen(self.url) as req:
-                with io.open(dfp, 'w', 'utf-8') as outp:
+                with OutFile(dfp) as outp:
                     outp.write(req.read())
             _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
         else:

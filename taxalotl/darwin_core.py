@@ -18,6 +18,7 @@ from peyotl import (assure_dir_exists,
 
 from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.resource_wrapper import TaxonomyWrapper
+from .util import OutFile
 
 _LOG = get_logger(__name__)
 
@@ -90,7 +91,7 @@ def write_gbif_projection_file(source, destination, fields2index):
     ts_ind = fields2index['taxonomicStatus']
     nat_ind = fields2index['nameAccordingTo']
     with io.open(source, 'rU', encoding='utf-8') as infile:
-        with io.open(destination, 'w', encoding='utf-8') as outfile:
+        with OutFile(destination) as outfile:
             for line in infile:
                 row = line.split('\t')
                 scientific = row[sci_ind]
@@ -312,7 +313,7 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     to_ignore.update(o_to_ignore)
     prune_ignored(itd, to_ignore)
     _LOG.info('writing {} paleodb ids'.format(len(paleos)))
-    with open(os.path.join(destination, 'paleo.tsv'), 'w') as paleofile:
+    with OutFile(os.path.join(destination, 'paleo.tsv')) as paleofile:
         for taxon_id in paleos:
             paleofile.write('{}\n'.format(taxon_id))
     res_wrapper.post_process_interim_tax_data(itd)

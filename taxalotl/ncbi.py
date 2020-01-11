@@ -6,6 +6,7 @@ import time
 from peyotl import (add_or_append_to_dict, get_logger)
 from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.resource_wrapper import TaxonomyWrapper
+from taxalotl.util import OutFile
 
 _LOG = get_logger(__name__)
 
@@ -47,7 +48,7 @@ def parse_ncbi_names_file(names_fp, itd):
          2 synonyms node_id -> [(name, type of synonym))
     """
     count = 0
-    with io.open(names_fp, "rU", encoding='utf-8') as namesf:
+    with OutFile(names_fp) as namesf:
         for line in namesf:
             # if you do \t|\t then you don't get the name class right because it is "\t|"
             spls = line.split("\t|")
