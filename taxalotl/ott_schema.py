@@ -30,35 +30,37 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     if not os.path.exists(syn_fp):
         return
     _LOG.debug('parsing synonyms from "{}" ...'.format(syn_fp))
-    with io.open(syn_fp, 'rU', encoding='utf-8') as inp:
-        iinp = iter(inp)
-        try:
-            tax_part.syn_header = next(iinp)
-        except StopIteration:
-            return
-        shs = tax_part.syn_header.split('\t|\t')
-        if shs[0] == 'uid':
-            uid_ind = 0
-        elif shs[1] == 'uid':
-            uid_ind = 1
-        else:
-            raise ValueError("Expected one of the first 2 columns of an OTT formatted "
-                             "synonyms file to be 'uid'. Problem reading: {}".format(syn_fp))
-        for n, line in enumerate(iinp):
-            ls = line.split('\t|\t')
-            if n > 0 and n % 5000 == 0:
-                _LOG.debug(' reading synonym {:7} from "{}"'.format(n, syn_fp))
+    try:
+        with io.open(syn_fp, 'rU', encoding='utf-8') as inp:
+            iinp = iter(inp)
             try:
-                accept_id = ls[uid_ind]
+                tax_part.syn_header = next(iinp)
+            except StopIteration:
+                return
+            shs = tax_part.syn_header.split('\t|\t')
+            if shs[0] == 'uid':
+                uid_ind = 0
+            elif shs[1] == 'uid':
+                uid_ind = 1
+            else:
+                raise ValueError("Expected one of the first 2 columns of an OTT formatted "
+                                 "synonyms file to be 'uid'. Problem reading: {}".format(syn_fp))
+            for n, line in enumerate(iinp):
+                ls = line.split('\t|\t')
+                if n > 0 and n % 5000 == 0:
+                    _LOG.debug(' reading synonym {:7} from "{}"'.format(n, syn_fp))
                 try:
-                    accept_id = int(accept_id)
+                    accept_id = ls[uid_ind]
+                    try:
+                        accept_id = int(accept_id)
+                    except:
+                        pass
+                    tax_part.add_synonym(accept_id, syn_id=None, line=line)
                 except:
-                    pass
-                tax_part.add_synonym(accept_id, syn_id=None, line=line)
-            except:
-                _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
-                raise
-
+                    _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
+                    raise
+    except:
+        _LOG.exception("Exception parsing \"{}\"".format(syn_fp))
 
 def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
     complete_taxon_fp = tax_part.tax_fp
@@ -71,6 +73,10 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
         iinp = iter(inp)
         try:
             tax_part.taxon_header = next(iinp)
+            if tax_part.taxon_header != FULL_OTT_HEADER:
+                if repr(tax_part.taxon_header) != repr(FULL_OTT_HEADER):
+                    import sys
+                    sys.exit("{} != {}".format(repr(tax_part.taxon_header), repr(FULL_OTT_HEADER)))
         except StopIteration:
             return
         for n, line in enumerate(iinp):
@@ -85,7 +91,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
                     pass
                 tax_part.read_taxon_line(uid, par_id, line)
             except:
-                _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
+                _LOG.exception("Exception parsing line {} of {}:\n{}".format(1 + n, complete_taxon_fp, line))
                 raise
 
 
@@ -198,19 +204,23 @@ def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
     ncbi_to_name = {}
     i = 0
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
-    with io.open(fp, 'rU', encoding='utf-8') as inp:
-        reader = csv.reader(inp, delimiter='\t')
-        header = next(reader)
-        uidx = header.index('uid')
-        namex = header.index('name')
-        for row in reader:
-            uid = id_coercion(row[uidx])
-            name = row[namex]
-            if name is not None:
-                ncbi_to_name[uid] = name
-                i += 1
-                if i % 200000 == 0:
-                    _LOG.info("{} {} {}".format(i, uid, name))
+    try:
+        with io.open(fp, 'rU', encoding='utf-8') as inp:
+            reader = csv.reader(inp, delimiter='\t')
+            header = next(reader)
+            uidx = header.index('uid')
+            namex = header.index('name')
+            for row in reader:
+                uid = id_coercion(row[uidx])
+                name = row[namex]
+                if name is not None:
+                    ncbi_to_name[uid] = name
+                    i += 1
+                    if i % 200000 == 0:
+                        _LOG.info("{} {} {}".format(i, uid, name))
+    except:
+        _LOG.exception("error reading {}".format(fp))
+        raise
     return ncbi_to_name
 
 
@@ -268,7 +278,7 @@ def flag_after_rank_parser(taxon, line):
             assert ls[4].endswith('\n')
             ls[4] = ls[4].strip()
         else:
-            assert len(ls) == 6 and ls[-1] == '\n'
+            assert len(ls) > 5 and ls[-1] == '\n'
     except:
         _LOG.exception("Error reading line {}:\n{}".format(taxon.line_num, line))
         raise
@@ -298,35 +308,41 @@ def read_taxonomy_to_get_id_to_fields(tax_dir):
     expected_header = '\t|\t'.join(fields)
     if not os.path.exists(fp):
         return {}
-    with io.open(fp, 'rU', encoding='utf-8') as inp:
-        iinp = iter(inp)
-        header = next(iinp)
-        assert header == expected_header
-        id_to_obj = {}
-        for n, line in enumerate(iinp):
-            obj = Taxon(line, line_num=1 + n)
-            oid = obj.id
-            assert oid not in id_to_obj
-            id_to_obj[oid] = obj
-        return id_to_obj
-
+    try:
+        with io.open(fp, 'rU', encoding='utf-8') as inp:
+            iinp = iter(inp)
+            header = next(iinp)
+            assert header == expected_header
+            id_to_obj = {}
+            for n, line in enumerate(iinp):
+                obj = Taxon(line, line_num=1 + n)
+                oid = obj.id
+                assert oid not in id_to_obj
+                id_to_obj[oid] = obj
+            return id_to_obj
+    except:
+        _LOG.exception("Error reading {}".format(fp))
+        raise
 
 def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
     sri = str(root_id)
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
     fields = ['uid', 'parent_uid', 'name', 'rank', 'sourceinfo', 'uniqname', 'flags', '\n']
     expected_header = '\t|\t'.join(fields)
-    with io.open(fp, 'rU', encoding='utf-8') as inp:
-        iinp = iter(inp)
-        header = next(iinp)
-        assert header == expected_header
-        for n, line in enumerate(iinp):
-            if not line.startswith(sri):
-                continue
-            obj = Taxon(line, line_num=1 + n)
-            if root_id == obj.id:
-                return obj
-
+    try:
+        with io.open(fp, 'rU', encoding='utf-8') as inp:
+            iinp = iter(inp)
+            header = next(iinp)
+            assert header == expected_header
+            for n, line in enumerate(iinp):
+                if not line.startswith(sri):
+                    continue
+                obj = Taxon(line, line_num=1 + n)
+                if root_id == obj.id:
+                    return obj
+    except:
+        _LOG.exception('Error reading {}'.format(fp))
+        raise
 
 class InterimTaxonomyData(object):
     def __init__(self):

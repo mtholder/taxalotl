@@ -282,8 +282,9 @@ class LightTaxonomyHolder(object):
 
     @property
     def write_taxon_header(self):
-        from taxalotl.ott_schema import INP_FLAGGED_OTT_TAXONOMY_HEADER
-        return INP_FLAGGED_OTT_TAXONOMY_HEADER
+        from taxalotl.ott_schema import INP_FLAGGED_OTT_TAXONOMY_HEADER, FULL_OTT_HEADER
+        from taxalotl.ott import OTTaxonomyWrapper
+        return FULL_OTT_HEADER if isinstance(self.res, OTTaxonomyWrapper) else INP_FLAGGED_OTT_TAXONOMY_HEADER
 
     @property
     def synonyms_by_id(self):
@@ -865,7 +866,7 @@ def _write_d_as_tsv(header, dict_to_write, id_order, dest_path):
     ret = []
     pd = os.path.split(dest_path)[0]
     assure_dir_exists(pd)
-    _LOG.info('Writing {} records to "{}"'.format(len(dict_to_write), dest_path))
+    _LOG.info('Writing {} tax records to "{}"'.format(len(dict_to_write), dest_path))
     with io.open(dest_path, 'w', encoding='utf-8') as outp:
         outp.write(header)
         for i in id_order:
@@ -899,7 +900,7 @@ def _write_syn_d_as_tsv(header, dict_to_write, id_order, dest_path):
     x = len(ltw)
     pd = os.path.split(dest_path)[0]
     assure_dir_exists(pd)
-    _LOG.info('Writing {} records to "{}"'.format(x, dest_path))
+    _LOG.info('Writing {} syn. records to "{}"'.format(x, dest_path))
     with io.open(dest_path, 'w', encoding='utf-8') as outp:
         outp.write(header)
         for line in ltw:
