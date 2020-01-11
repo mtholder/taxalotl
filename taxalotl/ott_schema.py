@@ -195,7 +195,8 @@ def write_ott_forwards(out_fp, forwarded_dict):
 
 
 def write_ncbi_details_json(fp, details_log):
-    write_as_json(details_log, fp, indent=2)
+    with OutFile(fp) as outs:
+        write_as_json(details_log, outs, indent=2)
 
 
 def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
@@ -420,7 +421,8 @@ class InterimTaxonomyData(object):
                 write_ott_forwards(os.path.join(d, 'forwards.tsv'), self.forwards)
 
             about_fp = os.path.join(d, 'about.json')
-            write_as_json(self.about, about_fp, indent=2)
+            with OutFile(about_fp) as about_outs:
+                write_as_json(self.about, about_outs, indent=2)
             self.finalize()
             write_ncbi_details_json(os.path.join(d, 'details.json'),
                                     self.details_log)

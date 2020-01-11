@@ -25,7 +25,7 @@ from taxalotl.dynamic_partitioning import (perform_dynamic_separation,
                                            return_sep_obj_copy_with_ott_fields)
 from taxalotl.analyze_update import analyze_update_to_resources
 from taxalotl.align import align_resource
-from taxalotl.util import unlink
+from taxalotl.util import unlink, VirtCommand, OutFile
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -216,16 +216,17 @@ def unpack_resources(taxalotl_config, id_list):
 
 def normalize_resources(taxalotl_config, id_list):
     for rid in id_list:
-        rw = taxalotl_config.get_terminalized_res_by_id(rid, 'normalize')
-        if not rw.has_been_unpacked():
-            m = "{} will be unpacked first..."
-            _LOG.info(m.format(rw.id))
-            unpack_resources(taxalotl_config, [rw.id])
-        if rw.has_been_normalized():
-            m = "{} was already normalized at {}"
-            _LOG.info(m.format(rw.id, rw.normalized_filedir))
-        else:
-            rw.normalize()
+        with VirtCommand(name='analyze-update', res_id=rid):
+            rw = taxalotl_config.get_terminalized_res_by_id(rid, 'normalize')
+            if not rw.has_been_unpacked():
+                m = "{} will be unpacked first..."
+                _LOG.info(m.format(rw.id))
+                unpack_resources(taxalotl_config, [rw.id])
+            if rw.has_been_normalized():
+                m = "{} was already normalized at {}"
+                _LOG.info(m.format(rw.id, rw.normalized_filedir))
+            else:
+                rw.normalize()
 
 
 def _iter_norm_term_res_internal_level_pairs(taxalotl_config, id_list, level_list, cmd_name):
@@ -260,8 +261,9 @@ def partition_resources(taxalotl_config, id_list, level_list):
     for res, part_name_to_split in _iter_norm_term_res_internal_level_pairs(taxalotl_config,
                                                                             id_list, level_list,
                                                                             'partition'):
-        with use_tax_partitions():
-            do_partition(res, part_name_to_split)
+        with VirtCommand('partition', res_id=res.id, level=part_name_to_split):
+            with use_tax_partitions():
+                do_partition(res, part_name_to_split)
 
 
 def exec_or_runtime_error(invocation, working_dir='.'):
@@ -302,7 +304,8 @@ def pull_otifacts(taxalotl_config):
         by_root_id = partition_otifacts_by_root_element(ext_tax)
         for root_key, res_dict in by_root_id.items():
             fp = os.path.join(dest_dir, root_key + '.json')
-            write_as_json(res_dict, fp, indent=2, separators=(',', ': '))
+            with OutFile(fp) as outs:
+                write_as_json(res_dict, outs, indent=2, separators=(',', ': '))
 
 
 NEW_SEP_FILENAME = '__sep__.json'
@@ -316,16 +319,18 @@ def diagnose_new_separators(taxalotl_config, level_list):
     if level_list == [None]:
         level_list = PART_NAMES
     for part_name in level_list:
-        nsd = rw.diagnose_new_separators(current_partition_key=part_name)
-        if not nsd:
-            _LOG.info("no new separtors in {}.".format(part_name))
-        else:
-            for k, sd in nsd.items():
-                _LOG.info('{} new separators in {}'.format(sd.num_separators(),
-                                                           part_name))
-                fp = os.path.join(pd, k, NEW_SEP_FILENAME)
-                write_as_json(sd.as_dict(), fp, sort_keys=True, indent=2)
-                _LOG.info("new separators written to {}".format(fp))
+        with VirtCommand('diagnose-new-separators', level=part_name):
+            nsd = rw.diagnose_new_separators(current_partition_key=part_name)
+            if not nsd:
+                _LOG.info("no new separtors in {}.".format(part_name))
+            else:
+                for k, sd in nsd.items():
+                    _LOG.info('{} new separators in {}'.format(sd.num_separators(),
+                                                               part_name))
+                    fp = os.path.join(pd, k, NEW_SEP_FILENAME)
+                    with OutFile(fp) as outs:
+                        write_as_json(sd.as_dict(), outs, sort_keys=True, indent=2)
+                        _LOG.info("new separators written to {}".format(fp))
 
 
 def enforce_new_separators(taxalotl_config, id_list, level_list):
@@ -345,7 +350,9 @@ def build_partition_maps(taxalotl_config):
         return
     pd = rw.partitioned_filepath
     mfp = os.path.join(pd, GEN_MAPPING_FILENAME)
-    write_as_json(nsd, mfp, indent=2)
+    with VirtCommand('build-partition-maps'):
+        with OutFile(mfp) as outs:
+            write_as_json(nsd, outs, indent=2)
     _LOG.info("Partitions maps written to {}".format(mfp))
 
 
@@ -365,13 +372,15 @@ def cache_separator_names(taxalotl_config):
     xl = list(n2p.keys())
     xl.sort()
     outfn = os.path.join(rw.partitioned_filepath, SEP_NAMES)
-    write_as_json(xl, outfn)
+    with OutFile(outfn) as outs:
+        write_as_json(xl, outs)
     _LOG.info("Separator dir names written to {}".format(outfn))
     outfn = os.path.join(rw.partitioned_filepath, SEP_MAPPING)
     for k, v in n2p.items():
         if len(v) > 1:
             _LOG.info("separator {} has multiple dirs: {}".format(k, v))
-    write_as_json(n2p, outfn)
+    with OutFile(outfn) as outs:
+        write_as_json(n2p, outs)
     _LOG.info("Separator name to dir mapping written to {}".format(outfn))
 
 
@@ -379,14 +388,15 @@ def compare_taxonomies(taxalotl_config, levels):
     assert levels != [None]
     todir = taxalotl_config.get_separator_dict()
     for level in levels:
-        try:
-            tax_dir_list = todir[level]
-        except KeyError:
-            raise ValueError('The level "{}" is not separator name'.format(level))
-        for tax_dir in tax_dir_list:
-            m = 'Will compare taxonomies for "{}" based on {}'
-            _LOG.info(m.format(level, tax_dir))
-            compare_taxonomies_in_dir(taxalotl_config, tax_dir)
+        with VirtCommand(name='compare-taxonomies', level=level):
+            try:
+                tax_dir_list = todir[level]
+            except KeyError:
+                raise ValueError('The level "{}" is not separator name'.format(level))
+            for tax_dir in tax_dir_list:
+                m = 'Will compare taxonomies for "{}" based on {}'
+                _LOG.info(m.format(level, tax_dir))
+                compare_taxonomies_in_dir(taxalotl_config, tax_dir)
 
 
 def remove_sep_artifacts_and_empty_dirs(d):
@@ -463,10 +473,11 @@ def accumulate_separated_descendants(taxalotl_config, id_list):
     postorder = [i[1] for i in dir_tuple_list]
     for i in id_list:
         _LOG.info('accumulate_separated_descendants for {}'.format(i))
-        res = taxalotl_config.get_terminalized_res_by_id(i, '')
-        for d in postorder:
-            _LOG.info('accumulate_separated_descendants for {}'.format(d))
-            res.accumulate_separated_descendants(d)
+        with VirtCommand('accumulate-separated-descendants', res_id=i):
+            res = taxalotl_config.get_terminalized_res_by_id(i, '')
+            for d in postorder:
+                _LOG.info('accumulate_separated_descendants for {}'.format(d))
+                res.accumulate_separated_descendants(d)
 
 
 def perform_separation(taxalotl_config, part_name, id_list, sep_fn):
@@ -488,9 +499,10 @@ def perform_separation(taxalotl_config, part_name, id_list, sep_fn):
     else:
         resource_ids = get_taxonomies_for_dir(top_dir)
     for rid in resource_ids:
-        rw = taxalotl_config.get_resource_by_id(rid)
-        print(rid, rw)
-        perform_dynamic_separation(ott_res,
-                                   res=rw,
-                                   part_key=part_name,
-                                   separation_by_ott=active_seps)
+        with VirtCommand('enforce-new-separators', res_id=rid, level=part_name):
+            rw = taxalotl_config.get_resource_by_id(rid)
+            print(rid, rw)
+            perform_dynamic_separation(ott_res,
+                                       res=rw,
+                                       part_key=part_name,
+                                       separation_by_ott=active_seps)

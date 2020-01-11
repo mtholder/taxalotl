@@ -17,6 +17,7 @@ from taxalotl.commands import unpack_resources
 from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.partitions import GEN_MAPPING_FILENAME
 from taxalotl.resource_wrapper import TaxonomyWrapper
+from .util import OutFile
 
 _LOG = get_logger(__name__)
 
@@ -66,7 +67,8 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
     res_wrapper.post_process_interim_tax_data(itd)
     itd.write_to_dir(destination)
     mapping_file = os.path.join(destination, GEN_MAPPING_FILENAME)
-    write_as_json(part_name_to_silva_id, mapping_file, indent=2, separators=(',', ': '))
+    with OutFile(mapping_file) as outs:
+        write_as_json(part_name_to_silva_id, outs, indent=2, separators=(',', ': '))
 
 
 def gen_all_namepaths(path, name, prim_acc):

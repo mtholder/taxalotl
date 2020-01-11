@@ -13,7 +13,7 @@ from .config import TaxalotlConfig
 from .partitions import (PART_NAMES)
 from .resource_wrapper import TaxonomyWrapper
 from .taxonomic_ranks import (SPECIES_SORTING_NUMBER)
-from .util import get_true_false_repsonse
+from .util import get_true_false_repsonse, VirtCommand
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -36,7 +36,8 @@ def align_resource(taxalotl_config: TaxalotlConfig,
     if level_list == [None]:
         level_list = PART_NAMES
     for part_name in level_list:
-        align_for_level(taxalotl_config, ott_res, res, part_name)
+        with VirtCommand("align", res_id=res.id, level=part_name):
+            align_for_level(taxalotl_config, ott_res, res, part_name)
 
 
 def _register_name(tup_list, name_to_ott_id_list, leaf, name, ott_id):
@@ -134,7 +135,6 @@ def align_trees_for_level(ott_res, ott_tree, res, part_name, non_incert_trees, i
         attach_synonyms_and_find_strict_name_matches(res, tree, part_name, sp_ott_ls)
         for nd in tree.postorder():
             nd.match_status = None
-    found_tip_names = {}
 
     _new_match_stat(tree_l, sp_ott_ls, MatchStatus.VALID_SP_OTT_VALID_SP, NodeFilter.SPECIES, False)
     _new_match_stat(tree_l, sp_ott_ls, MatchStatus.SYN_SP_OTT_VALID_SP, NodeFilter.SPECIES, True)
@@ -216,7 +216,6 @@ def mark_found_unfound_name_matches(tree,
         nd.found_names, nd.unfound_names = set(), set()
         nd.matched_to_name = None
         if do_name_check:
-            found = False
             if nd.name in ott_lls:
                 nd.found_names.add(nd.name)
                 nd.matched_to_name = nd.name
@@ -238,7 +237,6 @@ def mark_found_unfound_name_matches(tree,
 
 def separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, res, part_name):
     fragment = taxalotl_config.get_fragment_from_part_name(part_name)
-    orig_fragment = fragment
     higher_part_name = part_name
     res_forest = None
     while not res_forest:

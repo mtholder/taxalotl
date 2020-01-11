@@ -96,6 +96,7 @@ class TaxonTree(object):
             p = self.id_to_taxon[nd.par_id]
         except:
             return None
+        # noinspection PyTypeChecker
         return self.find_genus_for_alpha(p)
 
     def add_best_guess_rank_sort_number(self):

@@ -280,12 +280,6 @@ class LightTaxonomyHolder(object):
         self._has_moved_taxa = False  # true when taxa have been moved to another partition
 
     @property
-    def write_taxon_header(self):
-        from taxalotl.ott_schema import INP_FLAGGED_OTT_TAXONOMY_HEADER, FULL_OTT_HEADER
-        from taxalotl.ott import OTTaxonomyWrapper
-        return FULL_OTT_HEADER if isinstance(self.res, OTTaxonomyWrapper) else INP_FLAGGED_OTT_TAXONOMY_HEADER
-
-    @property
     def synonyms_by_id(self):
         return copy(self._syn_by_id)
 
@@ -528,6 +522,12 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         self._fs_is_partitioned = None
         self._has_flushed = False
         self._external_inp_fp = None
+
+    @property
+    def write_taxon_header(self):
+        from taxalotl.ott_schema import INP_FLAGGED_OTT_TAXONOMY_HEADER, FULL_OTT_HEADER
+        from taxalotl.ott import OTTaxonomyWrapper
+        return FULL_OTT_HEADER if isinstance(self.res, OTTaxonomyWrapper) else INP_FLAGGED_OTT_TAXONOMY_HEADER
 
     @property
     def external_input_fp(self):
@@ -848,7 +848,8 @@ def write_taxon_json(obj, filepath):
             dtw[k] = v.to_serializable_dict()
         else:
             dtw[k] = v
-    write_as_json(dtw, filepath, separators=(',', ": "), indent=1)
+    with OutFile(filepath) as outs:
+        write_as_json(dtw, outs, separators=(',', ": "), indent=1)
 
 
 def get_taxon_partition(res, fragment):

@@ -17,7 +17,7 @@ from .taxonomic_ranks import (GENUS_RANK_TO_SORTING_NUMBER,
                               MINIMUM_HIGHER_TAXON_NUMBER,
                               SPECIES_SORTING_NUMBER)
 from .tax_partition import IGNORE_SYN_TYPES
-from .util import OutFile
+from .util import OutFile, VirtCommand
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -38,7 +38,8 @@ def analyze_update_to_resources(taxalotl_config: TaxalotlConfig,
     if level_list == [None]:
         level_list = PART_NAMES
     for part_name in level_list:
-        analyze_update_for_level(taxalotl_config, prev, curr, part_name)
+        with VirtCommand(name='analyze-update', res_id=curr.id, level=part_name):
+            analyze_update_for_level(taxalotl_config, prev, curr, part_name)
 
 
 class UpdateStatus(IntFlag):
@@ -397,12 +398,15 @@ class UpdateStatusLog(object):
         for edit in edit_list:
             ft = edit.get('focal_taxon')
             if ft is None:
+                # noinspection PyTypeChecker
                 pt = edit['focal_taxon_prev']
+                # noinspection PyTypeChecker
                 key = '{}_|edit|_prev_{}'.format(self.tag, pt['id'])
             else:
                 key = '{}_|edit|_{}'.format(self.tag, ft['id'])
             assert key not in edit_ids
             edit_ids.add(key)
+            # noinspection PyTypeChecker
             edit['edit_id'] = key
 
         fp = os.path.join(tax_dir, UPDATE_ANALYSIS_FILENAME)

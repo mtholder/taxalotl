@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import io
-import sys
 import os
+import sys
 
 from peyotl import (get_logger, read_as_json)
 
@@ -71,10 +70,6 @@ def _validate_level_arg(taxalotl_config, level):
 
 def main_post_parse(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config)
-    hist_file = os.path.expanduser("~/.taxalotl_history")
-    if os.path.isfile(hist_file):
-        with io.open(hist_file, 'a', encoding='utf-8') as hout:
-            hout.write('"{}"\n'.format('" "'.join(sys.argv)))
     try:
         if args.which == 'analyze-update':
             analyze_update(taxalotl_config, args.resources, [args.level])
