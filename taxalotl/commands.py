@@ -150,6 +150,20 @@ def status_of_resources(taxalotl_config,
         t_and_id_list = _group_by_status(res, id_list)
     else:
         t_and_id_list = [["", id_list]]
+    # correct a wart in which "ott" is separated from its version numbers by "ott-id-list"
+    tmp = []
+    for tag, id_list in t_and_id_list:
+        mod_id_list = list(id_list)
+        if "ott" in mod_id_list and "ott-id-list" in mod_id_list:
+            mod_id_list.remove('ott')
+            last_ind = 0
+            for index, el in enumerate(mod_id_list):
+                if el.startswith('ott-id-list'):
+                    last_ind = index
+            mod_id_list.insert(1 + last_ind, "ott")
+        tmp.append([tag, mod_id_list])
+    t_and_id_list = tmp
+    # End wart correction
     if ids_only:
         for tag, id_list in t_and_id_list:
             if tag:
@@ -161,20 +175,27 @@ def status_of_resources(taxalotl_config,
                 out_stream.write("{}{}\n".format(pref, sep.join(id_list)))
         return
     par_id_set = set()
+    written = set()
     for tag, id_list in t_and_id_list:
         if tag:
             out_stream.write("{}:\n".format(tag))
         for rid in id_list:
             if terminalize:
                 ntrw = taxalotl_config.get_resource_by_id(rid)
-                ntrw.write_status(out_stream, indent='')
+                if ntrw.id not in written:
+                    ntrw.write_status(out_stream, indent='')
+                written.add(ntrw.id)
                 trw = taxalotl_config.get_terminalized_res_by_id(rid, '')
-                if trw is not ntrw:
+                if trw is not ntrw and trw.id not in written:
                     trw.write_status(out_stream, indent='  ')
+                    written.add(trw.id)
             else:
                 rw = taxalotl_config.get_resource_by_id(rid)
                 indent = '  ' if rw.base_id in par_id_set else ''
-                rw.write_status(out_stream, indent=indent)
+                # out_stream.write('\n\nrid={}\n'.format(rid))
+                if rw.id not in written:
+                    rw.write_status(out_stream, indent=indent)
+                    written.add(rw.id)
                 if rw.is_abstract:
                     par_id_set.add(rw.id)
 
