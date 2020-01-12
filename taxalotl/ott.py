@@ -227,7 +227,7 @@ def _add_nst_subtree_el_to_dict(rd, nst_el, par_to_child):
 
 NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
                            'species group', 'species subgroup', 'varietas', 'variety', ])
-MIN_SEP_SIZE = 1000
+MIN_SEP_SIZE = 200
 
 
 def get_stable_source_keys(taxon):
@@ -260,9 +260,8 @@ def _diagnose_relevant_sources(tree):
     return frozenset(ac_src)
 
 
-MINIMAL_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi']),
+MINIMAL_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi', 'worms'])
 PART_KEY_TO_REL_SRC_SET = {
-    'Chordata': frozenset(['gbif', 'irmng', 'ncbi', 'worms']),
 }
 
 
@@ -283,7 +282,7 @@ def add_confirmed_sep(nns, tree, list_num_id_taxon):
                 continue
         m = '"{}" has {} tips below it.'.format(obj.name_that_is_unique, nt)
         p = '{} Enter (y) to treat is a separator: '.format(m)
-        if get_true_false_repsonse(p):
+        if get_true_false_repsonse(p, def_value=True):
             top_sep_set.add(i)
     if top_sep_set:
         nns.add_separtors_for_tree(tree, top_sep_set)
@@ -317,8 +316,8 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
                 m = 'Might try calling _diagnose_relevant_sources for "{}", but in Jan 2019 moved to ' \
                     'making this hard coded in PART_KEY_TO_REL_SRC_SET.'
                 raise NotImplementedError(m.format(current_partition_key))
-            _LOG.info("Relevant sources for {} are recorded as to be: {}".format(current_partition_key,
-                                                                                 ac_src))
+            _LOG.info("Relevant sources for {} are recorded as to be: {}. size = {}".format(current_partition_key,
+                                                                                 ac_src, len(ac_src)))
             for tree in tax_forest.trees:
                 tree.add_num_tips_below()
                 assert ac_src

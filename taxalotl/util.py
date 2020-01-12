@@ -8,7 +8,7 @@ from peyotl import get_logger
 
 _LOG = get_logger(__name__)
 
-INTERACTIVE_MODE = False
+INTERACTIVE_MODE = True
 
 
 def _startswith_y(r):
@@ -100,7 +100,7 @@ class VirtCommand(object):
         clear_filepaths_overwritten()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_value, traceback):
         fpo = get_filepaths_overwritten()
         if not fpo:
             return
@@ -123,7 +123,7 @@ class OutFile(object):
         _FILES_WRITTEN.append(self.filepath)
         return self.out_stream
 
-    def __exit__(self):
+    def __exit__(self, exc_type, exc_value, traceback):
         if self.out_stream is not None:
             self.out_stream.close()
             self.out_stream = None
