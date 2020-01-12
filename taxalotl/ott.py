@@ -260,6 +260,7 @@ def _diagnose_relevant_sources(tree):
     return frozenset(ac_src)
 
 
+MINIMAL_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi']),
 PART_KEY_TO_REL_SRC_SET = {
     'Chordata': frozenset(['gbif', 'irmng', 'ncbi', 'worms']),
 }
@@ -298,43 +299,42 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
 
     def get_source_for_sep_or_part(self, current_partition_key):
         try:
-            return PART_KEY_TO_REL_SRC_SET[current_partition_key]
+            return PART_KEY_TO_REL_SRC_SET.get(current_partition_key, MINIMAL_REL_SRC_SET)
         except:
             dn = self.config.get_fragment_from_part_name(current_partition_key)
             higher = os.path.split(os.path.split(dn)[0])[-1]
             if higher.lower() == 'life':
-                raise ValueError('partition/separator name "{}" not found')
+                raise ValueError('partition/separator name "{}" not found'.format(current_partition_key))
             return self.get_source_for_sep_or_part(higher)
 
     def diagnose_new_separators(self, current_partition_key):
         tax_forest = self.get_taxon_forest_for_partition(current_partition_key)
         nns = NestedNewSeparator()
-
-        try:
-            ac_src = self.get_source_for_sep_or_part(current_partition_key)
-        except:
-            m = 'Might try calling _diagnose_relevant_sources for "{}", but in Jan 2019 moved to ' \
-                'making this hard coded in PART_KEY_TO_REL_SRC_SET.'
-            raise NotImplementedError(m.format(current_partition_key))
-        _LOG.info("Relevant sources for {} are recorded as to be: {}".format(current_partition_key,
-                                                                             ac_src))
-        for tree in tax_forest.trees:
-            tree.add_num_tips_below()
-            assert ac_src
-            nst = []
-            for i, obj in tree.id_to_taxon.items():
-                if obj is tree.root:
-                    continue  # no point in partitioning at the root taxon
-                if not obj.children_refs:
-                    continue  # no point in partitioning leaves...
-                sk_for_obj = set(get_stable_source_keys(obj))
-                if sk_for_obj.issuperset(ac_src):
-                    if obj.num_tips_below >= MIN_SEP_SIZE:
-                        if not obj.rank or (obj.rank not in NON_SEP_RANKS):
-                            nst.append((obj.num_tips_below, i, obj))
-            nst.sort(reverse=True)
-            add_confirmed_sep(nns, tree, nst)
-
+        if tax_forest:
+            try:
+                ac_src = self.get_source_for_sep_or_part(current_partition_key)
+            except:
+                m = 'Might try calling _diagnose_relevant_sources for "{}", but in Jan 2019 moved to ' \
+                    'making this hard coded in PART_KEY_TO_REL_SRC_SET.'
+                raise NotImplementedError(m.format(current_partition_key))
+            _LOG.info("Relevant sources for {} are recorded as to be: {}".format(current_partition_key,
+                                                                                 ac_src))
+            for tree in tax_forest.trees:
+                tree.add_num_tips_below()
+                assert ac_src
+                nst = []
+                for i, obj in tree.id_to_taxon.items():
+                    if obj is tree.root:
+                        continue  # no point in partitioning at the root taxon
+                    if not obj.children_refs:
+                        continue  # no point in partitioning leaves...
+                    sk_for_obj = set(get_stable_source_keys(obj))
+                    if sk_for_obj.issuperset(ac_src):
+                        if obj.num_tips_below >= MIN_SEP_SIZE:
+                            if not obj.rank or (obj.rank not in NON_SEP_RANKS):
+                                nst.append((obj.num_tips_below, i, obj))
+                nst.sort(reverse=True)
+                add_confirmed_sep(nns, tree, nst)
         if len(nns.separators) == 0:
             _LOG.info('No new separators found for "{}"'.format(current_partition_key))
             return None
