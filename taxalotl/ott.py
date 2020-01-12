@@ -227,7 +227,7 @@ def _add_nst_subtree_el_to_dict(rd, nst_el, par_to_child):
 
 NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
                            'species group', 'species subgroup', 'varietas', 'variety', ])
-MIN_SEP_SIZE = 200
+MIN_SEP_SIZE = 20
 
 
 def get_stable_source_keys(taxon):
