@@ -275,7 +275,7 @@ PART_KEY_TO_REL_SRC_SET = { 'Insecta': NO_WORMS_REL_SRC_SET,
                             }
 
 
-def add_confirmed_sep(nns, tree, list_num_id_taxon):
+def add_confirmed_sep(nns, tree, list_num_id_taxon, sep_name):
     if list_num_id_taxon:
         r = tree.root
         m = 'The current partition subtree "{}" has {} tips below it.'
@@ -290,9 +290,12 @@ def add_confirmed_sep(nns, tree, list_num_id_taxon):
                     break
             if already_sep:
                 continue
-        m = '"{}" has {} tips below it.'.format(obj.name_that_is_unique, nt)
-        p = '{} Enter (y) to treat is a separator: '.format(m)
-        if get_true_false_repsonse(p, def_value=True):
+        if sep_name is None:
+            m = '"{}" has {} tips below it.'.format(obj.name_that_is_unique, nt)
+            p = '{} Enter (y) to treat is a separator: '.format(m)
+            if get_true_false_repsonse(p, def_value=True):
+                top_sep_set.add(i)
+        else:
             top_sep_set.add(i)
     if top_sep_set:
         nns.add_separtors_for_tree(tree, top_sep_set)
@@ -316,9 +319,13 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
                 raise ValueError('partition/separator name "{}" not found'.format(current_partition_key))
             return self.get_source_for_sep_or_part(higher)
 
-    def diagnose_new_separators(self, current_partition_key):
+    def diagnose_new_separators(self, current_partition_key, sep_name):
         tax_forest = self.get_taxon_forest_for_partition(current_partition_key)
         nns = NestedNewSeparator()
+        if sep_name is None:
+            lsn, lsep = 0, None
+        else:
+            lsn, lsep = len(sep_name), sep_name.lower()
         if tax_forest:
             try:
                 ac_src = self.get_source_for_sep_or_part(current_partition_key)
@@ -337,13 +344,20 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
                         continue  # no point in partitioning at the root taxon
                     if not obj.children_refs:
                         continue  # no point in partitioning leaves...
-                    sk_for_obj = set(get_stable_source_keys(obj))
-                    if sk_for_obj.issuperset(ac_src):
-                        if obj.num_tips_below >= MIN_SEP_SIZE:
-                            if not obj.rank or (obj.rank not in NON_SEP_RANKS):
-                                nst.append((obj.num_tips_below, i, obj))
+                    if sep_name is not None:
+                        obn, obun = obj.name, obj.uniqname
+                        if (obn and (len(obn) == lsn and obn.lower() == lsep)) \
+                            or (obun and (len(obun) == lsn and obun.lower() == lsep)):
+                            nst.append((obj.num_tips_below, i, obj))
+                            break
+                    else:
+                        sk_for_obj = set(get_stable_source_keys(obj))
+                        if sk_for_obj.issuperset(ac_src):
+                            if obj.num_tips_below >= MIN_SEP_SIZE:
+                                if not obj.rank or (obj.rank not in NON_SEP_RANKS):
+                                    nst.append((obj.num_tips_below, i, obj))
                 nst.sort(reverse=True)
-                add_confirmed_sep(nns, tree, nst)
+                add_confirmed_sep(nns, tree, nst, sep_name)
         if len(nns.separators) == 0:
             _LOG.info('No new separators found for "{}"'.format(current_partition_key))
             return None

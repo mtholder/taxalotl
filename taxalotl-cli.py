@@ -101,7 +101,7 @@ def main_post_parse(args):
             pull_otifacts(taxalotl_config)
         elif args.which == 'diagnose-new-separators':
             _validate_level_arg(taxalotl_config, args.level)
-            diagnose_new_separators(taxalotl_config, [args.level])
+            diagnose_new_separators(taxalotl_config, [args.level], args.name)
         elif args.which == 'enforce-new-separators':
             _validate_level_arg(taxalotl_config, args.level)
             enforce_new_separators(taxalotl_config, args.resources, [args.level])
@@ -217,6 +217,8 @@ def main():
                                  help="Uses the last OTT build to find taxa IDs that "
                                       "feature are common to the relevant inputs")
     _add_level_arg(diag_sep_p)
+    diag_sep_p.add_argument("--name", default=None, required=False,
+                            help="Name of the separator")
     diag_sep_p.set_defaults(which="diagnose-new-separators")
     # ENFORCE-NEW-SEPARATORS
     enf_sep_p = subp.add_parser('enforce-new-separators',

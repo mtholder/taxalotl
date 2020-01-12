@@ -311,7 +311,7 @@ def pull_otifacts(taxalotl_config):
 NEW_SEP_FILENAME = '__sep__.json'
 
 
-def diagnose_new_separators(taxalotl_config, level_list):
+def diagnose_new_separators(taxalotl_config, level_list, name):
     rw = taxalotl_config.get_terminalized_res_by_id("ott", 'diagnose-new-separators')
     if not rw.has_been_partitioned():
         partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
@@ -320,7 +320,7 @@ def diagnose_new_separators(taxalotl_config, level_list):
         level_list = PART_NAMES
     for part_name in level_list:
         with VirtCommand('diagnose-new-separators', level=part_name):
-            nsd = rw.diagnose_new_separators(current_partition_key=part_name)
+            nsd = rw.diagnose_new_separators(current_partition_key=part_name, sep_name=name)
             if not nsd:
                 _LOG.info("no new separtors in {}.".format(part_name))
             else:
