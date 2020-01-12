@@ -260,9 +260,19 @@ def _diagnose_relevant_sources(tree):
     return frozenset(ac_src)
 
 
-MINIMAL_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi', 'worms'])
-PART_KEY_TO_REL_SRC_SET = {
-}
+DEFAULT_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi', 'worms'])
+NO_WORMS_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi'])
+SILVA_NOT_WORMS_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi', 'silva'])
+PART_KEY_TO_REL_SRC_SET = { 'Insecta': NO_WORMS_REL_SRC_SET,
+                            'Hymenoptera': NO_WORMS_REL_SRC_SET,
+                            'Diptera': NO_WORMS_REL_SRC_SET,
+                            'Coleoptera': NO_WORMS_REL_SRC_SET,
+                            'Lepidoptera': NO_WORMS_REL_SRC_SET,
+                            'Chordata': NO_WORMS_REL_SRC_SET,
+                            'Fungi': NO_WORMS_REL_SRC_SET,
+                            'Bacteria': SILVA_NOT_WORMS_REL_SRC_SET,
+                            'Archaea': SILVA_NOT_WORMS_REL_SRC_SET,
+                            }
 
 
 def add_confirmed_sep(nns, tree, list_num_id_taxon):
@@ -298,7 +308,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
 
     def get_source_for_sep_or_part(self, current_partition_key):
         try:
-            return PART_KEY_TO_REL_SRC_SET.get(current_partition_key, MINIMAL_REL_SRC_SET)
+            return PART_KEY_TO_REL_SRC_SET.get(current_partition_key, DEFAULT_REL_SRC_SET)
         except:
             dn = self.config.get_fragment_from_part_name(current_partition_key)
             higher = os.path.split(os.path.split(dn)[0])[-1]
