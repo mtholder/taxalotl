@@ -12,7 +12,7 @@ from taxalotl.partitions import (get_all_taxdir_and_misc_uncles,
 from taxalotl.tax_partition import (TAX_SLICE_CACHE,
                                     get_taxon_partition,
                                     PartitionedTaxDirBase)
-from taxalotl.util import get_true_false_repsonse
+from taxalotl.util import get_true_false_repsonse, OutDir
 
 _LOG = get_logger(__name__)
 _norm_char_pat = re.compile(r'[-a-zA-Z0-9._]')
@@ -182,9 +182,8 @@ def _assure_sep_dirs(ott_res, fragment, sep_obj):
         fs = _escape_odd_char(i["uniqname"])
         sep_id_to_fn[sep_id] = fs
         nd = os.path.join(ott_res.partitioned_filepath, fragment, fs)
-        if not os.path.isdir(nd):
-            _LOG.info('Creating {}'.format(nd))
-            os.mkdir(nd)
+        with OutDir(nd):
+            pass
     return sep_id_to_fn
 
 

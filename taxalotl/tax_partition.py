@@ -11,6 +11,7 @@ from .tree import TaxonForest
 from .util import unlink, OutFile
 
 INP_TAXONOMY_DIRNAME = '__inputs__'
+OUTP_TAXONOMY_DIRNAME = '__outputs__'
 MISC_DIRNAME = '__misc__'
 GEN_MAPPING_FILENAME = '__mapping__.json'
 ROOTS_FILENAME = '__roots__.json'
@@ -522,6 +523,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         self._fs_is_partitioned = None
         self._has_flushed = False
         self._external_inp_fp = None
+
 
     @property
     def write_taxon_header(self):

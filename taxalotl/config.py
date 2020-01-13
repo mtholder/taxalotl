@@ -4,7 +4,7 @@ from __future__ import print_function
 import os
 from peyotl import get_logger
 from taxalotl.resource_manager import ResourceManager
-
+from .util import OutDir
 _LOG = get_logger(__name__)
 
 
@@ -124,7 +124,8 @@ class TaxalotlConfig(object):
             if not os.path.isdir(self.resources_dir):
                 m = 'The resources dir "{}" does not exist. Creating an empty one...'
                 _LOG.warn(m.format(self.resources_dir))
-                os.makedirs(self.resources_dir)
+                with OutDir(self.resources_dir):
+                    pass
             self._resources_mgr = ResourceManager(self.resources_dir)
             for v in self._resources_mgr.resources.values():
                 v.config = self

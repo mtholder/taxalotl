@@ -111,6 +111,20 @@ class VirtCommand(object):
         clear_filepaths_overwritten()
 
 
+class OutDir(object):
+    def __init__(self, filepath, mode='w', encoding='utf-8'):
+        self.filepath = filepath
+
+    def __enter__(self):
+        if not os.path.exists(self.filepath):
+            _LOG.info('Creating directory {}'.format(self.filepath))
+            os.makedirs(self.filepath)
+            _FILES_WRITTEN.append(self.filepath)
+        return self.filepath
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
 class OutFile(object):
     def __init__(self, filepath, mode='w', encoding='utf-8'):
         self.filepath = filepath

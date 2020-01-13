@@ -153,8 +153,8 @@ def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
 def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):
     inpfp = os.path.join(unpacked_dirp, resource_wrapper.local_filename)
     outfd = resource_wrapper.normalized_filedir
-    if not os.path.exists(outfd):
-        os.makedirs(outfd)
+    with OutDir(outfd):
+        pass
     outfp = resource_wrapper.normalized_filepath
     if resource_wrapper.schema.lower() == 'silva taxmap':
         shutil.copyfile(inpfp, outfp)
@@ -411,7 +411,7 @@ class ResourceWrapper(FromOTifacts):
         par_key, misc_dir = self.config.get_par_and_par_misc_taxdir(part_key, self.id)
         taxon_file = os.path.join(misc_dir, self.taxon_filename)
         if os.path.exists(taxon_file):
-            return misc_dir
+            return misc_dirsemanticize_and_serialize_tax_part
         return None
 
     def download(self):
@@ -532,6 +532,22 @@ class TaxonomyWrapper(ResourceWrapper):
         self.part_name_to_tax_part_in_mem = {}
         # print("ET obj = {}".format(obj))
 
+    def semanticize_node_entry(self, sem_graph, node, par_sem_node):
+        _LOG.warn('called TaxonomyWrapper.semanticize_node_entry')
+        return None
+
+    def semanticize_node_exit(self, sem_graph, node, sem_node, child_sem_nodes):
+        _LOG.warn('called TaxonomyWrapper.semanticize_node_exit')
+        return None
+
+    def semanticize(self, fragment, semantics_dir, tax_part=None, taxon_forest=None):
+        if taxon_forest is None:
+            tax_part, taxon_forest = self.get_tax_part_and_forest(fragment)
+        from .semanticize import semanticize_and_serialize_tax_part
+        semanticize_and_serialize_tax_part(self.config, self, fragment, semantics_dir,
+                                           tax_part, taxon_forest)
+
+
     def accumulate_separated_descendants(self, scaffold_dir):
         scaffold_anc = os.path.split(scaffold_dir)[0]
         pd = self.partitioned_filepath
@@ -590,17 +606,20 @@ class TaxonomyWrapper(ResourceWrapper):
         return tax_part
 
     def get_taxon_forest_for_partition(self, current_partition_key):
+        return self.get_tax_part_and_forest(current_partition_key)[1]
+
+    def get_tax_part_and_forest(self, current_partition_key):
         tax_part = self.get_read_only_tax_part(current_partition_key)
         if not os.path.isfile(tax_part.tax_fp):
             m = 'Skipping {} due to lack of file at "{}"'
             _LOG.warn(m.format(current_partition_key, tax_part.tax_fp))
-            return {}
+            return tax_part, {}
         _LOG.info('converting taxonomy from {} to a tree'.format(tax_part.tax_fp))
         tax_forest = tax_part.get_taxa_as_forest()
         for x in tax_forest.trees:
             self._post_process_tree(x)
         _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
-        return tax_forest
+        return tax_part, tax_forest
 
     def get_parsed_synonyms_by_id(self, current_partition_key, ignored_syn_types=None):
         tax_part = self.get_read_only_tax_part(current_partition_key)

@@ -13,12 +13,18 @@ _LOG = get_logger(__name__)
 
 
 def write_indented_subtree(out, node, indent_level):
-    out.write('{}{} (id={})\n'.format('  ' * indent_level,
-                                      node.name_that_is_unique,
-                                      node.id))
+    fmsd = node.formatted_src_dict()
+    f = 'flags={}'.format(', '.join(node.sorted_flags)) if node.sorted_flags else ''
+    s = 'src={}'.format(fmsd) if fmsd else ''
+    m = '{}{}\t|\tid={}\t|\trank={}\t|\t{}\t|\t{}\n'
+    out.write(m.format('    ' * indent_level, node.name_that_is_unique, node.id, node.rank, s, f))
     if node.children_refs:
+        sortable = []
         for c in node.children_refs:
-            write_indented_subtree(out, c, indent_level=1 + indent_level)
+            sortable.append((c.name_that_is_unique, c))
+        sortable.sort()
+        for el in sortable:
+            write_indented_subtree(out, el[1], indent_level=1 + indent_level)
 
 
 class TaxonTree(object):

@@ -26,6 +26,17 @@ class Taxon(object):
                 line_parser = full_ott_line_parser
             line_parser(self, line)
 
+    def formatted_src_dict(self):
+        if not self.src_dict:
+            return
+        sortable_list = [(k, list(v)) for k, v in self.src_dict.items()]
+        sortable_list.sort()
+        strs = []
+        for el in sortable_list:
+            el[1].sort()
+            strs.extend(['{}:{}'.format(el[0], i) for i in el[1]])
+        return ','.join(strs)
+
     def child_id_dict(self):
         return {c.id: c for c in self.children_refs}
 

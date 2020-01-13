@@ -249,6 +249,7 @@ def full_ott_line_parser(taxon, line):
         taxon.rank = ls[3]
     if len(ls) == 5:
         return
+    # _LOG.debug('ls[4] = {}'.format(ls[4]))
     if ls[4]:
         sel = ls[4].split(',')
         d = {}

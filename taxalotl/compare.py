@@ -3,8 +3,8 @@ from __future__ import print_function
 from peyotl import get_logger
 import sys
 import os
-from taxalotl.tax_partition import (get_taxon_partition, INP_TAXONOMY_DIRNAME, MISC_DIRNAME)
-
+from taxalotl.tax_partition import (get_taxon_partition, INP_TAXONOMY_DIRNAME, MISC_DIRNAME, OUTP_TAXONOMY_DIRNAME)
+from .util import OutFile, OutDir
 _LOG = get_logger(__name__)
 
 
@@ -28,10 +28,18 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
         if os.path.exists(sd):
             tax_id_set.update(os.listdir(sd))
     out = sys.stdout
-    for res_id in tax_id_set:
-        res = taxalotl_conf.get_resource_by_id(res_id)
-        tp = get_taxon_partition(res, fragment)
-        tp.read_inputs_for_read_only()
-        tf = tp.get_taxa_as_forest()
-        out.write("taxonomy for {} according to {}".format(fragment, res_id))
-        tf.write_indented(out)
+    out_dir = os.path.join(tax_dir, OUTP_TAXONOMY_DIRNAME)
+    with OutDir(out_dir):
+        for res_id in tax_id_set:
+            res = taxalotl_conf.get_resource_by_id(res_id)
+            tp = get_taxon_partition(res, fragment)
+            tp.read_inputs_for_read_only()
+            tf = tp.get_taxa_as_forest()
+            fn = os.path.split(fragment)[-1]
+            fp = os.path.join(out_dir, 'taxalotl-out-{}-taxonomy-by-{}.txt'.format(fn, res_id))
+            with OutFile(fp) as outstream:
+                out.write("writing taxonomy for {} according to {} to \"{}\"\n".format(fragment, res_id, fp))
+                tf.write_indented(outstream)
+            semantics_dir = os.path.join(out_dir, res_id)
+            with OutDir(semantics_dir):
+                res.semanticize(fragment, semantics_dir, tax_part=tp, taxon_forest=tf)
