@@ -532,13 +532,23 @@ class TaxonomyWrapper(ResourceWrapper):
         self.part_name_to_tax_part_in_mem = {}
         # print("ET obj = {}".format(obj))
 
+    def node_should_be_semanticized(self, node):
+        return True
+
     def semanticize_node_entry(self, sem_graph, node, par_sem_node):
-        _LOG.warn('called TaxonomyWrapper.semanticize_node_entry')
-        return None
+        from .semanticize import semanticize_node_name
+        if not self.node_should_be_semanticized(node):
+            return None
+        tc = sem_graph.add_taxon_concept(self, node.id)
+        tc.claim_rank(node.rank)
+        semanticize_node_name(self, sem_graph, tc, node)
+        _LOG.warn('node: {}'.format(node.__dict__))
+        return tc
 
     def semanticize_node_exit(self, sem_graph, node, sem_node, child_sem_nodes):
-        _LOG.warn('called TaxonomyWrapper.semanticize_node_exit')
-        return None
+        for csn in child_sem_nodes:
+            csn.claim_is_child_of(sem_node)
+        return sem_node
 
     def semanticize(self, fragment, semantics_dir, tax_part=None, taxon_forest=None):
         if taxon_forest is None:

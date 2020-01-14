@@ -300,6 +300,7 @@ def add_confirmed_sep(nns, tree, list_num_id_taxon, sep_name):
     if top_sep_set:
         nns.add_separtors_for_tree(tree, top_sep_set)
 
+_skip_semanticizing_set = frozenset(['not_otu', 'was_container', 'barren'])
 
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(TaxonomyWrapper):
@@ -309,6 +310,10 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
+    def node_should_be_semanticized(self, node):
+        if node.flags and _skip_semanticizing_set.intersection(node.flags):
+            return False
+        return True
     def get_source_for_sep_or_part(self, current_partition_key):
         try:
             return PART_KEY_TO_REL_SRC_SET.get(current_partition_key, DEFAULT_REL_SRC_SET)

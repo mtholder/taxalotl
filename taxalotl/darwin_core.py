@@ -320,6 +320,7 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
     itd.write_to_dir(destination)
 
 
+_BOLD_NAME = re.compile(r"BOLD[:]([A-Z0-9]+)")
 class GBIFWrapper(TaxonomyWrapper):
     schema = {"http://rs.tdwg.org/dwc/"}
 
@@ -328,3 +329,8 @@ class GBIFWrapper(TaxonomyWrapper):
 
     def normalize(self):
         normalize_darwin_core_taxonomy(self.unpacked_filepath, self.normalized_filedir, self)
+
+    def node_should_be_semanticized(self, node):
+        if _BOLD_NAME.match(node.name):
+            return False
+        return True

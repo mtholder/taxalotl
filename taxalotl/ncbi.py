@@ -257,16 +257,3 @@ class NCBIWrapper(TaxonomyWrapper):
 
     def post_process_interim_tax_data(self, interim_tax_data):
         self.collapse_as_incertae_sedis_interim_tax_data(interim_tax_data, 'unclassified')
-
-    def semanticize_node_entry(self, sem_graph, node, par_sem_node):
-        from .semanticize import semanticize_node_name
-        tc = sem_graph.add_taxon_concept(self, node.id)
-        tc.claim_rank(node.rank)
-        semanticize_node_name(self, sem_graph, tc, node)
-        _LOG.warn('node: {}'.format(node.__dict__))
-        return tc
-
-    def semanticize_node_exit(self, sem_graph, node, sem_node, child_sem_nodes):
-        for csn in child_sem_nodes:
-            csn.claim_is_child_of(sem_node)
-        return sem_node

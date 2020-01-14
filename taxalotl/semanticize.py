@@ -26,7 +26,10 @@ class SemGraphNode(object):
         for att in self.predicates:
             val = getattr(self, att, [])
             if val:
-                d[att] = [serialize_triple_object(i) for i in val]
+                if isinstance(val, list) or isinstance(val, tuple):
+                    d[att] = [serialize_triple_object(i) for i in val]
+                else:
+                    d[att] = serialize_triple_object(val)
         return d
 
     @property
@@ -48,27 +51,26 @@ class TaxonConceptSemNode(SemGraphNode):
         self.rank = None
         self.has_name = None
         self.undescribed = None
-        self.id = ['{}:{}'.format(res_id, concept_id),]
+        self.id = '{}:{}'.format(res_id, concept_id)
 
     def claim_is_child_of(self, par_sem_node):
         assert self.is_child_of is None
-        self.is_child_of = [par_sem_node]
+        self.is_child_of = par_sem_node
 
     def claim_rank(self, rank):
         assert self.rank is None
-        self.rank = [rank]
+        self.rank = rank
 
     def claim_name(self, name_sem_node):
-        if self.has_name is None:
-            self.has_name = []
-        self.has_name.append(name_sem_node)
+        assert self.has_name is None
+        self.has_name = name_sem_node
 
     def claim_undescribed(self):
-        self.undescribed = [True, ]
+        self.undescribed = True
 
     @property
     def predicates(self):
-        return ['is_child_of', 'rank', 'has_name', 'id']
+        return ['is_child_of', 'rank', 'has_name', 'id', 'undescribed']
 
 
 class NameSemNode(SemGraphNode):
@@ -76,7 +78,11 @@ class NameSemNode(SemGraphNode):
     def __init__(self, sem_graph, res_id, tag, concept_id, name):
         ci = canonicalize(res_id, tag, concept_id)
         super(NameSemNode, self).__init__(sem_graph, ci)
-        self.name = [name,]
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def predicates(self):
@@ -152,7 +158,7 @@ class SpecimenCodeSemNode(NameSemNode):
 def _find_by_name(container, name):
     if container:
         for el in container:
-            if el.name == name:
+            if el._name == name:
                 return el
     return None
 
@@ -229,12 +235,19 @@ class SemGraph(object):
 
 
 def semanticize_node_name(res, sem_graph, tc, node):
-    rsn = node.rank_sorting_number()
-    if rsn <= SPECIES_SORTING_NUMBER:
-        name_dict = parse_sp_name(node.name, node.rank)
-    elif rsn <= GENUS_SORTING_NUMBER:
-        name_dict = parse_genus_group_name(node.name, node.rank)
+    name_dict = None
+    try:
+        rsn = node.rank_sorting_number()
+    except KeyError:
+        pass
     else:
+        if rsn is None:
+            pass
+        elif rsn <= SPECIES_SORTING_NUMBER:
+            name_dict = parse_sp_name(node.name, node.rank)
+        elif rsn <= GENUS_SORTING_NUMBER:
+            name_dict = parse_genus_group_name(node.name, node.rank)
+    if name_dict is None:
         name_dict = parse_higher_name(node.name, node.rank)
     semanticize_names(res, sem_graph, tc, node.name, name_dict)
 
@@ -247,32 +260,33 @@ def semanticize_names(res, sem_graph, taxon_concept_sem_node, name, name_dict):
     name_part_holder = rn
     tcsn.claim_name(rn)
     combination = name_dict.get('combination')
+    bresid = res.base_resource.id
     if combination:
-        cn = sem_graph.add_combination(res.id, tcsn.concept_id, combination)
+        cn = sem_graph.add_combination(bresid, tcsn.concept_id, combination)
         rn.claim_combination(cn)
     genus = name_dict.get('genus')
     if genus:
-        cn = sem_graph.add_genus(res.id, tcsn.concept_id, genus)
+        cn = sem_graph.add_genus(bresid, tcsn.concept_id, genus)
         name_part_holder.claim_genus(cn)
     subgenus = name_dict.get('subgenus')
     if subgenus:
-        cn = sem_graph.add_subgenus(res.id, tcsn.concept_id, subgenus)
+        cn = sem_graph.add_subgenus(bresid, tcsn.concept_id, subgenus)
         name_part_holder.claim_subgenus(cn)
     sp_epithet = name_dict.get('sp_epithet')
     if sp_epithet:
-        cn = sem_graph.add_sp_epithet(res.id, tcsn.concept_id, sp_epithet)
+        cn = sem_graph.add_sp_epithet(bresid, tcsn.concept_id, sp_epithet)
         name_part_holder.claim_sp_epithet(cn)
     infra_epithet = name_dict.get('infra_epithet')
     if infra_epithet:
-        cn = sem_graph.add_infra_epithet(res.id, tcsn.concept_id, infra_epithet)
+        cn = sem_graph.add_infra_epithet(bresid, tcsn.concept_id, infra_epithet)
         name_part_holder.claim_infra_epithet(cn)
     higher_group_name = name_dict.get('higher_group_name')
     if higher_group_name:
-        cn = sem_graph.add_higher_group_name(res.id, tcsn.concept_id, higher_group_name)
+        cn = sem_graph.add_higher_group_name(bresid, tcsn.concept_id, higher_group_name)
         name_part_holder.claim_higher_group_name(cn)
     specimen_code = name_dict.get('specimen_code')
     if specimen_code:
-        cn = sem_graph.add_specimen_code(res.id, tcsn.concept_id, specimen_code)
+        cn = sem_graph.add_specimen_code(bresid, tcsn.concept_id, specimen_code)
         name_part_holder.claim_specimen_code(cn)
     return rn
 
@@ -292,10 +306,13 @@ def semanticize_tax_part(taxolotl_config, res, fragment, tax_part, tax_forest):
 
 def semanticize_subtree(sem_graph, res, node, par_sem_node=None):
     sem_node = res.semanticize_node_entry(sem_graph, node, par_sem_node)
+    if sem_node is None:
+        return None
     cr = node.children_refs
     csn = []
     if cr:
         csn = [semanticize_subtree(sem_graph, res, c, par_sem_node=sem_node) for c in cr]
+    csn = [i for i in csn if i is not None]
     res.semanticize_node_exit(sem_graph, node, sem_node, child_sem_nodes=csn)
     return sem_node
 
