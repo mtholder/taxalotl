@@ -7,7 +7,6 @@ from peyotl import (add_or_append_to_dict, get_logger)
 from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.resource_wrapper import TaxonomyWrapper
 from taxalotl.util import OutFile
-
 _LOG = get_logger(__name__)
 
 
@@ -23,7 +22,7 @@ _LOG = get_logger(__name__)
 # JAR copied this file from data/ in the taxomachine repository
 # to smasher/ in the opentree repository on 2013-04-25.
 # Some subsequent modifications:
-#  - remove "unclassified"
+#  - remove "unclassified"GENUS_RANK_TO_SORTING_NUMBER
 #  - add command line argument for directory in which to put ncbi
 #  - change skipids from list to dictionary for speed
 
@@ -260,8 +259,10 @@ class NCBIWrapper(TaxonomyWrapper):
         self.collapse_as_incertae_sedis_interim_tax_data(interim_tax_data, 'unclassified')
 
     def semanticize_node_entry(self, sem_graph, node, par_sem_node):
-        tc = sem_graph.add_taxon_concept(self.id, node.id)
+        from .semanticize import semanticize_node_name
+        tc = sem_graph.add_taxon_concept(self, node.id)
         tc.claim_rank(node.rank)
+        semanticize_node_name(self, sem_graph, tc, node)
         _LOG.warn('node: {}'.format(node.__dict__))
         return tc
 

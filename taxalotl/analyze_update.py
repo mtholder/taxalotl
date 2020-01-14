@@ -12,7 +12,7 @@ from .config import TaxalotlConfig
 from .tree import TaxonTree
 from .partitions import (PART_NAMES)
 from .resource_wrapper import TaxonomyWrapper
-from .taxonomic_ranks import (GENUS_RANK_TO_SORTING_NUMBER,
+from .taxonomic_ranks import (GENUS_SORTING_NUMBER,
                               MAX_INFRASPECIFIC_NUMBER,
                               MINIMUM_HIGHER_TAXON_NUMBER,
                               SPECIES_SORTING_NUMBER)
@@ -261,7 +261,7 @@ class UpdateStatusLog(object):
         other_tree = self.prev_tree if is_in_curr else self.curr_tree
         assert other_nd
         other_rank_range = other_tree.node_rank_sorting_number_range(other_nd)
-        assert other_rank_range == (GENUS_RANK_TO_SORTING_NUMBER, GENUS_RANK_TO_SORTING_NUMBER)
+        assert other_rank_range == (GENUS_SORTING_NUMBER, GENUS_SORTING_NUMBER)
         nd_c = nd.child_id_dict()
         other_c = other_nd.child_id_dict()
         common_unchanged_dict = {}
@@ -324,7 +324,7 @@ class UpdateStatusLog(object):
             # self._write_nd(nd, True)
         else:
             max_sn, min_csn = tree.node_rank_sorting_number_range(nd)
-            if max_sn == min_csn and max_sn == GENUS_RANK_TO_SORTING_NUMBER:
+            if max_sn == min_csn and max_sn == GENUS_SORTING_NUMBER:
                 self._par_is_genus_report(nd, is_in_curr_tree, tree, status, other_nd)
             else:
                 _LOG.warn('CLADE ')

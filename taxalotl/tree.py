@@ -5,7 +5,7 @@ from __future__ import print_function
 from typing import Dict, List
 from peyotl import get_logger
 from .taxon import Taxon
-from .taxonomic_ranks import (GENUS_RANK_TO_SORTING_NUMBER,
+from .taxonomic_ranks import (GENUS_SORTING_NUMBER,
                               MINIMUM_SORTING_NUMBER,
                               SPECIES_SORTING_NUMBER)
 
@@ -96,7 +96,7 @@ class TaxonTree(object):
                 return False
 
     def find_genus_for_alpha(self, nd):
-        if nd.best_rank_sort_number == GENUS_RANK_TO_SORTING_NUMBER:
+        if nd.best_rank_sort_number == GENUS_SORTING_NUMBER:
             return nd
         try:
             p = self.id_to_taxon[nd.par_id]
