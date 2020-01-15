@@ -204,20 +204,20 @@ class Synonym(object):
 
 
 _VALID_SYN_TYPES = {'acronym', 'ambiguous synonym',
-                    'authority',
+                    'authority', 'basionym',
                     'blast name',
                     'common name',
                     'equivalent name',
                     'genbank common name',
                     'genbank synonym',
-                    'homotypic synonym',
+                    'homotypic synonym', 'heterotypic synonym',
                     'includes', 'misapplied name',
                     'misnomer',
                     'misspelling',
                     'orthographia',
                     'proparte synonym',
                     'synonym',
-                    'type material',
+                    'type material', 'unavailable',
                     }
 IGNORE_SYN_TYPES = {'acronym',
                     'authority',
@@ -227,6 +227,7 @@ IGNORE_SYN_TYPES = {'acronym',
                     'genbank synonym',
                     'type material',
                     }
+IGNORE_COMMON_NAME_SYN_TYPES = {'common name', 'genbank common name',}
 
 
 class SynonymInterpreter(object):
@@ -244,7 +245,7 @@ class SynonymInterpreter(object):
         sl = line.split('\t|\t')
         suid = sl[self._uid_ind]
         name = sl[self._name_ind].strip()
-        syn_type = sl[self._type_ind].strip()
+        syn_type = sl[self._type_ind].strip().lower()
         if syn_type not in _VALID_SYN_TYPES:
             m = 'synonym_type "{}" not recognized in for ({}, "{}")'
             raise ValueError(m.format(syn_type, uid, name))

@@ -8,7 +8,7 @@ from peyotl import (get_logger, write_as_json)
 from taxalotl.util import OutFile, OutDir
 from .taxonomic_ranks import SPECIES_SORTING_NUMBER, GENUS_SORTING_NUMBER
 from .name_parsing import (parse_genus_group_name, parse_higher_name, parse_sp_name)
-
+from .tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
 _LOG = get_logger(__name__)
 
 
@@ -233,6 +233,13 @@ class SemGraph(object):
                 d[hidden[1:]] = {i.canonical_id: i.as_dict() for i in v}
         return d
 
+def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
+    _LOG.debug('"{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
+    st = syn.syn_type
+
+def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
+    _LOG.debug('"{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
+    st = syn.syn_type
 
 def semanticize_node_name(res, sem_graph, tc, node):
     name_dict = None
@@ -299,19 +306,37 @@ def semanticize_and_serialize_tax_part(taxolotl_config, res, fragment, out_dir, 
 # noinspection PyUnusedLocal
 def semanticize_tax_part(taxolotl_config, res, fragment, tax_part, tax_forest):
     sem_graph = SemGraph()
+    # First, Preorder sweep of the tree to deal with taxon concepts and valid names
+    nd_sem_pairs = []
     for r in tax_forest.roots.values():
-        semanticize_subtree(sem_graph, res, r.root, par_sem_node=None)
+        semanticize_subtree(sem_graph, res, r.root, nd_sem_pairs, par_sem_node=None)
+    # grab all the synonyms
+    t2syn = tax_part.parsed_synonyms_by_id(ignored_syn_types=IGNORE_COMMON_NAME_SYN_TYPES)
+    delay_auth_syns = []
+    # process the non-"authority" synonyms next
+    for node, sem_node in nd_sem_pairs:
+        if sem_node is not None:
+            for syn in t2syn.get(node.id, []):
+                if syn.syn_type == 'authority':
+                    delay_auth_syns.append((node, sem_node, syn))
+                    continue
+                res.semanticize_node_synonyms(sem_graph, node, sem_node, syn)
+    # now the "authority" synonyms...
+    for node, sem_node, syn in delay_auth_syns:
+        res.semanticize_node_authority_synonyms(sem_graph, node, sem_node, syn)
     return sem_graph
 
 
-def semanticize_subtree(sem_graph, res, node, par_sem_node=None):
+def semanticize_subtree(sem_graph, res, node, nd_sem_pairs, par_sem_node=None):
     sem_node = res.semanticize_node_entry(sem_graph, node, par_sem_node)
+    nd_sem_pairs.append((node, sem_node))
     if sem_node is None:
         return None
     cr = node.children_refs
     csn = []
     if cr:
-        csn = [semanticize_subtree(sem_graph, res, c, par_sem_node=sem_node) for c in cr]
+        csn = [semanticize_subtree(sem_graph, res, c,
+                                   nd_sem_pairs, par_sem_node=sem_node) for c in cr]
     csn = [i for i in csn if i is not None]
     res.semanticize_node_exit(sem_graph, node, sem_node, child_sem_nodes=csn)
     return sem_node

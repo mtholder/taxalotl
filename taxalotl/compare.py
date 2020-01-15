@@ -36,7 +36,7 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
             tp.read_inputs_for_read_only()
             tf = tp.get_taxa_as_forest()
             fn = os.path.split(fragment)[-1]
-            fp = os.path.join(out_dir, 'taxalotl-out-{}-taxonomy-by-{}.txt'.format(fn, res_id))
+            fp = os.path.join(out_dir, '{}-for-{}.txt'.format(res_id, fn))
             with OutFile(fp) as outstream:
                 out.write("writing taxonomy for {} according to {} to \"{}\"\n".format(fragment, res_id, fp))
                 tf.write_indented(outstream)

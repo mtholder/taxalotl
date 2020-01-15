@@ -542,13 +542,21 @@ class TaxonomyWrapper(ResourceWrapper):
         tc = sem_graph.add_taxon_concept(self, node.id)
         tc.claim_rank(node.rank)
         semanticize_node_name(self, sem_graph, tc, node)
-        _LOG.warn('node: {}'.format(node.__dict__))
+        #_LOG.warn('node: {}'.format(node.__dict__))
         return tc
 
     def semanticize_node_exit(self, sem_graph, node, sem_node, child_sem_nodes):
         for csn in child_sem_nodes:
             csn.claim_is_child_of(sem_node)
         return sem_node
+
+    def semanticize_node_synonyms(self, sem_graph, node, sem_node, syn):
+        from .semanticize import semanticize_node_synonym
+        semanticize_node_synonym(self, sem_graph, node, sem_node, syn)
+
+    def semanticize_node_authority_synonyms(self, sem_graph, node, sem_node, syn):
+        from .semanticize import semanticize_node_auth_synonym
+        semanticize_node_auth_synonym(self, sem_graph, node, sem_node, syn)
 
     def semanticize(self, fragment, semantics_dir, tax_part=None, taxon_forest=None):
         if taxon_forest is None:
