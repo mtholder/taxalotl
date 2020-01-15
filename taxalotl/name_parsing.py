@@ -77,7 +77,7 @@ def _check_genus_sp_epithet_cruft(name, d):
         return False
     d['genus'] = m.group(1)
     d['sp_epithet'] = m.group(2)
-    d['undescribed'] = m.group(3).strip()
+    d['specimen_code'] = m.group(3).strip()
     return True
 
 

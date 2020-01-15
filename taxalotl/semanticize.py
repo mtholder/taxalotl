@@ -16,6 +16,7 @@ from .name_parsing import (parse_genus_group_name,
                            parse_name_string_without_context,
                            parse_sp_name, )
 from .tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
+
 _LOG = get_logger(__name__)
 
 
@@ -58,7 +59,11 @@ class TaxonConceptSemNode(SemGraphNode):
         self.rank = None
         self.has_name = None
         self.undescribed = None
+        self.is_synonym = None
         self.problematic_synonyms = None
+        self.synonyms = None
+        self.syn_type = None
+        self.former_ranks = None
         self.id = '{}:{}'.format(res_id, concept_id)
 
     def claim_is_child_of(self, par_sem_node):
@@ -78,7 +83,9 @@ class TaxonConceptSemNode(SemGraphNode):
 
     @property
     def predicates(self):
-        return ['is_child_of', 'rank', 'has_name', 'id', 'undescribed', 'problematic_synonyms']
+        return ['is_child_of', 'rank', 'has_name', 'id', 'undescribed',
+                'is_synonym', 'syn_type', 'former_ranks'
+                'problematic_synonyms', 'synonyms']
 
     @property
     def valid_combination(self):
@@ -102,8 +109,68 @@ class TaxonConceptSemNode(SemGraphNode):
     def name_attached_to_type_specimen(self):
         return None if self.has_name is None else self.has_name.name_attached_to_type_specimen
 
+    def _get_next_syn_id(self):
+        ns = len(self.synonyms) if self.synonyms else 0
+        return '{}:syn{}'.format(self.concept_id, ns)
+
+    def claim_is_synonym(self):
+        self.is_synonym = True
+
+    def claim_former_rank(self, rank):
+        if self.former_ranks is None:
+            self.former_ranks = []
+        if rank not in self.former_ranks:
+            self.former_ranks.append(rank)
+
+    def claim_uninomial_synonym(self, res, name, syn_type, **kwargs):
+        if 'genus' in kwargs:
+            return self._claim_syn_impl(res, name, syn_type, 'genus', **kwargs)
+        if 'higher_group_name' not in kwargs:
+            raise ValueError("Expecting 'higher_group_name' or 'genus' kwarg "
+                             "in claim_uninomial_synonym")
+        return self._claim_syn_impl(res, name, syn_type, 'clade', **kwargs)
+
+    def claim_formerly_full_species(self, res, name, syn_type, **kwargs):
+        self.claim_former_rank('species')
+        return self.claim_binom_synonym(res, name, syn_type, **kwargs)
+
+    def claim_formerly_subspecies(self, res, name, syn_type, **kwargs):
+        self.claim_former_rank('subspecies')
+        return self.claim_trinomial_synonym(res, name, syn_type, **kwargs)
+
+    def claim_binom_synonym(self, res, name, syn_type, **kwargs):
+        for expected in ('genus', 'sp_epithet'):
+            if expected not in kwargs:
+                raise ValueError("Expecting '{}' kwarg in claim_binom_synonym".format(expected))
+        return self._claim_syn_impl(res, name, syn_type, 'species', **kwargs)
+
+    def claim_trinomial_synonym(self, res, name, syn_type, **kwargs):
+        for expected in ('genus', 'sp_epithet', 'infra_epithet'):
+            if expected not in kwargs:
+                raise ValueError("Expecting '{}' kwarg in claim_trinomial_synonym".format(expected))
+        return self._claim_syn_impl(res, name, syn_type, 'infraspecies', **kwargs)
+
+    def _add_to_syn_list(self, syntc):
+        if self.synonyms is None:
+            self.synonyms = []
+        self.synonyms.append(syntc)
+
+    def _claim_syn_impl(self, res, name, syn_type, rank, **kwargs):
+        tc = self.graph.add_taxon_concept(res, self._get_next_syn_id())
+        self._add_to_syn_list(tc)
+        tc.claim_rank(rank)
+        tc.claim_is_synonym()
+        if syn_type:
+            tc.syn_type = syn_type
+        if kwargs.get('undescribed', False):
+            tc.claim_undescribed()
+        semanticize_names(res, self.graph, tc, name, kwargs)
+        return tc
+
+
 class NameSemNode(SemGraphNode):
-    name_sem_nd_pred = ('name', )
+    name_sem_nd_pred = ('name',)
+
     def __init__(self, sem_graph, res_id, tag, concept_id, name):
         ci = canonicalize(res_id, tag, concept_id)
         super(NameSemNode, self).__init__(sem_graph, ci)
@@ -125,7 +192,7 @@ class CombinationSemNode(NameSemNode):
 
 class VerbatimSemNode(NameSemNode):
     extra_pred = ('combination', 'higher_group_name', 'genus_name',
-                'subgenus_names', 'sp_epithet', 'infra_epithets', 'specimen_codes')
+                  'subgenus_names', 'sp_epithet', 'infra_epithets', 'specimen_codes')
     name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + list(extra_pred))
 
     def __init__(self, sem_graph, res_id, concept_id, name):
@@ -151,7 +218,7 @@ class VerbatimSemNode(NameSemNode):
         self.combination = n
 
     def claim_genus(self, n):
-        assert self.genus_name is None
+        assert self.genus_name is None or self.genus_name == n
         self.genus_name = n
 
     def claim_subgenus(self, n):
@@ -197,6 +264,7 @@ class VerbatimSemNode(NameSemNode):
             return ie
         return self.sp_epithet
 
+
 class GenusGroupSemNode(NameSemNode):
     def __init__(self, sem_graph, res_id, concept_id, name):
         super(GenusGroupSemNode, self).__init__(sem_graph, res_id, 'gen', concept_id, name)
@@ -213,6 +281,7 @@ class SpeciesGroupSemNode(NameSemNode):
         if self.type_materials is None:
             self.type_materials = []
         self.type_materials.append(type_str)
+
 
 class HigherGroupSemNode(NameSemNode):
     def __init__(self, sem_graph, res_id, concept_id, name):
@@ -302,6 +371,7 @@ class SemGraph(object):
                 d[hidden[1:]] = {i.canonical_id: i.as_dict() for i in v}
         return d
 
+
 def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
     try:
         rsn = node.rank_sorting_number()
@@ -314,10 +384,42 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
         else:
             sem_node.claim_type_material(syn.name.strip())
         return
-    name_dict = parse_name_string_without_context(syn.name)
-    if not name_dict:
-        _LOG.debug('WARNING: Could not parse "{}" as a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
+    pnd = parse_name_string_without_context(syn.name)
+    if not pnd:
         sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, "unparseable")
+        return
+    arank = pnd['apparent_rank']
+    if arank == 'clade':
+        if rsn <= SPECIES_SORTING_NUMBER:
+            e = "higher taxon name synonym for taxon rank = {}".format(node.rank)
+            sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, e)
+        else:
+            cn = pnd['clade_name']
+            del pnd['clade_name']
+            if rsn == GENUS_SORTING_NUMBER:
+                pnd['genus'] = cn
+            else:
+                pnd['higher_group_name'] = cn
+            sem_node.claim_uninomial_synonym(res, syn.name, syn_type=syn.syn_type, **pnd)
+    elif arank == 'species':
+        if rsn > SPECIES_SORTING_NUMBER:
+            e = "species synonym for taxon rank = {}".format(node.rank)
+            sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, e)
+        elif rsn == SPECIES_SORTING_NUMBER:
+            sem_node.claim_binom_synonym(res, syn.name, syn_type=syn.syn_type, **pnd)
+            # ['genus'], pnd['sp_epithet'], pnd.get('undescribed', False),
+            #                             syn.syn_type, pnd.get('specimen_code'))
+        else:
+            sem_node.claim_formerly_full_species(res, syn.name, syn_type=syn.syn_type, **pnd)
+    else:
+        assert arank == 'infraspecies'
+        if rsn > SPECIES_SORTING_NUMBER:
+            e = "infraspecies synonym for taxon rank = {}".format(node.rank)
+            sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, e)
+        elif rsn == SPECIES_SORTING_NUMBER:
+            sem_node.claim_formerly_subspecies(res, syn.name, syn_type=syn.syn_type, **pnd)
+        else:
+            sem_node.claim_trinomial_synonym(res, syn.name, syn_type=syn.syn_type, **pnd)
     '''
 
     
@@ -331,9 +433,10 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
     st = syn.syn_type
     '''
 
+
 def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
     _LOG.debug('"{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
-    st = syn.syn_type
+
 
 def semanticize_node_name(res, sem_graph, tc, node):
     name_dict = None
@@ -358,6 +461,7 @@ def semanticize_names(res, sem_graph, taxon_concept_sem_node, name, name_dict):
     if name_dict.get('undescribed'):
         tcsn.claim_undescribed()
     rn = sem_graph.add_verbatim_name(res.base_resource.id, tcsn.concept_id, name)
+    _LOG.debug('semanticizing {} for {}'.format(name, tcsn.concept_id))
     name_part_holder = rn
     tcsn.claim_name(rn)
     combination = name_dict.get('combination')
