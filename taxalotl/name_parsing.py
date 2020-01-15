@@ -6,19 +6,22 @@ from peyotl import get_logger
 
 _LOG = get_logger(__name__)
 
-_SP_EPITHET = re.compile(r'^([A-Z][a-z]+)\s+sp[.]?\s*$')
-_CF_SPECIES = re.compile(r'^([A-Z][a-z]+)\s+cf[.]?\s*([a-z]+)$')
 _BINOMINAL = re.compile(r'^([A-Z][a-z]+)\s+([a-z]+)\s*$')
-_SP_EPITHET_CRUFT = re.compile(r'^([A-Z][a-z]+)\s+sp[.]?\s+(\S.*)$')
-_CF_SPECIES_CRUFT = re.compile(r'^([A-Z][a-z]+)\s+cf[.]?\s*([a-z]+)\s+(\S.*)$')
 _BINOMINAL_CRUFT = re.compile(r'^([A-Z][a-z]+)\s+([a-z]+)\s+(\S.*)$')
-_UNINOMINAL = re.compile(r'^([A-Z][a-z]+)$')
-_TWO_CAP = re.compile(r'^([A-Z][a-z]+)\s+([A-Z][a-z]+)$')
+_CF_SPECIES = re.compile(r'^([A-Z][a-z]+)\s+cf[.]?\s*([a-z]+)$')
+_CF_SPECIES_CRUFT = re.compile(r'^([A-Z][a-z]+)\s+cf[.]?\s*([a-z]+)\s+(\S.*)$')
 _PARENS_SUB_GENUS = re.compile(r'^([A-Z][a-z]+)\s+\(([A-Z][a-z]+)\)$')
+_SPDOT_EPITHET = re.compile(r'^([A-Z][a-z]+)\s+sp[.]?\s*$')
+_SPDOT_EPITHET_CRUFT = re.compile(r'^([A-Z][a-z]+)\s+sp[.]?\s+(\S.*)$')
+_TRINOMINAL = re.compile(r'^([A-Z][a-z]+)\s+([a-z]+)\s+([a-z]+)\s*$')
+_TRINOMINAL_CRUFT = re.compile(r'^([A-Z][a-z]+)\s+([a-z]+)\s+([a-z]+)\s+(\S.*)$')
+_TWO_CAP = re.compile(r'^([A-Z][a-z]+)\s+([A-Z][a-z]+)$')
+_UNINOMINAL = re.compile(r'^([A-Z][a-z]+)$')
+_UNINOMINAL_CRUFT = re.compile(r'^([A-Z][a-z]+)\s+(\S.*)$')
 
 
 def _check_genus_sp_dot(name, d):
-    m = _SP_EPITHET.match(name)
+    m = _SPDOT_EPITHET.match(name)
     if not m:
         return False
     d['genus'] = m.group(1)
@@ -47,7 +50,7 @@ def _check_genus_sp_epithet(name, d):
 
 
 def _check_genus_sp_dot_cruft(name, d):
-    m = _SP_EPITHET_CRUFT.match(name)
+    m = _SPDOT_EPITHET_CRUFT.match(name)
     if not m:
         return False
     d['genus'] = m.group(1)
@@ -55,6 +58,7 @@ def _check_genus_sp_dot_cruft(name, d):
     d['undescribed'] = True
     d['specimen_code'] = m.group(2).strip()
     return True
+
 
 def _check_cf_species_cruft(name, d):
     m = _CF_SPECIES_CRUFT.match(name)
@@ -66,6 +70,7 @@ def _check_cf_species_cruft(name, d):
     d['specimen_code'] = m.group(3).strip()
     return True
 
+
 def _check_genus_sp_epithet_cruft(name, d):
     m = _BINOMINAL_CRUFT.match(name)
     if not m:
@@ -74,9 +79,6 @@ def _check_genus_sp_epithet_cruft(name, d):
     d['sp_epithet'] = m.group(2)
     d['undescribed'] = m.group(3).strip()
     return True
-
-
-_TRINOMINAL = re.compile(r'^([A-Z][a-z]+)\s+([a-z]+)\s+([a-z]+)\s*$')
 
 
 def _check_trinomial(name, d):
@@ -88,10 +90,24 @@ def _check_trinomial(name, d):
     d['infra_epithet'] = m.group(3)
     return True
 
+def _check_trinomial_cruft(name, d):
+    m = _TRINOMINAL.match(name)
+    if not m:
+        return False
+    d['genus'] = m.group(1)
+    d['sp_epithet'] = m.group(2)
+    d['infra_epithet'] = m.group(3)
+    d['specimen_code'] = m.group(4).strip()
+    return True
 
+
+
+just_sp_check_order = (_check_genus_sp_dot, _check_cf_species, _check_genus_sp_epithet)
+sp_with_cruft_order = (_check_genus_sp_dot_cruft, _check_cf_species_cruft, _check_genus_sp_epithet_cruft)
 sp_check_order = (_check_genus_sp_dot, _check_cf_species, _check_genus_sp_epithet,
                   _check_genus_sp_dot_cruft, _check_cf_species_cruft, _check_genus_sp_epithet_cruft)
 
+sub_sp_check_order = (_check_trinomial,)
 infra_sp_check_order = (_check_trinomial,)
 
 
@@ -116,6 +132,85 @@ def parse_sp_name(name, rank):
             d['combination'] = '{} {} {}'.format(d['genus'], d['sp_epithet'], d['infra_epithet'])
             return d
     raise ValueError('Could not parse species level name "{}" with rank={}'.format(name, rank))
+
+
+def parse_as_just_clade_name(name, dest):
+    m = _UNINOMINAL.match(name)
+    if m:
+        dest['apparent_rank'] = 'clade'
+        dest['clade_name'] = m.group(1)
+        return dest
+
+
+def parse_as_just_sp_name(name, dest):
+    for check in just_sp_check_order:
+        if check(name, dest):
+            dest['apparent_rank'] = 'species'
+            return dest
+
+
+def parse_as_just_subsp_name(name, dest):
+    for check in sub_sp_check_order:
+        if check(name, dest):
+            dest['apparent_rank'] = 'infraspecies'
+            return dest
+
+
+def parse_as_just_infra_sp(name, dest):
+    raise NotImplemented('parse_as_just_infra_sp')
+    # for check in infra_sp_check_order:
+    #     if check(name, dest):
+    #        dest['apparent_rank'] = 'infraspecies'
+    #         return dest
+
+
+def parse_as_infra_sp_with_codes(name, dest):
+    raise NotImplemented('parse_as_infra_sp_with_codes')
+    # for check in (_TRINOMINAL_CRUFT, ):
+    #     if check(name, dest):
+    #        dest['apparent_rank'] = 'infraspecies'
+    #         return dest
+
+
+def parse_as_subsp_name_with_codes(name, dest):
+    for check in (_check_trinomial_cruft,):
+        if check(name, dest):
+            dest['apparent_rank'] = 'infraspecies'
+            return dest
+
+
+def parse_as_sp_with_codes(name, dest):
+    for check in sp_with_cruft_order:
+        if check(name, dest):
+            dest['apparent_rank'] = 'species'
+            return dest
+
+
+def parse_as_clade_with_codes(name, dest):
+    m = _UNINOMINAL_CRUFT.match(name)
+    if m:
+        dest['apparent_rank'] = 'clade'
+        dest['clade_name'] = m.group(1)
+        dest['specimen_code'] = m.group(2).strip()
+        return dest
+
+
+_without_context_order = (parse_as_just_clade_name,
+                          parse_as_just_sp_name,
+                          parse_as_just_subsp_name,
+                          # parse_as_just_infra_sp, # NotImplemented
+                          # parse_as_infra_sp_with_codes,
+                          parse_as_subsp_name_with_codes,
+                          parse_as_sp_with_codes,
+                          parse_as_clade_with_codes,)
+
+
+def parse_name_string_without_context(name):
+    dest = {}
+    for pfn in _without_context_order:
+        if pfn(name, dest):
+            break
+    return dest
 
 
 def parse_genus_group_name(name, rank):

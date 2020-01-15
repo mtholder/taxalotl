@@ -6,8 +6,15 @@ import os
 from peyotl import (get_logger, write_as_json)
 
 from taxalotl.util import OutFile, OutDir
-from .taxonomic_ranks import SPECIES_SORTING_NUMBER, GENUS_SORTING_NUMBER
-from .name_parsing import (parse_genus_group_name, parse_higher_name, parse_sp_name)
+from .taxonomic_ranks import (ABOVE_GENUS_SORTING_NUMBER,
+                              SPECIES_SORTING_NUMBER,
+                              GENUS_SORTING_NUMBER,
+                              MINIMUM_HIGHER_TAXON_NUMBER)
+
+from .name_parsing import (parse_genus_group_name,
+                           parse_higher_name,
+                           parse_name_string_without_context,
+                           parse_sp_name, )
 from .tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
 _LOG = get_logger(__name__)
 
@@ -51,6 +58,7 @@ class TaxonConceptSemNode(SemGraphNode):
         self.rank = None
         self.has_name = None
         self.undescribed = None
+        self.problematic_synonyms = None
         self.id = '{}:{}'.format(res_id, concept_id)
 
     def claim_is_child_of(self, par_sem_node):
@@ -70,13 +78,29 @@ class TaxonConceptSemNode(SemGraphNode):
 
     @property
     def predicates(self):
-        return ['is_child_of', 'rank', 'has_name', 'id', 'undescribed']
+        return ['is_child_of', 'rank', 'has_name', 'id', 'undescribed', 'problematic_synonyms']
 
     @property
     def valid_combination(self):
-        _LOG.debug('valid_combination TaxonConceptSemNode = {}'.format(self.has_name))
         return None if self.has_name is None else self.has_name.valid_combination
 
+    def claim_problematic_synonym_statement(self, name, syn_type, error_str):
+        if self.problematic_synonyms is None:
+            self.problematic_synonyms = []
+        blob = {"name": name, "syn_type": syn_type, "problem": error_str}
+        self.problematic_synonyms.append(blob)
+
+    def claim_type_material(self, type_str):
+        n = self.name_attached_to_type_specimen
+        try:
+            n.claim_type_material(type_str)
+        except:
+            e = 'could not find name that was type-material-based attached to TaxonConcept'
+            self.claim_problematic_synonym_statement(type_str, 'type material', e)
+
+    @property
+    def name_attached_to_type_specimen(self):
+        return None if self.has_name is None else self.has_name.name_attached_to_type_specimen
 
 class NameSemNode(SemGraphNode):
     name_sem_nd_pred = ('name', )
@@ -154,9 +178,24 @@ class VerbatimSemNode(NameSemNode):
 
     @property
     def valid_combination(self):
-        _LOG.debug('valid_combination VerbatimSemNode = {}'.format(self.combination))
         return None if self.combination is None else self.combination.name
 
+    @property
+    def most_terminal_infra_epithet(self):
+        if self.infra_epithets:
+            if len(self.infra_epithets) > 1:
+                x = [(len(i.name), i.name, i) for i in self.infra_epithets]
+                x.sort()
+                return x[-1][-1]
+            return self.infra_epithets[0]
+        return None
+
+    @property
+    def name_attached_to_type_specimen(self):
+        ie = self.most_terminal_infra_epithet
+        if ie is not None:
+            return ie
+        return self.sp_epithet
 
 class GenusGroupSemNode(NameSemNode):
     def __init__(self, sem_graph, res_id, concept_id, name):
@@ -164,9 +203,16 @@ class GenusGroupSemNode(NameSemNode):
 
 
 class SpeciesGroupSemNode(NameSemNode):
+    sp_grp_name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + ['type_materials'])
+
     def __init__(self, sem_graph, res_id, concept_id, name):
         super(SpeciesGroupSemNode, self).__init__(sem_graph, res_id, 'sp', concept_id, name)
+        self.type_materials = None
 
+    def claim_type_material(self, type_str):
+        if self.type_materials is None:
+            self.type_materials = []
+        self.type_materials.append(type_str)
 
 class HigherGroupSemNode(NameSemNode):
     def __init__(self, sem_graph, res_id, concept_id, name):
@@ -257,22 +303,33 @@ class SemGraph(object):
         return d
 
 def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
-    expecting_combo = True
     try:
         rsn = node.rank_sorting_number()
     except KeyError:
-        expecting_combo = False
+        rsn = ABOVE_GENUS_SORTING_NUMBER
+    if syn.syn_type == 'type material':
+        if rsn >= MINIMUM_HIGHER_TAXON_NUMBER:
+            _LOG.warn('PROBLEM: "{}" rsn={} node.rank={}'.format(syn.name, rsn, node.rank))
+            sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, "type_material for higher taxon")
+        else:
+            sem_node.claim_type_material(syn.name.strip())
+        return
+    name_dict = parse_name_string_without_context(syn.name)
+    if not name_dict:
+        _LOG.debug('WARNING: Could not parse "{}" as a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
+        sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, "unparseable")
+    '''
+
+    
+
     else:
-        if rsn is None or rsn >= GENUS_SORTING_NUMBER:
-            expecting_combo = False
-    if expecting_combo:
         valid_combo = sem_node.valid_combination
-        _LOG.debug('node = {} has\n sem_node={} valid_combo = {}'.format(node.__dict__, sem_node.__dict__, valid_combo))
         if len(syn.name.split()) != len(valid_combo.split()):
             _LOG.debug('WARNING: "{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
         else:
             _LOG.debug('         "{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
     st = syn.syn_type
+    '''
 
 def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
     _LOG.debug('"{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
