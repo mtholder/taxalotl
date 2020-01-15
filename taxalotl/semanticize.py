@@ -72,6 +72,11 @@ class TaxonConceptSemNode(SemGraphNode):
     def predicates(self):
         return ['is_child_of', 'rank', 'has_name', 'id', 'undescribed']
 
+    @property
+    def valid_combination(self):
+        _LOG.debug('valid_combination TaxonConceptSemNode = {}'.format(self.has_name))
+        return None if self.has_name is None else self.has_name.valid_combination
+
 
 class NameSemNode(SemGraphNode):
     name_sem_nd_pred = ('name', )
@@ -95,44 +100,62 @@ class CombinationSemNode(NameSemNode):
 
 
 class VerbatimSemNode(NameSemNode):
-    extra_pred = ('combinations', 'higher_group_names', 'genus_names',
-                'subgenus_names', 'sp_epithets', 'infra_epithets')
+    extra_pred = ('combination', 'higher_group_name', 'genus_name',
+                'subgenus_names', 'sp_epithet', 'infra_epithets', 'specimen_codes')
     name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + list(extra_pred))
 
     def __init__(self, sem_graph, res_id, concept_id, name):
         super(VerbatimSemNode, self).__init__(sem_graph, res_id, 'combin', concept_id, name)
-        self.combinations = []
-        self.higher_group_names = []
-        self.genus_names = []
-        self.subgenus_names = []
-        self.sp_epithets = []
-        self.infra_epithets = []
-        self.specimen_codes = []
+        self.combination = None
+        self.higher_group_name = None
+        self.genus_name = None
+        self.subgenus_names = None
+        self.sp_epithet = None
+        self.infra_epithets = None
+        self.specimen_codes = None
 
     @property
     def predicates(self):
         return VerbatimSemNode.name_sem_nd_pred
 
     def claim_higher_group_name(self, n):
-        self.higher_group_names.append(n)
+        assert self.higher_group_name is None
+        self.higher_group_name = n
 
     def claim_combination(self, n):
-        self.combinations.append(n)
+        assert self.combination is None
+        self.combination = n
 
     def claim_genus(self, n):
-        self.genus_names.append(n)
+        assert self.genus_name is None
+        self.genus_name = n
 
     def claim_subgenus(self, n):
-        self.subgenus_names.append(n)
+        if self.subgenus_names is None:
+            self.subgenus_names = [n]
+        else:
+            self.subgenus_names.append(n)
 
     def claim_sp_epithet(self, n):
-        self.sp_epithets.append(n)
+        assert self.sp_epithet is None
+        self.sp_epithet = n
 
     def claim_infra_epithet(self, n):
-        self.infra_epithets.append(n)
+        if self.infra_epithets is None:
+            self.infra_epithets = [n]
+        else:
+            self.infra_epithets.append(n)
 
     def claim_specimen_code(self, n):
-        self.specimen_codes.append(n)
+        if self.specimen_codes is None:
+            self.specimen_codes = [n]
+        else:
+            self.specimen_codes.append(n)
+
+    @property
+    def valid_combination(self):
+        _LOG.debug('valid_combination VerbatimSemNode = {}'.format(self.combination))
+        return None if self.combination is None else self.combination.name
 
 
 class GenusGroupSemNode(NameSemNode):
@@ -234,7 +257,21 @@ class SemGraph(object):
         return d
 
 def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
-    _LOG.debug('"{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
+    expecting_combo = True
+    try:
+        rsn = node.rank_sorting_number()
+    except KeyError:
+        expecting_combo = False
+    else:
+        if rsn is None or rsn >= GENUS_SORTING_NUMBER:
+            expecting_combo = False
+    if expecting_combo:
+        valid_combo = sem_node.valid_combination
+        _LOG.debug('node = {} has\n sem_node={} valid_combo = {}'.format(node.__dict__, sem_node.__dict__, valid_combo))
+        if len(syn.name.split()) != len(valid_combo.split()):
+            _LOG.debug('WARNING: "{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
+        else:
+            _LOG.debug('         "{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
     st = syn.syn_type
 
 def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
