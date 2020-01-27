@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import json
 import os
 
 from peyotl import (get_logger, write_as_json)
@@ -434,9 +435,30 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
     st = syn.syn_type
     '''
 
+def _assure_basionym_exists_as_syn(res, sem_graph, epithet, canonical_name, infra):
+    _LOG.debug('"{}" is a basionym'.format(canonical_name['full']))
 
-def _parse_sp_level_auth_syn(res, sem_graph, epithet, syn):
+def _parse_sp_level_auth_syn(res, sem_graph, epithet, syn, infra):
     gnp = parse_name_to_dict(syn.name)
+    assert gnp['parsed']
+    cn = gnp['canonicalName']
+    try:
+        details = gnp['details']
+        if isinstance(details, list):
+            assert len(details) == 1
+            details = details[0]
+        if infra:
+            epithet_details = details['infraspecificEpithets'][-1]
+        else:
+            epithet_details = details['specificEpithet']
+    except:
+        import sys
+        sys.exit('choking on\n{}\n'.format(json.dumps(details, indent=2)))
+    authorship = epithet_details['authorship']
+    parens_preserved = authorship['value'].strip()
+    is_basionym = parens_preserved.startswith('(')
+    if is_basionym:
+        _assure_basionym_exists_as_syn(res, sem_graph, epithet, cn, infra)
     _LOG.debug('"{}" is a {} for {}'.format(syn.name, syn.syn_type, epithet.__dict__))
     #
     # n = epithet.name
@@ -449,19 +471,21 @@ def _parse_sp_level_auth_syn(res, sem_graph, epithet, syn):
     #     assert authority[-1] == ')'
     #     paren = True
     #     authority = authority[1:-1]
-    _LOG.debug('authsp={}'.format(gnp))
+    _LOG.debug('authsp={}'.format(epithet_details))
 
 
 def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
     shn = sem_node.has_name
     if node.rank in 'species':
         word_for_auth = shn.sp_epithet
+        infra = False
     elif node.rank == 'subspecies':
         assert len(shn.infra_epithets) == 1
         word_for_auth = shn.infra_epithets[0]
+        infra = True
     else:
         raise NotImplementedError('nonsp ({}) rank authority: "{}" is a {} for {} ({})'.format(node.rank, syn.name, syn.syn_type, node.name, node.id))
-    d = _parse_sp_level_auth_syn(res, sem_graph, word_for_auth, syn)
+    d = _parse_sp_level_auth_syn(res, sem_graph, word_for_auth, syn, infra)
 
 def semanticize_node_name(res, sem_graph, tc, node):
     name_dict = None
