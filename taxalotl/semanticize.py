@@ -16,6 +16,7 @@ from .name_parsing import (parse_genus_group_name,
                            parse_name_string_without_context,
                            parse_sp_name, )
 from .tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
+from .gnparser import parse_name_to_dict
 
 _LOG = get_logger(__name__)
 
@@ -434,9 +435,33 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
     '''
 
 
-def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
-    _LOG.debug('"{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
+def _parse_sp_level_auth_syn(res, sem_graph, epithet, syn):
+    gnp = parse_name_to_dict(syn.name)
+    _LOG.debug('"{}" is a {} for {}'.format(syn.name, syn.syn_type, epithet.__dict__))
+    #
+    # n = epithet.name
+    # sp = [i for i in syn.name.split(n)]
+    # authority = sp[-1].strip()
+    # sp[-1] = ''
+    # combin = n.join(sp)
+    # paren = False
+    # if authority[0] == '(':
+    #     assert authority[-1] == ')'
+    #     paren = True
+    #     authority = authority[1:-1]
+    _LOG.debug('authsp={}'.format(gnp))
 
+
+def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
+    shn = sem_node.has_name
+    if node.rank in 'species':
+        word_for_auth = shn.sp_epithet
+    elif node.rank == 'subspecies':
+        assert len(shn.infra_epithets) == 1
+        word_for_auth = shn.infra_epithets[0]
+    else:
+        raise NotImplementedError('nonsp ({}) rank authority: "{}" is a {} for {} ({})'.format(node.rank, syn.name, syn.syn_type, node.name, node.id))
+    d = _parse_sp_level_auth_syn(res, sem_graph, word_for_auth, syn)
 
 def semanticize_node_name(res, sem_graph, tc, node):
     name_dict = None
