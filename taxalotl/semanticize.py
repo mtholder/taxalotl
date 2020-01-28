@@ -25,9 +25,9 @@ def serialize_triple_object(o):
 
 class SemGraphNode(object):
     def __init__(self, sem_graph, canoncial_id):
-        self.canonical_id = canoncial_id
+        self.canonical_id = sem_graph.register_obj(canoncial_id, self)
         self.graph = sem_graph
-        sem_graph.register_obj(canoncial_id, self)
+
 
     def as_dict(self):
         d = {}
@@ -46,7 +46,9 @@ class SemGraphNode(object):
 
 
 def canonicalize(res_id, pred_id, entity_id):
-    return '{}:{}:{}'.format(res_id, pred_id, entity_id)
+    if pred_id:
+        return '{}:{}:{}'.format(res_id, pred_id, entity_id)
+    return '{}:{}'.format(res_id, pred_id, entity_id)
 
 
 class TaxonConceptSemNode(SemGraphNode):
@@ -64,7 +66,7 @@ class TaxonConceptSemNode(SemGraphNode):
         self.synonyms = None
         self.syn_type = None
         self.former_ranks = None
-        self.id = '{}:{}'.format(res_id, concept_id)
+        self.hybrid = None
 
     def claim_is_child_of(self, par_sem_node):
         assert self.is_child_of is None
@@ -81,9 +83,12 @@ class TaxonConceptSemNode(SemGraphNode):
     def claim_undescribed(self):
         self.undescribed = True
 
+    def claim_hybrid(self):
+        self.hybrid = True
+
     @property
     def predicates(self):
-        return ['is_child_of', 'rank', 'has_name', 'id', 'undescribed',
+        return ['hybrid', 'is_child_of', 'rank', 'has_name', 'id', 'undescribed',
                 'is_synonym', 'syn_type', 'former_ranks'
                 'problematic_synonyms', 'synonyms']
 
@@ -175,13 +180,8 @@ class AuthoritySemNode(SemGraphNode):
     auth_sem_nd_pred = ('authors', 'year')
 
     def __init__(self, sem_graph, res_id, tag, authors, year):
-        ind = 1
-        while True:
-            concept_id = 'auth{}'.format(ind)
-            ind += 1
-            ci = canonicalize(res_id, tag, concept_id)
-            if sem_graph.get_by_id(ci) is None:
-                break
+        concept_id = 'auth'
+        ci = canonicalize(tag, '', concept_id)
         super(AuthoritySemNode, self).__init__(sem_graph, ci)
         self._authors = authors
         self._year = year
@@ -369,7 +369,17 @@ class SemGraph(object):
             setattr(self, att, None)
 
     def register_obj(self, can_id, obj):
-        self._by_id[can_id] = obj
+        rci, n = can_id, 1
+        while True:
+            wtid = self._by_id.get(can_id)
+            if wtid is None:
+                self._by_id[can_id] = obj
+                return can_id
+            if wtid == obj:
+                return can_id
+            n += 1
+            can_id = '{}:v{}'.format(rci, n)
+
 
     def get_by_id(self, can_id, default=None):
         return self._by_id.get(can_id, default)
@@ -589,6 +599,8 @@ def semanticize_names(res, sem_graph, taxon_concept_sem_node, name, name_dict):
     tcsn = taxon_concept_sem_node
     if name_dict.get('undescribed'):
         tcsn.claim_undescribed()
+    if name_dict.get('hybrid'):
+        tcsn.claim_hybrid()
     rn = sem_graph.add_verbatim_name(res.base_resource.id, tcsn.concept_id, name)
     _LOG.debug('semanticizing {} for {}'.format(name, tcsn.concept_id))
     name_part_holder = rn

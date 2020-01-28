@@ -29,7 +29,7 @@ def _convert_gnparser_detail(deet, tnd):
         assert annot in ['sp.', 'cf.'], 'annot not sp. or cf.'
         tnd['undescribed'] = True
     if 'uninomial' in deet:
-        tnd['higher_group_name'] = deet['uninomial']
+        tnd['higher_group_name'] = deet['uninomial']['value']
     else:
         if 'infraspecificEpithets' in deet:
             ielist = deet['infraspecificEpithets']
