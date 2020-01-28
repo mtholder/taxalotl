@@ -435,10 +435,14 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
     st = syn.syn_type
     '''
 
-def _assure_basionym_exists_as_syn(res, sem_graph, epithet, canonical_name, infra):
-    _LOG.debug('"{}" is a basionym'.format(canonical_name['full']))
+def _assure_basionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
+    fn = canonical_name['full']
+    vthn = valid_taxon.has_name
+    if vthn and vthn.combination and vthn.combination.name == fn:
+        return
+    _LOG.debug('"{}" is a basionym'.format(fn))
 
-def _parse_sp_level_auth_syn(res, sem_graph, epithet, syn, infra):
+def _parse_sp_level_auth_syn(res, sem_graph, taxon_sem_node, syn):
     gnp = parse_name_to_dict(syn.name)
     assert gnp['parsed']
     cn = gnp['canonicalName']
@@ -447,19 +451,22 @@ def _parse_sp_level_auth_syn(res, sem_graph, epithet, syn, infra):
         if isinstance(details, list):
             assert len(details) == 1
             details = details[0]
-        if infra:
+        if 'infraspecificEpithets' in details:
             epithet_details = details['infraspecificEpithets'][-1]
         else:
             epithet_details = details['specificEpithet']
     except:
         import sys
         sys.exit('choking on\n{}\n'.format(json.dumps(details, indent=2)))
+    if isinstance(epithet_details, list):
+        assert len(epithet_details) == 1
+        epithet_details = epithet_details[0]
     authorship = epithet_details['authorship']
     parens_preserved = authorship['value'].strip()
     is_basionym = parens_preserved.startswith('(')
     if is_basionym:
-        _assure_basionym_exists_as_syn(res, sem_graph, epithet, cn, infra)
-    _LOG.debug('"{}" is a {} for {}'.format(syn.name, syn.syn_type, epithet.__dict__))
+        _assure_basionym_exists_as_syn(res, sem_graph, taxon_sem_node, cn)
+    _LOG.debug('"{}" is a {} for {}'.format(syn.name, syn.syn_type, taxon_sem_node))
     #
     # n = epithet.name
     # sp = [i for i in syn.name.split(n)]
@@ -476,16 +483,7 @@ def _parse_sp_level_auth_syn(res, sem_graph, epithet, syn, infra):
 
 def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
     shn = sem_node.has_name
-    if node.rank in 'species':
-        word_for_auth = shn.sp_epithet
-        infra = False
-    elif node.rank == 'subspecies':
-        assert len(shn.infra_epithets) == 1
-        word_for_auth = shn.infra_epithets[0]
-        infra = True
-    else:
-        raise NotImplementedError('nonsp ({}) rank authority: "{}" is a {} for {} ({})'.format(node.rank, syn.name, syn.syn_type, node.name, node.id))
-    d = _parse_sp_level_auth_syn(res, sem_graph, word_for_auth, syn, infra)
+    d = _parse_sp_level_auth_syn(res, sem_graph, sem_node, syn)
 
 def semanticize_node_name(res, sem_graph, tc, node):
     name_dict = None
