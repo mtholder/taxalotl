@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import json
 import os
 
 from peyotl import (get_logger, write_as_json)
@@ -11,11 +12,9 @@ from .taxonomic_ranks import (ABOVE_GENUS_SORTING_NUMBER,
                               GENUS_SORTING_NUMBER,
                               MINIMUM_HIGHER_TAXON_NUMBER)
 
-from .name_parsing import (parse_genus_group_name,
-                           parse_higher_name,
-                           parse_name_string_without_context,
-                           parse_sp_name, )
+from .name_parsing import parse_name_using_rank_hints, parse_name_to_dict
 from .tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
+
 
 _LOG = get_logger(__name__)
 
@@ -26,8 +25,9 @@ def serialize_triple_object(o):
 
 class SemGraphNode(object):
     def __init__(self, sem_graph, canoncial_id):
-        self.canonical_id = canoncial_id
+        self.canonical_id = sem_graph.register_obj(canoncial_id, self)
         self.graph = sem_graph
+
 
     def as_dict(self):
         d = {}
@@ -46,7 +46,9 @@ class SemGraphNode(object):
 
 
 def canonicalize(res_id, pred_id, entity_id):
-    return '{}:{}:{}'.format(res_id, pred_id, entity_id)
+    if pred_id:
+        return '{}:{}:{}'.format(res_id, pred_id, entity_id)
+    return '{}:{}'.format(res_id, pred_id, entity_id)
 
 
 class TaxonConceptSemNode(SemGraphNode):
@@ -59,12 +61,12 @@ class TaxonConceptSemNode(SemGraphNode):
         self.rank = None
         self.has_name = None
         self.undescribed = None
-        self.is_synonym = None
+        self._is_synonym_of = None
         self.problematic_synonyms = None
         self.synonyms = None
         self.syn_type = None
         self.former_ranks = None
-        self.id = '{}:{}'.format(res_id, concept_id)
+        self.hybrid = None
 
     def claim_is_child_of(self, par_sem_node):
         assert self.is_child_of is None
@@ -81,9 +83,12 @@ class TaxonConceptSemNode(SemGraphNode):
     def claim_undescribed(self):
         self.undescribed = True
 
+    def claim_hybrid(self):
+        self.hybrid = True
+
     @property
     def predicates(self):
-        return ['is_child_of', 'rank', 'has_name', 'id', 'undescribed',
+        return ['hybrid', 'is_child_of', 'rank', 'has_name', 'id', 'undescribed',
                 'is_synonym', 'syn_type', 'former_ranks'
                 'problematic_synonyms', 'synonyms']
 
@@ -113,8 +118,12 @@ class TaxonConceptSemNode(SemGraphNode):
         ns = len(self.synonyms) if self.synonyms else 0
         return '{}:syn{}'.format(self.concept_id, ns)
 
-    def claim_is_synonym(self):
-        self.is_synonym = True
+    @property
+    def is_synonym(self):
+        return self._is_synonym_of is not None
+
+    def claim_is_synonym_of(self, valid):
+        self._is_synonym_of = valid
 
     def claim_former_rank(self, rank):
         if self.former_ranks is None:
@@ -159,7 +168,7 @@ class TaxonConceptSemNode(SemGraphNode):
         tc = self.graph.add_taxon_concept(res, self._get_next_syn_id())
         self._add_to_syn_list(tc)
         tc.claim_rank(rank)
-        tc.claim_is_synonym()
+        tc.claim_is_synonym_of(self)
         if syn_type:
             tc.syn_type = syn_type
         if kwargs.get('undescribed', False):
@@ -167,6 +176,27 @@ class TaxonConceptSemNode(SemGraphNode):
         semanticize_names(res, self.graph, tc, name, kwargs)
         return tc
 
+class AuthoritySemNode(SemGraphNode):
+    auth_sem_nd_pred = ('authors', 'year')
+
+    def __init__(self, sem_graph, res_id, tag, authors, year):
+        concept_id = 'auth'
+        ci = canonicalize(tag, '', concept_id)
+        super(AuthoritySemNode, self).__init__(sem_graph, ci)
+        self._authors = authors
+        self._year = year
+
+    @property
+    def year(self):
+        return self._year
+
+    @property
+    def authors(self):
+        return self._authors
+
+    @property
+    def predicates(self):
+        return AuthoritySemNode.auth_sem_nd_pred
 
 class NameSemNode(SemGraphNode):
     name_sem_nd_pred = ('name',)
@@ -196,7 +226,7 @@ class VerbatimSemNode(NameSemNode):
     name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + list(extra_pred))
 
     def __init__(self, sem_graph, res_id, concept_id, name):
-        super(VerbatimSemNode, self).__init__(sem_graph, res_id, 'combin', concept_id, name)
+        super(VerbatimSemNode, self).__init__(sem_graph, res_id, 'verbatim', concept_id, name)
         self.combination = None
         self.higher_group_name = None
         self.genus_name = None
@@ -248,6 +278,16 @@ class VerbatimSemNode(NameSemNode):
         return None if self.combination is None else self.combination.name
 
     @property
+    def most_terminal_name(self):
+        ie = self.most_terminal_infra_epithet
+        if ie is not None:
+            return ie
+        for n in [self.sp_epithet, self.subgenus_names, self.genus_name, self.higher_group_name]:
+            if n:
+                return n
+        return None
+
+    @property
     def most_terminal_infra_epithet(self):
         if self.infra_epithets:
             if len(self.infra_epithets) > 1:
@@ -268,19 +308,28 @@ class VerbatimSemNode(NameSemNode):
 class GenusGroupSemNode(NameSemNode):
     def __init__(self, sem_graph, res_id, concept_id, name):
         super(GenusGroupSemNode, self).__init__(sem_graph, res_id, 'gen', concept_id, name)
+        self.contained = []
 
 
 class SpeciesGroupSemNode(NameSemNode):
-    sp_grp_name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + ['type_materials'])
+    sp_grp_name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + ['type_materials', 'authority'])
 
     def __init__(self, sem_graph, res_id, concept_id, name):
         super(SpeciesGroupSemNode, self).__init__(sem_graph, res_id, 'sp', concept_id, name)
         self.type_materials = None
+        self._authority = None
 
     def claim_type_material(self, type_str):
         if self.type_materials is None:
             self.type_materials = []
         self.type_materials.append(type_str)
+
+    def claim_authority(self, auth):
+        self._authority = None
+        
+    @property
+    def authority(self):
+        return None if self._authority is None else self._authority.canonical_id
 
 
 class HigherGroupSemNode(NameSemNode):
@@ -302,25 +351,67 @@ def _find_by_name(container, name):
 
 
 class SemGraph(object):
-    att_list = ['_specimens',
+    att_list = ['_authorities',
+                '_specimens',
                 '_specimen_codes',
                 '_species_group_epithets',
                 '_genus_group_names',
                 '_combinations',
                 '_higher_group_names',
                 '_verbatim_name',
-                '_taxon_concepts', '_authorities', '_references']
+                '_taxon_concepts', '_references',
+                ]
     att_set = frozenset(att_list)
 
     def __init__(self):
+        self._by_id = {}
         for att in SemGraph.att_list:
             setattr(self, att, None)
 
-    def _add_name(self, container, node_type, res_id, concept_id, name):
-        x = _find_by_name(container, name)
+    def register_obj(self, can_id, obj):
+        rci, n = can_id, 1
+        while True:
+            wtid = self._by_id.get(can_id)
+            if wtid is None:
+                self._by_id[can_id] = obj
+                return can_id
+            if wtid == obj:
+                return can_id
+            n += 1
+            can_id = '{}:v{}'.format(rci, n)
+
+
+    def get_by_id(self, can_id, default=None):
+        return self._by_id.get(can_id, default)
+
+    def _add_name(self, container, node_type, res_id, concept_id, name, extra_container=None):
+        if extra_container is None:
+            search_cont, id_minting_str = container, concept_id
+        else:
+            search_cont = extra_container.contained
+            pref = '{}:'.format(res_id)
+            assert extra_container.canonical_id.startswith(pref)
+            sans_res = extra_container.canonical_id[len(pref):]
+            id_minting_str = '{}.epi.{}'.format(sans_res, concept_id)
+        x = _find_by_name(search_cont, name)
         if x is None:
-            x = node_type(self, res_id, concept_id, name)
-            container.append(x)
+            x = node_type(self, res_id, id_minting_str, name)
+            search_cont.append(x)
+            if search_cont is not container:
+                container.append(x)
+        return x
+
+    def add_authority(self, res_id, name_sem, authors, year):
+        auth_list = self.authorities
+        x = None
+        for a in auth_list:
+            if a.authors == authors and a.year == year:
+                x = a
+                break
+        if x is None:
+            x = AuthoritySemNode(self, res_id, name_sem.canonical_id, authors, year)
+        auth_list.append(x)
+        name_sem.claim_authority(x)
         return x
 
     def add_combination(self, res_id, concept_id, name):
@@ -338,9 +429,9 @@ class SemGraph(object):
         return self._add_name(self.higher_group_names, HigherGroupSemNode,
                               res_id, concept_id, name)
 
-    def add_sp_epithet(self, res_id, concept_id, name):
+    def add_sp_epithet(self, res_id, concept_id, name, genus):
         return self._add_name(self.species_group_epithets, SpeciesGroupSemNode,
-                              res_id, concept_id, name)
+                              res_id, concept_id, name, genus)
 
     add_infra_epithet = add_sp_epithet
 
@@ -384,7 +475,7 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
         else:
             sem_node.claim_type_material(syn.name.strip())
         return
-    pnd = parse_name_string_without_context(syn.name)
+    pnd = parse_name_using_rank_hints(syn.name)
     if not pnd:
         sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, "unparseable")
         return
@@ -433,37 +524,89 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
     st = syn.syn_type
     '''
 
+def _assure_nonbasionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
+    fn = canonical_name['full']
+    vthn = valid_taxon.has_name
+    if vthn and vthn.combination and vthn.combination.name == fn:
+        return vthn
+    if valid_taxon.synonyms:
+        for syn in valid_taxon.synonyms:
+            shn = syn.has_name
+            if shn and shn.name == fn:
+                return shn
+    raise RuntimeError('"{}" is not a basionym'.format(fn))
+
+def add_authority_to_name(res, sem_graph, name_sem, authors, year):
+    mtn = name_sem.most_terminal_name
+    # _LOG.debug('auth for {} is {}'.format(mtn, authors))
+    sem_graph.add_authority(res.id, mtn, authors, year)
+
+
+def _assure_basionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
+    fn = canonical_name['full']
+    vthn = valid_taxon.has_name
+    if vthn and vthn.combination and vthn.combination.name == fn:
+        return vthn
+    raise RuntimeError('"{}" is a basionym'.format(fn))
+
+def _parse_sp_level_auth_syn(res, sem_graph, taxon_sem_node, syn):
+    gnp = parse_name_to_dict(syn.name)
+    assert gnp['parsed']
+    cn = gnp['canonicalName']
+    try:
+        details = gnp['details']
+        if isinstance(details, list):
+            assert len(details) == 1
+            details = details[0]
+        if 'infraspecificEpithets' in details:
+            epithet_details = details['infraspecificEpithets'][-1]
+        else:
+            epithet_details = details['specificEpithet']
+    except:
+        import sys
+        sys.exit('choking on\n{}\n'.format(json.dumps(details, indent=2)))
+    if isinstance(epithet_details, list):
+        assert len(epithet_details) == 1
+        epithet_details = epithet_details[0]
+    authorship = epithet_details['authorship']
+    parens_preserved = authorship['value'].strip()
+    is_basionym = parens_preserved.startswith('(')
+    if is_basionym:
+        name_sem = _assure_basionym_exists_as_syn(res, sem_graph, taxon_sem_node, cn)
+    else:
+        name_sem = _assure_nonbasionym_exists_as_syn(res, sem_graph, taxon_sem_node, cn)
+    ba = authorship['basionymAuthorship']
+    authors, year = ba.get('authors', []), ba.get('year', {}).get('value')
+    add_authority_to_name(res, sem_graph, name_sem, authors, year)
+
 
 def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
-    _LOG.debug('"{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
-
+    shn = sem_node.has_name
+    _parse_sp_level_auth_syn(res, sem_graph, sem_node, syn)
 
 def semanticize_node_name(res, sem_graph, tc, node):
-    name_dict = None
     try:
         rsn = node.rank_sorting_number()
     except KeyError:
-        pass
-    else:
-        if rsn is None:
-            pass
-        elif rsn <= SPECIES_SORTING_NUMBER:
-            name_dict = parse_sp_name(node.name, node.rank)
-        elif rsn <= GENUS_SORTING_NUMBER:
-            name_dict = parse_genus_group_name(node.name, node.rank)
-    if name_dict is None:
-        name_dict = parse_higher_name(node.name, node.rank)
+        rsn = None
+    name_dict = parse_name_using_rank_hints(node.name, node.rank, rsn)
     semanticize_names(res, sem_graph, tc, node.name, name_dict)
 
 
 def semanticize_names(res, sem_graph, taxon_concept_sem_node, name, name_dict):
+    """
+    """
     tcsn = taxon_concept_sem_node
     if name_dict.get('undescribed'):
         tcsn.claim_undescribed()
+    if name_dict.get('hybrid'):
+        tcsn.claim_hybrid()
     rn = sem_graph.add_verbatim_name(res.base_resource.id, tcsn.concept_id, name)
     _LOG.debug('semanticizing {} for {}'.format(name, tcsn.concept_id))
     name_part_holder = rn
     tcsn.claim_name(rn)
+    valid_tcsn = tcsn if tcsn._is_synonym_of is None else tcsn._is_synonym_of
+    valid_nph = valid_tcsn.has_name
     combination = name_dict.get('combination')
     bresid = res.base_resource.id
     if combination:
@@ -473,17 +616,20 @@ def semanticize_names(res, sem_graph, taxon_concept_sem_node, name, name_dict):
     if genus:
         cn = sem_graph.add_genus(bresid, tcsn.concept_id, genus)
         name_part_holder.claim_genus(cn)
+    valid_genus = valid_nph.genus_name
     subgenus = name_dict.get('subgenus')
     if subgenus:
         cn = sem_graph.add_subgenus(bresid, tcsn.concept_id, subgenus)
         name_part_holder.claim_subgenus(cn)
     sp_epithet = name_dict.get('sp_epithet')
     if sp_epithet:
-        cn = sem_graph.add_sp_epithet(bresid, tcsn.concept_id, sp_epithet)
+        assert valid_genus is not None
+        cn = sem_graph.add_sp_epithet(bresid, tcsn.concept_id, sp_epithet, valid_genus)
         name_part_holder.claim_sp_epithet(cn)
     infra_epithet = name_dict.get('infra_epithet')
     if infra_epithet:
-        cn = sem_graph.add_infra_epithet(bresid, tcsn.concept_id, infra_epithet)
+        assert valid_genus is not None
+        cn = sem_graph.add_infra_epithet(bresid, tcsn.concept_id, infra_epithet, valid_genus)
         name_part_holder.claim_infra_epithet(cn)
     higher_group_name = name_dict.get('higher_group_name')
     if higher_group_name:

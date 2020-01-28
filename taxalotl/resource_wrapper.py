@@ -565,7 +565,6 @@ class TaxonomyWrapper(ResourceWrapper):
         semanticize_and_serialize_tax_part(self.config, self, fragment, semantics_dir,
                                            tax_part, taxon_forest)
 
-
     def accumulate_separated_descendants(self, scaffold_dir):
         scaffold_anc = os.path.split(scaffold_dir)[0]
         pd = self.partitioned_filepath
