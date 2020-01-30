@@ -236,6 +236,18 @@ class VerbatimSemNode(NameSemNode):
         self.specimen_codes = None
 
     @property
+    def canonical_name(self):
+        if self.combination is not None:
+            return self.combination
+        if self.subgenus_names is not None:
+            return self.subgenus_names
+        if self.genus_name is not None:
+            return self.genus_name
+        assert self.higher_group_name is not None
+        return self.higher_group_name
+
+
+    @property
     def predicates(self):
         return VerbatimSemNode.name_sem_nd_pred
 
@@ -244,7 +256,7 @@ class VerbatimSemNode(NameSemNode):
         self.higher_group_name = n
 
     def claim_combination(self, n):
-        assert self.combination is None
+        assert self.combination is None or self.combination is n
         self.combination = n
 
     def claim_genus(self, n):
@@ -258,7 +270,7 @@ class VerbatimSemNode(NameSemNode):
             self.subgenus_names.append(n)
 
     def claim_sp_epithet(self, n):
-        assert self.sp_epithet is None
+        assert self.sp_epithet is None or self.sp_epithet is n
         self.sp_epithet = n
 
     def claim_infra_epithet(self, n):
@@ -527,7 +539,7 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
 def _assure_nonbasionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
     fn = canonical_name['full']
     vthn = valid_taxon.has_name
-    if vthn and vthn.combination and vthn.combination.name == fn:
+    if vthn and vthn.canonical_name and vthn.canonical_name.name == fn:
         return vthn
     if valid_taxon.synonyms:
         for syn in valid_taxon.synonyms:
@@ -545,11 +557,11 @@ def add_authority_to_name(res, sem_graph, name_sem, authors, year):
 def _assure_basionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
     fn = canonical_name['full']
     vthn = valid_taxon.has_name
-    if vthn and vthn.combination and vthn.combination.name == fn:
+    if vthn and vthn.canonical_name and vthn.canonical_name.name == fn:
         return vthn
     raise RuntimeError('"{}" is a basionym'.format(fn))
 
-def _parse_sp_level_auth_syn(res, sem_graph, taxon_sem_node, syn):
+def _parse_auth_syn(res, sem_graph, taxon_sem_node, syn):
     gnp = parse_name_to_dict(syn.name)
     assert gnp['parsed']
     cn = gnp['canonicalName']
@@ -559,30 +571,36 @@ def _parse_sp_level_auth_syn(res, sem_graph, taxon_sem_node, syn):
             assert len(details) == 1
             details = details[0]
         if 'infraspecificEpithets' in details:
-            epithet_details = details['infraspecificEpithets'][-1]
+            target_name = details['infraspecificEpithets'][-1]
+        elif 'specificEpithet' in details:
+            target_name = details['specificEpithet']
         else:
-            epithet_details = details['specificEpithet']
+            assert 'uninomial' in details
+            target_name = details['uninomial']
     except:
         import sys
         sys.exit('choking on\n{}\n'.format(json.dumps(details, indent=2)))
-    if isinstance(epithet_details, list):
-        assert len(epithet_details) == 1
-        epithet_details = epithet_details[0]
-    authorship = epithet_details['authorship']
+    if isinstance(target_name, list):
+        assert len(target_name) == 1
+        target_name = target_name[0]
+    authorship = target_name['authorship']
     parens_preserved = authorship['value'].strip()
     is_basionym = parens_preserved.startswith('(')
     if is_basionym:
         name_sem = _assure_basionym_exists_as_syn(res, sem_graph, taxon_sem_node, cn)
     else:
         name_sem = _assure_nonbasionym_exists_as_syn(res, sem_graph, taxon_sem_node, cn)
-    ba = authorship['basionymAuthorship']
+    try:
+        ba = authorship['basionymAuthorship']
+    except:
+        pass
     authors, year = ba.get('authors', []), ba.get('year', {}).get('value')
     add_authority_to_name(res, sem_graph, name_sem, authors, year)
 
 
 def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
     shn = sem_node.has_name
-    _parse_sp_level_auth_syn(res, sem_graph, sem_node, syn)
+    _parse_auth_syn(res, sem_graph, sem_node, syn)
 
 def semanticize_node_name(res, sem_graph, tc, node):
     try:
