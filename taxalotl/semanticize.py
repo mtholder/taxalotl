@@ -199,12 +199,13 @@ class AuthoritySemNode(SemGraphNode):
         return AuthoritySemNode.auth_sem_nd_pred
 
 class NameSemNode(SemGraphNode):
-    name_sem_nd_pred = ('name',)
+    name_sem_nd_pred = ('name', 'authority')
 
     def __init__(self, sem_graph, res_id, tag, concept_id, name):
         ci = canonicalize(res_id, tag, concept_id)
         super(NameSemNode, self).__init__(sem_graph, ci)
         self._name = name
+        self._authority = None
 
     @property
     def name(self):
@@ -214,6 +215,13 @@ class NameSemNode(SemGraphNode):
     def predicates(self):
         return NameSemNode.name_sem_nd_pred
 
+    def claim_authority(self, auth):
+        self._authority = None
+
+    @property
+    def authority(self):
+        return None if self._authority is None else self._authority.canonical_id
+
 
 class CombinationSemNode(NameSemNode):
     def __init__(self, sem_graph, res_id, concept_id, name):
@@ -221,7 +229,7 @@ class CombinationSemNode(NameSemNode):
 
 
 class VerbatimSemNode(NameSemNode):
-    extra_pred = ('combination', 'higher_group_name', 'genus_name',
+    extra_pred = ('combination', 'higher_group_name', 'genus_name', 'authority',
                   'subgenus_names', 'sp_epithet', 'infra_epithets', 'specimen_codes')
     name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + list(extra_pred))
 
@@ -335,14 +343,6 @@ class SpeciesGroupSemNode(NameSemNode):
         if self.type_materials is None:
             self.type_materials = []
         self.type_materials.append(type_str)
-
-    def claim_authority(self, auth):
-        self._authority = None
-        
-    @property
-    def authority(self):
-        return None if self._authority is None else self._authority.canonical_id
-
 
 class HigherGroupSemNode(NameSemNode):
     def __init__(self, sem_graph, res_id, concept_id, name):
