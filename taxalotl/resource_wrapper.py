@@ -527,8 +527,8 @@ class TaxonomyWrapper(ResourceWrapper):
     resource_type = 'external taxonomy'
     schema = {'headerless ott', "newick", "ott", "ott id csv", "tab-separated ott"}
 
-    def __init__(self, obj, parent=None, refs=None):
-        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)
+    def __init__(self, obj, parent=None, refs=None, config=None):
+        ResourceWrapper.__init__(self, obj, parent=parent, refs=refs, config=config)
         self.part_name_to_tax_part_in_mem = {}
         # print("ET obj = {}".format(obj))
 
@@ -701,3 +701,11 @@ class TaxonomyWrapper(ResourceWrapper):
                 interim_tax_data.to_flags.setdefault(old_id, []).append('incertae_sedis')
             interim_tax_data.del_ids(container_id_to_par_id.keys())
         interim_tax_data.names_interpreted_as_changes = True
+
+class GenericTaxonomyWrapper(TaxonomyWrapper):
+    def __init__(self, res_id, config):
+        super(GenericTaxonomyWrapper, self).__init__({'id': res_id}, None, config=config)
+
+    @property
+    def is_abstract(self):
+        return False

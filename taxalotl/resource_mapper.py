@@ -11,7 +11,7 @@ from taxalotl.ncbi import NCBIWrapper
 from taxalotl.ott import OTTaxonomyWrapper, OTTaxonomyIdListWrapper
 from taxalotl.plant_list import PlantListWrapper
 from taxalotl.silva import SilvaIdListWrapper, SilvaWrapper, SilvaToNCBIMappingListWrapper
-from taxalotl.resource_wrapper import TaxonomyWrapper
+from taxalotl.resource_wrapper import TaxonomyWrapper, GenericTaxonomyWrapper
 from taxalotl.worms import WormsTaxonomyWrapper
 
 BASE_ID_TO_RES_TYPE = {

@@ -114,6 +114,10 @@ class ResourceManager(object):
         if update_merged:
             self._update_merged()
         self._read_merged()
+        self._generic_handler = None
+
+    def generic_handler_can_be_used(self, res_id):
+        return res_id.startswith('cof-')
 
     def _update_merged(self):
         needs_update = False

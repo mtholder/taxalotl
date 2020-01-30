@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 from peyotl import get_logger
 from taxalotl.resource_manager import ResourceManager
+from .resource_wrapper import GenericTaxonomyWrapper
 from .util import OutDir
 _LOG = get_logger(__name__)
 
@@ -136,6 +137,8 @@ class TaxalotlConfig(object):
         try:
             return self.resources_mgr.resources[res_id]
         except Exception:
+            if self.resources_mgr.generic_handler_can_be_used(res_id):
+                return GenericTaxonomyWrapper(res_id, config=self)
             raise ValueError("Unknown resource ID '{}'".format(res_id))
 
     def get_terminalized_res_by_id(self, res_id, logging_action_str=None):
