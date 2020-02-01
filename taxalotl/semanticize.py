@@ -144,7 +144,7 @@ class TaxonConceptSemNode(SemGraphNode):
     def predicates(self):
         return ['hybrid', 'is_child_of', 'rank', 'has_name', 'id', 'undescribed',
                 'is_synonym',
-                'incertae_sedis', 'other_flags'
+                'incertae_sedis', 'other_flags',
                 'syn_type', 'former_ranks',
                 'problematic_synonyms', 'synonyms']
 
