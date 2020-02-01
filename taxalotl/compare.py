@@ -17,6 +17,7 @@ def get_frag_from_dir(taxalotl_conf, tax_dir):
         f = f[1:]
     return f
 
+JUST_COF = True
 
 def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
     fragment = get_frag_from_dir(taxalotl_conf, tax_dir)
@@ -47,35 +48,43 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
                 graph_by_res_id[res_id] = (res, graph)
     ott_res = taxalotl_conf.get_terminalized_res_by_id("ott", None)
     ott_graph = graph_by_res_id[ott_res.id][1]
-    ott_vstc = ott_graph.valid_specimen_based_taxa
-    ott_vn2tc = ott_graph.valid_name_to_taxon_concept_map
     for res_id, res_graph_pair in graph_by_res_id.items():
         if res_id == ott_res.id:
             continue
+        if JUST_COF and not res_id.startswith('cof'):
+            continue
         res, ref_graph = res_graph_pair
-        out.write('comparing {} to {}\n'.format(ott_res.id, res_id))
-        ref_vstc = ref_graph.valid_specimen_based_taxa
-        out.write('{} vs {} valid specimen-based names\n'.format(len(ott_vstc), len(ref_vstc)))
-        ref_vn2tc = ref_graph.valid_name_to_taxon_concept_map
-        just_ott, both, just_ref =[], [], []
-        for ott_name, tax_con in ott_vn2tc.items():
-            if not tax_con.is_specimen_based:
-                continue
-            t = both if ott_name in ref_vn2tc else just_ott
-            t.append(ott_name)
-        for ott_name in ref_vn2tc.keys():
-            if ott_name not in ott_vn2tc:
-                just_ref.append(ott_name)
-        just_ott.sort()
-        just_ref.sort()
-        _write_just_in_list(out, just_ott, ott_res, ott_vn2tc)
-        _write_just_in_list(out, just_ref, res, ref_vn2tc)
+        _write_report(out, ott_res.id, ott_graph, res_id, ref_graph)
 
+def _write_report(out, ott_id, ott_graph, res_id, ref_graph):
+    ott_vstc = ott_graph.valid_specimen_based_taxa
+    ott_vn2tc = ott_graph.valid_name_to_taxon_concept_map
+    out.write('comparing {} to {}\n'.format(ott_id, res_id))
+    ref_vstc = ref_graph.valid_specimen_based_taxa
+    ref_vn2tc = ref_graph.valid_name_to_taxon_concept_map
+    just_ott, both, just_ref = [], [], []
+    for ott_name, tax_con in ott_vn2tc.items():
+        if not tax_con.is_specimen_based:
+            continue
+        t = both if ott_name in ref_vn2tc else just_ott
+        t.append(ott_name)
+    for ott_name in ref_vn2tc.keys():
+        if ott_name not in ott_vn2tc:
+            just_ref.append(ott_name)
+    just_ott.sort()
+    just_ref.sort()
+    out.write('{} in {} and {}:\n'.format(len(both), ott_id, res_id))
+    _write_report_info_unmatched(out, both, None)
+    out.write('{} only in  {} :\n'.format(len(just_ott), ott_id))
+    _write_report_info_unmatched(out, just_ott, ott_vn2tc)
+    out.write('{} only in  {} :\n'.format(len(just_ref), res_id))
+    _write_report_info_unmatched(out, just_ref, ref_vn2tc)
 
-def _write_just_in_list(out, just_in, res, obj_lookup):
-    out.write('{} only in  {} :\n'.format(len(just_in), res.id))
+def _write_report_info_unmatched(out, just_in, obj_lookup):
     for n, i in enumerate(just_in):
         out.write('{} "{}" : '.format(1 + n, i))
-        obj = obj_lookup[i]
-        obj.explain(out)
+        if obj_lookup is not None:
+            obj = obj_lookup[i]
+            obj.explain(out)
         out.write('\n')
+
