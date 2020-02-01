@@ -55,10 +55,12 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
         res, ref_graph = res_graph_pair
         out.write('comparing {} to {}\n'.format(ott_res.id, res_id))
         ref_vstc = ref_graph.valid_specimen_based_taxa
-        out.write('{} vs {} valid specimen based names\n'.format(len(ott_vstc), len(ref_vstc)))
+        out.write('{} vs {} valid specimen-based names\n'.format(len(ott_vstc), len(ref_vstc)))
         ref_vn2tc = ref_graph.valid_name_to_taxon_concept_map
         just_ott, both, just_ref =[], [], []
-        for ott_name in ott_vn2tc.keys():
+        for ott_name, tax_con in ott_vn2tc.items():
+            if not tax_con.is_specimen_based:
+                continue
             t = both if ott_name in ref_vn2tc else just_ott
             t.append(ott_name)
         for ott_name in ref_vn2tc.keys():
@@ -66,8 +68,14 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
                 just_ref.append(ott_name)
         just_ott.sort()
         just_ref.sort()
-        out.write('Only {}:\n {}\n'.format(ott_res.id, '\n '.join(['{} "{}"'.format(1 + n, i) for n, i in enumerate(just_ott)])))
-        out.write('Only {}:\n {}\n'.format(res_id, '\n '.join(['{} "{}"'.format(1 + n, i) for n, i in enumerate(just_ref)])))
+        _write_just_in_list(out, just_ott, ott_res, ott_vn2tc)
+        _write_just_in_list(out, just_ref, res, ref_vn2tc)
 
 
-
+def _write_just_in_list(out, just_in, res, obj_lookup):
+    out.write('{} only in  {} :\n'.format(len(just_in), res.id))
+    for n, i in enumerate(just_in):
+        out.write('{} "{}" : '.format(1 + n, i))
+        obj = obj_lookup[i]
+        obj.explain(out)
+        out.write('\n')

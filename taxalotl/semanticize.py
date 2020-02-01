@@ -71,10 +71,23 @@ class TaxonConceptSemNode(SemGraphNode):
         self.incertae_sedis = None
         self.other_flags = None
 
+    def explain(self, out):
+        cn = self.canonical_name.name if self.canonical_name else ''
+        out.write('"{}" Taxon({}) '.format(cn, self.canonical_id))
+        if self._is_synonym_of:
+            out.write('synonym of "{}"'.format(self.valid_name.name))
+        else:
+            out.write(' rank={}'.format(self.rank if self.rank else '?'))
+
+
     @property
     def valid_name(self):
         if self._is_synonym_of:
             return self._is_synonym_of.valid_name
+        return self.canonical_name
+
+    @property
+    def canonical_name(self):
         if not self.has_name:
             return None
         return self.has_name.canonical_name
@@ -457,7 +470,8 @@ class SemGraph(object):
         raw = self._taxon_concepts if self._taxon_concepts else []
         r = {}
         for tcobj in raw:
-            r[tcobj.canonical_id] = tcobj
+            if not tcobj.is_synonym_of:
+                r[tcobj.canonical_id] = tcobj
         return r
 
     @property
