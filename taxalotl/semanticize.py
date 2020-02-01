@@ -50,6 +50,7 @@ def canonicalize(res_id, pred_id, entity_id):
         return '{}:{}:{}'.format(res_id, pred_id, entity_id)
     return '{}:{}'.format(res_id, pred_id, entity_id)
 
+KNOWN_FLAGS = frozenset(['hidden', 'sibling_higher'])
 
 class TaxonConceptSemNode(SemGraphNode):
     def __init__(self, sem_graph, res, concept_id):
@@ -67,6 +68,24 @@ class TaxonConceptSemNode(SemGraphNode):
         self.syn_type = None
         self.former_ranks = None
         self.hybrid = None
+        self.incertae_sedis = None
+        self.other_flags = None
+
+    @property
+    def valid_name(self):
+        if self._is_synonym_of:
+            return self._is_synonym_of.valid_name
+        if not self.has_name:
+            return None
+        return self.has_name.canonical_name
+
+    @property
+    def is_synonym_of(self):
+        return bool(self._is_synonym_of)
+
+    @property
+    def is_specimen_based(self):
+        return self.rank in ['species', 'subspecies']
 
     def claim_is_child_of(self, par_sem_node):
         assert self.is_child_of is None
@@ -86,10 +105,34 @@ class TaxonConceptSemNode(SemGraphNode):
     def claim_hybrid(self):
         self.hybrid = True
 
+    def claim_incertae_sedis(self):
+        self.incertae_sedis = True
+
+    def claim_flag(self, flag):
+        if flag == 'incertae_sedis':
+            self.claim_incertae_sedis
+        elif flag == 'hybrid':
+            self.claim_hybrid()
+        else:
+            if flag not in KNOWN_FLAGS:
+                raise ValueError('Unknown flag "{}"'.format(flag))
+            self._add_other_flag(flag)
+
+    def _add_other_flag(self, flag):
+        if self.other_flags:
+            if flag in self.other_flags:
+                return
+            self.other_flags.append(flag)
+            self.other_flags.sort()
+        else:
+            self.other_flags = [flag]
+
     @property
     def predicates(self):
         return ['hybrid', 'is_child_of', 'rank', 'has_name', 'id', 'undescribed',
-                'is_synonym', 'syn_type', 'former_ranks'
+                'is_synonym',
+                'incertae_sedis', 'other_flags'
+                'syn_type', 'former_ranks',
                 'problematic_synonyms', 'synonyms']
 
     @property
@@ -173,7 +216,7 @@ class TaxonConceptSemNode(SemGraphNode):
             tc.syn_type = syn_type
         if kwargs.get('undescribed', False):
             tc.claim_undescribed()
-        semanticize_names(res, self.graph, tc, name, kwargs)
+        semanticize_names(res, self.graph, tc, name, kwargs, None)
         return tc
 
 class AuthoritySemNode(SemGraphNode):
@@ -251,8 +294,10 @@ class VerbatimSemNode(NameSemNode):
             return self.subgenus_names
         if self.genus_name is not None:
             return self.genus_name
-        assert self.higher_group_name is not None
-        return self.higher_group_name
+        if self.higher_group_name is not None:
+            return self.higher_group_name
+        assert self.name
+        return self
 
 
     @property
@@ -380,6 +425,45 @@ class SemGraph(object):
         for att in SemGraph.att_list:
             setattr(self, att, None)
 
+    def _all_specimen_based_tax_con_dict(self):
+        raw = self._taxon_concepts if self._taxon_concepts else []
+        r = {}
+        for tcobj in raw:
+            if tcobj.is_specimen_based:
+                r[tcobj.canonical_id] = tcobj
+        return r
+
+
+    def specimen_based_synonym_taxa(self):
+        d = self._all_specimen_based_tax_con_dict()
+        r = {}
+        for tcid, tcobj in d.items():
+            syn_list = tcobj.synonyms if tcobj.synonyms else []
+            for syn_id in syn_list:
+                r[syn_id] = d[syn_id]
+        return r
+
+    @property
+    def valid_specimen_based_taxa(self):
+        d = self._all_specimen_based_tax_con_dict()
+        r = {}
+        for tcid, tcobj in d.items():
+            if not tcobj.is_synonym_of:
+                r[tcid] = tcobj
+        return r
+
+    @property
+    def valid_taxa_dict(self):
+        raw = self._taxon_concepts if self._taxon_concepts else []
+        r = {}
+        for tcobj in raw:
+            r[tcobj.canonical_id] = tcobj
+        return r
+
+    @property
+    def valid_name_to_taxon_concept_map(self):
+        return {i.valid_name.name: i for i in self.valid_taxa_dict.values()}
+
     def register_obj(self, can_id, obj):
         rci, n = can_id, 1
         while True:
@@ -391,7 +475,6 @@ class SemGraph(object):
                 return can_id
             n += 1
             can_id = '{}:v{}'.format(rci, n)
-
 
     def get_by_id(self, can_id, default=None):
         return self._by_id.get(can_id, default)
@@ -459,7 +542,7 @@ class SemGraph(object):
     def __getattr__(self, item):
         hidden = '_{}'.format(item)
         if hidden not in SemGraph.att_set:
-            raise AttributeError("'SemGraph' object has no attribute '{}'".format(item))
+            return self.__getattribute__(item)
         v = getattr(self, hidden)
         if v is None:
             v = []
@@ -473,6 +556,7 @@ class SemGraph(object):
             if v is not None:
                 d[hidden[1:]] = {i.canonical_id: i.as_dict() for i in v}
         return d
+
 
 
 def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
@@ -565,8 +649,8 @@ def _parse_auth_syn(res, sem_graph, taxon_sem_node, syn):
     gnp = parse_name_to_dict(syn.name)
     assert gnp['parsed']
     cn = gnp['canonicalName']
+    details = gnp['details']
     try:
-        details = gnp['details']
         if isinstance(details, list):
             assert len(details) == 1
             details = details[0]
@@ -590,10 +674,8 @@ def _parse_auth_syn(res, sem_graph, taxon_sem_node, syn):
         name_sem = _assure_basionym_exists_as_syn(res, sem_graph, taxon_sem_node, cn)
     else:
         name_sem = _assure_nonbasionym_exists_as_syn(res, sem_graph, taxon_sem_node, cn)
-    try:
-        ba = authorship['basionymAuthorship']
-    except:
-        pass
+    ba = authorship.get('basionymAuthorship', {})
+    assert ba
     authors, year = ba.get('authors', []), ba.get('year', {}).get('value')
     add_authority_to_name(res, sem_graph, name_sem, authors, year)
 
@@ -608,10 +690,10 @@ def semanticize_node_name(res, sem_graph, tc, node):
     except KeyError:
         rsn = None
     name_dict = parse_name_using_rank_hints(node.name, node.rank, rsn)
-    semanticize_names(res, sem_graph, tc, node.name, name_dict)
+    semanticize_names(res, sem_graph, tc, node.name, name_dict, node)
 
 
-def semanticize_names(res, sem_graph, taxon_concept_sem_node, name, name_dict):
+def semanticize_names(res, sem_graph, taxon_concept_sem_node, name, name_dict, node=None):
     """
     """
     tcsn = taxon_concept_sem_node
@@ -619,6 +701,8 @@ def semanticize_names(res, sem_graph, taxon_concept_sem_node, name, name_dict):
         tcsn.claim_undescribed()
     if name_dict.get('hybrid'):
         tcsn.claim_hybrid()
+
+
     rn = sem_graph.add_verbatim_name(res.base_resource.id, tcsn.concept_id, name)
     _LOG.debug('semanticizing {} for {}'.format(name, tcsn.concept_id))
     name_part_holder = rn
@@ -657,12 +741,21 @@ def semanticize_names(res, sem_graph, taxon_concept_sem_node, name, name_dict):
     if specimen_code:
         cn = sem_graph.add_specimen_code(bresid, tcsn.concept_id, specimen_code)
         name_part_holder.claim_specimen_code(cn)
+    if node and node.flags:
+        for flag in node.flags:
+            if flag == 'infraspecific':
+                if infra_epithet is None:
+                    m = 'taxon "{}" flagged as infraspecific, but not parsed as such'
+                    raise ValueError(m.format(name))
+            else:
+                tcsn.claim_flag(flag)
     return rn
 
 
 def semanticize_and_serialize_tax_part(taxolotl_config, res, fragment, out_dir, tax_part, tax_forest):
     sem_graph = semanticize_tax_part(taxolotl_config, res, fragment, tax_part, tax_forest)
     serialize_sem_graph(taxolotl_config, sem_graph, out_dir)
+    return sem_graph
 
 
 # noinspection PyUnusedLocal

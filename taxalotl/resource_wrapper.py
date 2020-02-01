@@ -23,7 +23,8 @@ from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
                                  get_misc_inp_taxdir,
                                  get_taxon_partition, )
 from taxalotl.tax_partition import TAX_SLICE_CACHE
-from taxalotl.util import unlink, OutFile
+from taxalotl.util import unlink, OutFile, OutDir
+from .semanticize import SemGraph
 
 _LOG = get_logger(__name__)
 
@@ -411,7 +412,7 @@ class ResourceWrapper(FromOTifacts):
         par_key, misc_dir = self.config.get_par_and_par_misc_taxdir(part_key, self.id)
         taxon_file = os.path.join(misc_dir, self.taxon_filename)
         if os.path.exists(taxon_file):
-            return misc_dirsemanticize_and_serialize_tax_part
+            return misc_dir
         return None
 
     def download(self):
@@ -542,7 +543,7 @@ class TaxonomyWrapper(ResourceWrapper):
         tc = sem_graph.add_taxon_concept(self, node.id)
         tc.claim_rank(node.rank)
         semanticize_node_name(self, sem_graph, tc, node)
-        #_LOG.warn('node: {}'.format(node.__dict__))
+        # _LOG.warn('node: {}'.format(node.__dict__))
         return tc
 
     def semanticize_node_exit(self, sem_graph, node, sem_node, child_sem_nodes):
@@ -558,12 +559,12 @@ class TaxonomyWrapper(ResourceWrapper):
         from .semanticize import semanticize_node_auth_synonym
         semanticize_node_auth_synonym(self, sem_graph, node, sem_node, syn)
 
-    def semanticize(self, fragment, semantics_dir, tax_part=None, taxon_forest=None):
+    def semanticize(self, fragment, semantics_dir, tax_part=None, taxon_forest=None) -> SemGraph:
         if taxon_forest is None:
             tax_part, taxon_forest = self.get_tax_part_and_forest(fragment)
         from .semanticize import semanticize_and_serialize_tax_part
-        semanticize_and_serialize_tax_part(self.config, self, fragment, semantics_dir,
-                                           tax_part, taxon_forest)
+        return semanticize_and_serialize_tax_part(self.config, self, fragment, semantics_dir,
+                                                  tax_part, taxon_forest)
 
     def accumulate_separated_descendants(self, scaffold_dir):
         scaffold_anc = os.path.split(scaffold_dir)[0]
@@ -701,6 +702,7 @@ class TaxonomyWrapper(ResourceWrapper):
                 interim_tax_data.to_flags.setdefault(old_id, []).append('incertae_sedis')
             interim_tax_data.del_ids(container_id_to_par_id.keys())
         interim_tax_data.names_interpreted_as_changes = True
+
 
 class GenericTaxonomyWrapper(TaxonomyWrapper):
     def __init__(self, res_id, config):

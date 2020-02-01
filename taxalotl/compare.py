@@ -29,6 +29,7 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
             tax_id_set.update(os.listdir(sd))
     out = sys.stdout
     out_dir = os.path.join(tax_dir, OUTP_TAXONOMY_DIRNAME)
+    graph_by_res_id = {}
     with OutDir(out_dir):
         for res_id in tax_id_set:
             res = taxalotl_conf.get_resource_by_id(res_id)
@@ -42,4 +43,31 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
                 tf.write_indented(outstream)
             semantics_dir = os.path.join(out_dir, res_id)
             with OutDir(semantics_dir):
-                res.semanticize(fragment, semantics_dir, tax_part=tp, taxon_forest=tf)
+                graph = res.semanticize(fragment, semantics_dir, tax_part=tp, taxon_forest=tf)
+                graph_by_res_id[res_id] = (res, graph)
+    ott_res = taxalotl_conf.get_terminalized_res_by_id("ott", None)
+    ott_graph = graph_by_res_id[ott_res.id][1]
+    ott_vstc = ott_graph.valid_specimen_based_taxa
+    ott_vn2tc = ott_graph.valid_name_to_taxon_concept_map
+    for res_id, res_graph_pair in graph_by_res_id.items():
+        if res_id == ott_res.id:
+            continue
+        res, ref_graph = res_graph_pair
+        out.write('comparing {} to {}\n'.format(ott_res.id, res_id))
+        ref_vstc = ref_graph.valid_specimen_based_taxa
+        out.write('{} vs {} valid specimen based names\n'.format(len(ott_vstc), len(ref_vstc)))
+        ref_vn2tc = ref_graph.valid_name_to_taxon_concept_map
+        just_ott, both, just_ref =[], [], []
+        for ott_name in ott_vn2tc.keys():
+            t = both if ott_name in ref_vn2tc else just_ott
+            t.append(ott_name)
+        for ott_name in ref_vn2tc.keys():
+            if ott_name not in ott_vn2tc:
+                just_ref.append(ott_name)
+        just_ott.sort()
+        just_ref.sort()
+        out.write('Only {}:\n {}\n'.format(ott_res.id, '\n '.join(['{} "{}"'.format(1 + n, i) for n, i in enumerate(just_ott)])))
+        out.write('Only {}:\n {}\n'.format(res_id, '\n '.join(['{} "{}"'.format(1 + n, i) for n, i in enumerate(just_ref)])))
+
+
+

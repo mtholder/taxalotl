@@ -263,16 +263,16 @@ def _diagnose_relevant_sources(tree):
 DEFAULT_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi', 'worms'])
 NO_WORMS_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi'])
 SILVA_NOT_WORMS_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi', 'silva'])
-PART_KEY_TO_REL_SRC_SET = { 'Insecta': NO_WORMS_REL_SRC_SET,
-                            'Hymenoptera': NO_WORMS_REL_SRC_SET,
-                            'Diptera': NO_WORMS_REL_SRC_SET,
-                            'Coleoptera': NO_WORMS_REL_SRC_SET,
-                            'Lepidoptera': NO_WORMS_REL_SRC_SET,
-                            'Chordata': NO_WORMS_REL_SRC_SET,
-                            'Fungi': NO_WORMS_REL_SRC_SET,
-                            'Bacteria': SILVA_NOT_WORMS_REL_SRC_SET,
-                            'Archaea': SILVA_NOT_WORMS_REL_SRC_SET,
-                            }
+PART_KEY_TO_REL_SRC_SET = {'Insecta': NO_WORMS_REL_SRC_SET,
+                           'Hymenoptera': NO_WORMS_REL_SRC_SET,
+                           'Diptera': NO_WORMS_REL_SRC_SET,
+                           'Coleoptera': NO_WORMS_REL_SRC_SET,
+                           'Lepidoptera': NO_WORMS_REL_SRC_SET,
+                           'Chordata': NO_WORMS_REL_SRC_SET,
+                           'Fungi': NO_WORMS_REL_SRC_SET,
+                           'Bacteria': SILVA_NOT_WORMS_REL_SRC_SET,
+                           'Archaea': SILVA_NOT_WORMS_REL_SRC_SET,
+                           }
 
 
 def add_confirmed_sep(nns, tree, list_num_id_taxon, sep_name):
@@ -300,7 +300,9 @@ def add_confirmed_sep(nns, tree, list_num_id_taxon, sep_name):
     if top_sep_set:
         nns.add_separtors_for_tree(tree, top_sep_set)
 
+
 _skip_semanticizing_set = frozenset(['not_otu', 'was_container', 'barren'])
+
 
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(TaxonomyWrapper):
@@ -314,6 +316,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
         if node.flags and _skip_semanticizing_set.intersection(node.flags):
             return False
         return True
+
     def get_source_for_sep_or_part(self, current_partition_key):
         try:
             return PART_KEY_TO_REL_SRC_SET.get(current_partition_key, DEFAULT_REL_SRC_SET)
@@ -339,7 +342,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
                     'making this hard coded in PART_KEY_TO_REL_SRC_SET.'
                 raise NotImplementedError(m.format(current_partition_key))
             _LOG.info("Relevant sources for {} are recorded as to be: {}. size = {}".format(current_partition_key,
-                                                                                 ac_src, len(ac_src)))
+                                                                                            ac_src, len(ac_src)))
             for tree in tax_forest.trees:
                 tree.add_num_tips_below()
                 assert ac_src
@@ -352,7 +355,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
                     if sep_name is not None:
                         obn, obun = obj.name, obj.uniqname
                         if (obn and (len(obn) == lsn and obn.lower() == lsep)) \
-                            or (obun and (len(obun) == lsn and obun.lower() == lsep)):
+                                or (obun and (len(obun) == lsn and obun.lower() == lsep)):
                             nst.append((obj.num_tips_below, i, obj))
                             break
                     else:

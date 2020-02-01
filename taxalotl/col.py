@@ -43,6 +43,7 @@ COL_PARTMAP = {
 }
 
 
+# noinspection PyUnreachableCode
 def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
     """Reads the serialized taxonomy of the parent, adds the easy lines to their partition element,
     and returns dicts needed to finish the assignments.

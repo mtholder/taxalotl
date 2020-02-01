@@ -227,7 +227,7 @@ IGNORE_SYN_TYPES = {'acronym',
                     'genbank synonym',
                     'type material',
                     }
-IGNORE_COMMON_NAME_SYN_TYPES = {'common name', 'genbank common name',}
+IGNORE_COMMON_NAME_SYN_TYPES = {'common name', 'genbank common name', }
 
 
 class SynonymInterpreter(object):
@@ -524,7 +524,6 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         self._fs_is_partitioned = None
         self._has_flushed = False
         self._external_inp_fp = None
-
 
     @property
     def write_taxon_header(self):

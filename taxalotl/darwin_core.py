@@ -123,8 +123,12 @@ def read_gbif_projection(proj_filepath, itd, field_to_index, do_gbif_checks):
     col_taxonomic_status = field_to_index['taxonomicStatus']
     col_name_according_to = field_to_index['nameAccordingTo']
     not_doubtful = {
-        8407745: "Hierococcyx"
+        8407745: "Hierococcyx",
+        2391100: "Micropterus",
     }
+    doubtful_id_from_name = {}
+    for k, v in not_doubtful.items():
+        doubtful_id_from_name[v] = k
     flushed_because_source = set()
     to_remove = set()
     to_par = itd.to_par
@@ -173,6 +177,8 @@ def read_gbif_projection(proj_filepath, itd, field_to_index, do_gbif_checks):
             elif ("Paleobiology Database" in source) or (
                     source == "c33ce2f2-c3cc-43a5-a380-fe4526d63650"):
                 paleos.add(taxon_id)
+            # if name in doubtful_id_from_name and taxon_id == doubtful_id_from_name[name]:
+            #    raise ValueError("{} in doubtful_id_from_name, taxon_id={}".format(name, taxon_id))
             if tstatus == 'synonym' or (tstatus == 'doubtful' and taxon_id not in not_doubtful):
                 to_remove.add(taxon_id)
                 continue
@@ -321,6 +327,8 @@ def normalize_darwin_core_taxonomy(source, destination, res_wrapper):
 
 
 _BOLD_NAME = re.compile(r"BOLD[:]([A-Z0-9]+)")
+
+
 class GBIFWrapper(TaxonomyWrapper):
     schema = {"http://rs.tdwg.org/dwc/"}
 
