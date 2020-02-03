@@ -90,6 +90,8 @@ class TaxonConceptSemNode(SemGraphNode):
     def canonical_name(self):
         if not self.has_name:
             return None
+        if self.has_name.normalized:
+            return self.has_name.normalized
         return self.has_name.canonical_name
 
     @property
@@ -227,8 +229,6 @@ class TaxonConceptSemNode(SemGraphNode):
         tc.claim_is_synonym_of(self)
         if syn_type:
             tc.syn_type = syn_type
-        if kwargs.get('undescribed', False):
-            tc.claim_undescribed()
         semanticize_names(res, self.graph, tc, name, kwargs, None)
         return tc
 
@@ -286,7 +286,8 @@ class CombinationSemNode(NameSemNode):
 
 class VerbatimSemNode(NameSemNode):
     extra_pred = ('combination', 'higher_group_name', 'genus_name', 'authority',
-                  'subgenus_names', 'sp_epithet', 'infra_epithets', 'specimen_codes')
+                  'subgenus_names', 'sp_epithet', 'infra_epithets', 'specimen_codes',
+                  'normalized')
     name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + list(extra_pred))
 
     def __init__(self, sem_graph, res_id, concept_id, name):
@@ -298,6 +299,7 @@ class VerbatimSemNode(NameSemNode):
         self.sp_epithet = None
         self.infra_epithets = None
         self.specimen_codes = None
+        self.normalized = None
 
     @property
     def canonical_name(self):
@@ -324,6 +326,10 @@ class VerbatimSemNode(NameSemNode):
     def claim_combination(self, n):
         assert self.combination is None or self.combination is n
         self.combination = n
+
+    def claim_normalized(self, n):
+        assert self.normalized is None or self.normalized is n
+        self.normalized = n
 
     def claim_genus(self, n):
         assert self.genus_name is None or self.genus_name == n
@@ -523,6 +529,9 @@ class SemGraph(object):
         name_sem.claim_authority(x)
         return x
 
+    def add_normalized(self, res_id, concept_id, name):
+        return self._add_name(self.combinations, CombinationSemNode, res_id, concept_id, name)
+
     def add_combination(self, res_id, concept_id, name):
         return self._add_name(self.combinations, CombinationSemNode, res_id, concept_id, name)
 
@@ -711,23 +720,28 @@ def semanticize_names(res, sem_graph, taxon_concept_sem_node, name, name_dict, n
     """
     """
     tcsn = taxon_concept_sem_node
-    if name_dict.get('undescribed'):
+    undescribed = name_dict.get('undescribed')
+    if undescribed:
         tcsn.claim_undescribed()
     if name_dict.get('hybrid'):
         tcsn.claim_hybrid()
-
-
     rn = sem_graph.add_verbatim_name(res.base_resource.id, tcsn.concept_id, name)
     _LOG.debug('semanticizing {} for {}'.format(name, tcsn.concept_id))
     name_part_holder = rn
     tcsn.claim_name(rn)
     valid_tcsn = tcsn if tcsn._is_synonym_of is None else tcsn._is_synonym_of
     valid_nph = valid_tcsn.has_name
-    combination = name_dict.get('combination')
     bresid = res.base_resource.id
-    if combination:
-        cn = sem_graph.add_combination(bresid, tcsn.concept_id, combination)
-        rn.claim_combination(cn)
+    if undescribed:
+        normalized = name_dict.get('normalized')
+        if normalized:
+            cn = sem_graph.add_normalized(bresid, tcsn.concept_id, normalized)
+            rn.claim_normalized(cn)
+    else:
+        combination = name_dict.get('combination')
+        if combination:
+            cn = sem_graph.add_combination(bresid, tcsn.concept_id, combination)
+            rn.claim_combination(cn)
     genus = name_dict.get('genus')
     if genus:
         cn = sem_graph.add_genus(bresid, tcsn.concept_id, genus)

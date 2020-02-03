@@ -33,6 +33,8 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
     graph_by_res_id = {}
     with OutDir(out_dir):
         for res_id in tax_id_set:
+            if JUST_COF and not (res_id.startswith('cof') or res_id.startswith('ott')):
+                continue
             res = taxalotl_conf.get_resource_by_id(res_id)
             tp = get_taxon_partition(res, fragment)
             tp.read_inputs_for_read_only()
@@ -67,6 +69,7 @@ def _write_report(out, ott_id, ott_graph, res_id, ref_graph):
         if not tax_con.is_specimen_based:
             continue
         t = both if ott_name in ref_vn2tc else just_ott
+        out.write('ott_name = "{}"\n'.format(ott_name))
         t.append(ott_name)
     for ott_name in ref_vn2tc.keys():
         if ott_name not in ott_vn2tc:

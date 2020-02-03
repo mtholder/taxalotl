@@ -23,11 +23,14 @@ def _add_apparent_rank_and_clade_name(name_dict):
         else:
             name_dict['clade_name'] = name_dict['higher_group_name']
 
-def _convert_gnparser_detail(deet, tnd):
+def _convert_gnparser_detail(deet, tnd, gnp_dict):
     annot = deet.get('annotationIdentification', '')
+    had_cf = False
     if annot:
         assert annot in ['sp.', 'cf.'], 'annot not sp. or cf.'
         tnd['undescribed'] = True
+        if annot.startswith('cf'):
+            had_cf = True
     if 'uninomial' in deet:
         tnd['higher_group_name'] = deet['uninomial']['value']
     else:
@@ -45,8 +48,25 @@ def _convert_gnparser_detail(deet, tnd):
         tnd['genus'] = deet['genus']['value']
 
     ignored = deet.get('ignored')
+    if not ignored:
+        ignored = gnp_dict.get('unparsedTail')
+        if ignored:
+            ignored = {'value': ignored.strip()}
+
+    raw_ignored = ''
     if ignored:
-        tnd['specimen_code'] = ignored['value'].strip()
+        raw_ignored = ignored['value']
+        tnd['specimen_code'] = raw_ignored.strip()
+    if annot:
+        if had_cf:
+            normalized = gnp_dict.get('normalized')
+        elif raw_ignored:
+            normalized = gnp_dict.get('verbatim')[:-len(raw_ignored)]
+        else:
+            normalized = ''
+        if normalized:
+            tnd['normalized'] = normalized
+
 
 def parse_name(name):
     """Returns name dict with the following keys:
@@ -72,9 +92,9 @@ def parse_name(name):
             return tnd
         else:
             for deet in deets:
-                _convert_gnparser_detail(deet, tnd)
+                _convert_gnparser_detail(deet, tnd, gnp_dict)
     except Exception as x:
-        raise RuntimeError(emsg.format(json.dumps(gnp_dict, indent=2), name, str(x)))
+        raise #raise RuntimeError(emsg.format(json.dumps(gnp_dict, indent=2), name, str(x)))
     _add_apparent_rank_and_clade_name(tnd)
     if tnd['apparent_rank'] != 'clade':
         tnd['combination'] = gnp_dict['canonicalName']['full']
