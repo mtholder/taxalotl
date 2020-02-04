@@ -73,19 +73,41 @@ class TaxonConceptSemNode(SemGraphNode):
         self._child_set = None
 
     @property
+    def problematic_synonym_list(self):
+        return self.problematic_synonyms if self.problematic_synonyms else []
+
+    @property
+    def synonym_list(self):
+        return self.synonyms if self.synonyms else []
+
+    @property
     def child_set(self):
         if self._child_set is None:
             self._child_set = set()
         return self._child_set
 
-    def find_valid_species(self, genus_name, species_name):
+    def find_in_subtree(self, test):
         r = []
-        query_can_name = '{} {}'.format(genus_name, species_name)
-        if self.rank == 'species' and self.is_valid_for_sp_epithet(species_name):
+        if test(self):
             r.append(self)
         for c in self.child_set:
-            r.extend(c.find_valid_species(genus_name, species_name))
+            r.extend(c.find_in_subtree(test))
         return r
+
+    def find_valid_species(self, genus_name, species_name):
+        def test_fn(tc):
+            return ((not tc.undescribed)
+                    and (tc.rank == 'species')
+                    and tc.is_valid_for_sp_epithet(species_name))
+
+        return self.find_in_subtree(test=test_fn)
+
+    def find_undescribed_species_for_name(self, genus_name, species_name):
+        def test_fn(tc):
+            return (tc.undescribed
+                    and (tc.rank == 'species')
+                    and tc.is_valid_for_sp_epithet(species_name))
+        return self.find_in_subtree(test=test_fn)
 
     def explain(self, out):
         cn = self.canonical_name.name if self.canonical_name else ''
@@ -100,11 +122,10 @@ class TaxonConceptSemNode(SemGraphNode):
             return False
         if self.has_name.sp_epithet and self.has_name.sp_epithet.name == species_name:
             return True
-        if self.synonyms:
-            for syn in self.synonyms:
-                cn = syn.has_name.sp_epithet
-                if cn.name == species_name:
-                    return True
+        for syn in self.synonym_list:
+            cn = syn.has_name.sp_epithet
+            if cn.name == species_name:
+                return True
         return False
 
     def is_valid_for_name(self, genus_name):
@@ -112,11 +133,10 @@ class TaxonConceptSemNode(SemGraphNode):
             return False
         if self.canonical_name.name == genus_name:
             return True
-        if self.synonyms:
-            for syn in self.synonyms:
-                cn = syn.canonical_name
-                if cn.name == genus_name:
-                    return True
+        for syn in self.synonym_list:
+            cn = syn.canonical_name
+            if cn.name == genus_name:
+                return True
         return False
 
     @property
@@ -138,8 +158,12 @@ class TaxonConceptSemNode(SemGraphNode):
         return bool(self._is_synonym_of)
 
     @property
+    def is_the_valid_name(self):
+        return not self.is_synonym_of
+
+    @property
     def is_specimen_based(self):
-        return self.rank in ['species', 'subspecies']
+        return self.rank in ['species', 'subspecies', 'infraspecies']
 
     def claim_is_child_of(self, par_sem_node):
         assert self.is_child_of is None
@@ -189,6 +213,7 @@ class TaxonConceptSemNode(SemGraphNode):
                 'incertae_sedis', 'other_flags',
                 'syn_type', 'former_ranks',
                 'problematic_synonyms', 'synonyms']
+
 
     @property
     def valid_combination(self):
@@ -484,18 +509,20 @@ class SemGraph(object):
         for att in SemGraph.att_list:
             setattr(self, att, None)
 
+    @property
+    def taxon_concept_list(self):
+        return self._taxon_concepts if self._taxon_concepts else []
+
     def _all_specimen_based_tax_con_dict(self):
-        raw = self._taxon_concepts if self._taxon_concepts else []
         r = {}
-        for tcobj in raw:
+        for tcobj in self.taxon_concept_list:
             if tcobj.is_specimen_based:
                 r[tcobj.canonical_id] = tcobj
         return r
 
     def _all_higher_tax_con_dict(self):
-        raw = self._taxon_concepts if self._taxon_concepts else []
         r = {}
-        for tcobj in raw:
+        for tcobj in self.taxon_concept_list:
             if not tcobj.is_specimen_based:
                 r[tcobj.canonical_id] = tcobj
         return r
@@ -704,11 +731,10 @@ def _assure_nonbasionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_nam
     vthn = valid_taxon.has_name
     if vthn and vthn.canonical_name and vthn.canonical_name.name == fn:
         return vthn
-    if valid_taxon.synonyms:
-        for syn in valid_taxon.synonyms:
-            shn = syn.has_name
-            if shn and shn.name == fn:
-                return shn
+    for syn in valid_taxon.synonym_list:
+        shn = syn.has_name
+        if shn and shn.name == fn:
+            return shn
     raise RuntimeError('"{}" is not a basionym'.format(fn))
 
 def add_authority_to_name(res, sem_graph, name_sem, authors, year):

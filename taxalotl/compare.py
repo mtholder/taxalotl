@@ -70,60 +70,113 @@ def _write_report(out, ott_id, ott_graph, res_id, ref_graph):
             continue
         ref_tc = ref_vn2tc.get(ott_name)
         if ref_tc:
-            both.append((ott_name, ott_name, tax_con, ref_tc))
+            both.append((ott_name, tax_con, ott_name, ref_tc))
         else:
-            just_ott.append(ott_name)
-    for ott_name in ref_vn2tc.keys():
-        if ott_name not in ott_vn2tc:
-            just_ref.append(ott_name)
+            just_ott.append((ott_name, tax_con))
+    for ref_name, tax_con in ref_vn2tc.items():
+        if ref_name not in ott_vn2tc:
+            just_ref.append((ref_name, tax_con))
     just_ott.sort()
     just_ref.sort()
-    out.write('{} only in  {} :\n'.format(len(just_ott), ott_id))
-    dnm = _write_report_info_unmatched(out, just_ott, ott_vn2tc, ref_graph)
+    dnm, ott_unmatched = _gather_unmatched(just_ott, ref_graph)
     diff_name_matched = dnm
-    out.write('{} only in  {} :\n'.format(len(just_ref), res_id))
-    dnm = _write_report_info_unmatched(out, just_ref, ref_vn2tc, ott_graph)
+    dnm, ref_unmatched = _gather_unmatched(just_ref, ott_graph, rev_order=True)
     diff_name_matched.extend(dnm)
-    out.write('{} in {} and {}:\n'.format(len(both), ott_id, res_id))
     both.extend(diff_name_matched)
-    _write_report_info_matched(out, both, None, None)
+    ott_matched_set, ref_matched_set = set(), set()
+    for el in both:
+        ott_tc, ref_tc = el[1], el[3]
+        ott_matched_set.add(ott_tc)
+        if ref_tc is None:
+            continue
+        m = ref_matched_set.update if isinstance(ref_tc, list) else ref_matched_set.add
+        m(ref_tc)
+    ott_unmatched = [i for i in ott_unmatched if i[1] not in ott_matched_set]
+    ref_unmatched = [i for i in ref_unmatched if i[1] not in ref_matched_set]
+    # Report
+    out.write('{} only in  {} :\n'.format(len(just_ott), ott_id))
+    _write_tc_status(out, ott_unmatched)
+    out.write('{} only in  {} :\n'.format(len(just_ref), res_id))
+    _write_tc_status(out, ref_unmatched)
+    out.write('{} in {} and {}:\n'.format(len(both), ott_id, res_id))
+    _write_report_info_matched(out, both)
+    out.write('Checking type of names of synonyms for {} \n'.format(ott_id))
+    _check_syn_name_types(out, ott_graph)
+    out.write('Checking type of names of synonyms for {} \n'.format(res_id))
+    _check_syn_name_types(out, ref_graph)
 
+def _check_syn_name_types(out, graph):
+    msg_tmp = '"{}" is{} specimen-typed, but its synonym "{}" is{}.\n'
+    for valid_tc in graph.taxon_concept_list:
+        if not valid_tc.is_the_valid_name:
+            continue
+        oisb = valid_tc.is_specimen_based
+        vtcs, oths = ('', ' not') if oisb else (' not', '')
+        for syn in valid_tc.synonym_list:
+            if syn.is_specimen_based != oisb:
+                vtn, othn = valid_tc.canonical_name.name, syn.canonical_name.name
+                out.write(msg_tmp.format(vtn, vtcs, othn, oths))
+        for syn in valid_tc.problematic_synonym_list:
+            vtn, othn = valid_tc.canonical_name.name, syn['name']
+            oths = ' flagged as "{}"'.format(syn['problem'])
+            out.write(msg_tmp.format(vtn, vtcs, othn, oths))
 
-def _write_report_info_unmatched(out, just_in, obj_lookup, other_graph):
+def _gather_unmatched(just_in, other_graph, rev_order=False):
     n = 1
     diff_name_matched = []
-    for name in just_in:
-        found_tc = obj_lookup[name]
+    still_unmatched = []
+    for name_tc in just_in:
+        name, found_tc = name_tc
         to_extend = []
-        if found_tc.is_specimen_based:
+        if found_tc.is_specimen_based and not found_tc.hybrid:
             gn = found_tc.has_name.genus_name
             sn = found_tc.has_name.sp_epithet
             if gn and sn:
                 potential_genera = other_graph.find_valid_genus(gn.name)
                 gen_with_correct_epi = []
-                for genus in potential_genera:
-                    gen_with_correct_epi.extend(genus.find_valid_species(gn.name, sn.name))
+                if found_tc.rank == 'species':
+                    for genus in potential_genera:
+                        tta = []
+                        if found_tc.undescribed:
+                            tta = genus.find_undescribed_species_for_name(gn.name, sn.name)
+                        else:
+                            tta = genus.find_valid_species(gn.name, sn.name)
+                        gen_with_correct_epi.extend(tta)
                 to_extend.extend(gen_with_correct_epi)
         if to_extend:
             other_n = [i.canonical_name for i in to_extend]
-            diff_name_matched.append((name, other_n, found_tc, to_extend))
+            if rev_order:
+                tup = (other_n, to_extend, name, found_tc)
+            else:
+                tup = (name, found_tc, other_n, to_extend)
+            diff_name_matched.append(tup)
         else:
-            out.write('{} "{}" : '.format(n, name))
-            if obj_lookup is not None:
-                obj = obj_lookup[name]
-                obj.explain(out)
-            out.write('\n')
-            n += 1
-    return diff_name_matched
+            still_unmatched.append(name_tc)
+    return diff_name_matched, still_unmatched
 
-def _write_report_info_matched(out, just_in, obj_lookup, other_obj_lookup):
+def _write_report_info_matched(out, just_in):
     for n, i in enumerate(just_in):
-        alnl = i[1]
-        if i[0] == alnl:
+        ott_name, ott_tc, ref_name, ref_tc_or_list = i
+        if ott_name == ref_name:
             o = ''
         else:
-            o = ' => "{}"'.format('", "'.join([j.name for j in alnl]))
+            rtcl = ref_tc_or_list
+            if isinstance(rtcl, list) and len(rtcl) == 1:
+                rtcl = rtcl[0]
+            if isinstance(rtcl, list):
+                o = ' => ["{}"]'.format('", "'.join([j.canonical_name.name for j in rtcl]))
+            else:
+                o = ' => "{}"'.format(rtcl.canonical_name.name)
         out.write('{} "{}" {} '.format(1 + n, i[0], o))
         out.write('\n')
 
 
+def _write_tc_status(out, name_tc_list):
+    n = 1
+    for blob in name_tc_list:
+        name = blob[0]
+        obj = blob[1]
+        out.write('{} '.format(n))
+        obj.explain(out)
+        out.write('\n')
+        n += 1
