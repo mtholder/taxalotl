@@ -71,6 +71,7 @@ class TaxonConceptSemNode(SemGraphNode):
         self.incertae_sedis = None
         self.other_flags = None
         self._child_set = None
+        self.mapped_to = None
 
     @property
     def problematic_synonym_list(self):

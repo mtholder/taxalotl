@@ -59,10 +59,140 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
         _write_report(out, ott_res.id, ott_graph, res_id, ref_graph)
 
 def _write_report(out, ott_id, ott_graph, res_id, ref_graph):
-    ott_vstc = ott_graph.valid_specimen_based_taxa
+    # ott_vstc = ott_graph.valid_specimen_based_taxa
+    # ref_vstc = ref_graph.valid_specimen_based_taxa
     ott_vn2tc = ott_graph.valid_name_to_taxon_concept_map
     out.write('comparing {} to {}\n'.format(ott_id, res_id))
-    ref_vstc = ref_graph.valid_specimen_based_taxa
+    ref_vn2tc = ref_graph.valid_name_to_taxon_concept_map
+    just_ott, both, just_ref = [], [], []
+    for ott_name, tax_con in ott_vn2tc.items():
+        if not tax_con.is_specimen_based:
+            continue
+        ref_tc = ref_vn2tc.get(ott_name)
+        if ref_tc:
+            both.append((ott_name, tax_con, ott_name, [ref_tc]))
+        else:
+            just_ott.append((ott_name, tax_con))
+    for ref_name, tax_con in ref_vn2tc.items():
+        if ref_name not in ott_vn2tc:
+            just_ref.append((ref_name, tax_con))
+    just_ott.sort()
+    just_ref.sort()
+    dnm, ott_unmatched = _gather_unmatched(just_ott, ref_graph)
+    diff_name_matched = dnm
+    dnm, ref_unmatched = _gather_unmatched(just_ref, ott_graph, rev_order=True)
+    diff_name_matched.extend(dnm)
+    both.extend(diff_name_matched)
+    ott_matched_set, ref_matched_set = set(), set()
+    for el in both:
+        ott_tc, ref_tc = el[1], el[3]
+        ott_matched_set.add(ott_tc)
+        if ref_tc is None:
+            continue
+        m = ref_matched_set.update if isinstance(ref_tc, list) else ref_matched_set.add
+        m(ref_tc)
+    ott_unmatched = [i for i in ott_unmatched if i[1] not in ott_matched_set]
+    ref_unmatched = [i for i in ref_unmatched if i[1] not in ref_matched_set]
+    # Report
+    out.write('{} only in  {} :\n'.format(len(just_ott), ott_id))
+    _write_tc_status(out, ott_unmatched)
+    out.write('{} only in  {} :\n'.format(len(just_ref), res_id))
+    _write_tc_status(out, ref_unmatched)
+    out.write('Checking type of names of synonyms for {} \n'.format(ott_id))
+    _check_syn_name_types(out, ott_graph)
+    out.write('Checking type of names of synonyms for {} \n'.format(res_id))
+    _check_syn_name_types(out, ref_graph)
+    _diagnose_higher_taxa(out, both, ott_id, ott_graph, res_id, ref_graph)
+
+def _diagnose_higher_taxa(out, matched, ott_id, ott_graph, res_id, ref_graph):
+    ott_tc_set, ref_tc_set = set(), set()
+    for ott_name, ott_tc, ref_name, rtcl in matched:
+        ott_tc.mapped_to = set()
+        ott_tc_set.add(ott_tc)
+        for rtc in rtcl:
+            ref_tc_set.add(rtc)
+            rtc.mapped_to = set()
+    for ott_name, ott_tc, ref_name, rtcl in matched:
+        for rtc in rtcl:
+            ott_tc.mapped_to.add(rtc)
+            rtc.mapped_to.add(ott_tc)
+
+    uniq_map, merge, split, snarl = set(), set(), set(), set()
+    for ott_tc in ott_tc_set:
+        np = len(ott_tc.mapped_to)
+        if np == 1:
+            ref_tc = next(iter(ott_tc.mapped_to))
+            if len(ref_tc.mapped_to) == 1:
+                uniq_map.add(ott_tc)
+            else:
+                assert len(ref_tc.mapped_to) > 1
+                union = set()
+                for ott_tc in ref_tc.mapped_to:
+                    union.add(ott_tc)
+                assert len(union) > 1
+                key = frozenset(union)
+                ref_union = set()
+                dest = merge
+                for ott_tc in key:
+                    ref_union.update(ott_tc.mapped_to)
+                    if len(ref_union) > 1:
+                        dest = snarl
+                        break
+                dest.add(key)
+        else:
+            assert np > 1
+            union = set()
+            for ref_tc in ott_tc.mapped_to:
+                union.update(ref_tc.mapped_to)
+            is_snarl = len(union) > 1
+            dest = snarl if is_snarl else split
+            dest.add(frozenset(union))
+    red_snarl = set()
+    for x in snarl:
+        add, remove = True, []
+        for y in red_snarl:
+            assert x != y
+            if y.issubset(x):
+                remove.append(y)
+            if x.issubset(y):
+                add = False
+        if add:
+            red_snarl.add(x)
+        for td in remove:
+            red_snarl.remove(td)
+    snarl = red_snarl
+
+
+    out.write('{} names in {} need to be split into multiple names in and {}:\n'.format(len(split), ott_id, res_id))
+    _write_using_mapped_to(out, split)
+    out.write('{} sets of names in {} need to be merged into names in and {}:\n'.format(len(merge), ott_id, res_id))
+    _write_using_mapped_to(out, merge)
+    out.write('{} sets of names in {} need to be merged into names in a snarl in {}:\n'.format(len(snarl), ott_id, res_id))
+    _write_using_mapped_to(out, snarl)
+    out.write('{} names in {} map uniquely to a name in {}:\n'.format(len(uniq_map), ott_id, res_id))
+    _write_using_mapped_to(out, uniq_map)
+    '''
+    out.write('{} names in {} map to multiple names in and {}:\n'.format(len(ref_to_many), res_id, ott_id))
+    n = 1
+    for ott_tc, ref_tc_set in ref_to_many.items():
+        otn = ott_tc.canonical_name.name
+        rtnl = [i.canonical_name.name for i in ref_tc_set]
+        rtnl.sort()
+        out.write('{} "{}" -> {}\n'.format(n, otn, rtnl))
+        n += 1
+    out.write('{} unambiguous matches in {} and {}:\n'.format(len(u_o2r), ott_id, res_id))
+    n = 1
+    for n, blob in enumerate(u_o2r):
+        ott_name, ref_name, ott_tc, ref_tc = blob
+        if ott_name == ref_name:
+            o = ''
+        else:
+            o = ' => "{}"'.format(ref_name)
+        out.write('{} "{}" {} '.format(1 + n, ott_name, o))
+        out.write('\n')
+
+    ott_vn2tc = ott_graph.valid_name_to_taxon_concept_map
+    out.write('comparing {} to {}\n'.format(ott_id, res_id))
     ref_vn2tc = ref_graph.valid_name_to_taxon_concept_map
     just_ott, both, just_ref = [], [], []
     for ott_name, tax_con in ott_vn2tc.items():
@@ -104,6 +234,35 @@ def _write_report(out, ott_id, ott_graph, res_id, ref_graph):
     _check_syn_name_types(out, ott_graph)
     out.write('Checking type of names of synonyms for {} \n'.format(res_id))
     _check_syn_name_types(out, ref_graph)
+    '''
+
+def _write_using_mapped_to(out, mapping_set):
+    for n, k in enumerate(mapping_set):
+        if isinstance(k, frozenset):
+            union = set()
+            for m in k:
+                union.update(m.mapped_to)
+            sl = [i.canonical_name.name for i in k]
+            sl.sort()
+            osl = '", "'.join(sl)
+            usl = [i.canonical_name.name for i in union]
+            usl.sort()
+            if len(usl) == 1:
+                out.write('{} ["{}"] -> "{}"\n'.format(1 + n, osl, usl[0]))
+            else:
+                out.write('{} ["{}"] -> ["{}"]\n'.format(1 + n, osl, '", "'.join(usl)))
+        else:
+            usl = [i.canonical_name.name for i in k.mapped_to]
+            usl.sort()
+            osl = k.canonical_name.name
+            if len(usl) == 1:
+                if osl == usl[0]:
+                    out.write('{} "{}"\n'.format(1 + n, osl))
+                else:
+                    out.write('{} "{}" -> "{}"\n'.format(1 + n, osl, usl[0]))
+            else:
+                out.write('{} "{}" -> ["{}"]\n'.format(1 + n, osl, '", "'.join(usl)))
+
 
 def _check_syn_name_types(out, graph):
     msg_tmp = '"{}" is{} specimen-typed, but its synonym "{}" is{}.\n'
@@ -153,22 +312,6 @@ def _gather_unmatched(just_in, other_graph, rev_order=False):
         else:
             still_unmatched.append(name_tc)
     return diff_name_matched, still_unmatched
-
-def _write_report_info_matched(out, just_in):
-    for n, i in enumerate(just_in):
-        ott_name, ott_tc, ref_name, ref_tc_or_list = i
-        if ott_name == ref_name:
-            o = ''
-        else:
-            rtcl = ref_tc_or_list
-            if isinstance(rtcl, list) and len(rtcl) == 1:
-                rtcl = rtcl[0]
-            if isinstance(rtcl, list):
-                o = ' => ["{}"]'.format('", "'.join([j.canonical_name.name for j in rtcl]))
-            else:
-                o = ' => "{}"'.format(rtcl.canonical_name.name)
-        out.write('{} "{}" {} '.format(1 + n, i[0], o))
-        out.write('\n')
 
 
 def _write_tc_status(out, name_tc_list):
