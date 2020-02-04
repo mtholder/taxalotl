@@ -70,6 +70,22 @@ class TaxonConceptSemNode(SemGraphNode):
         self.hybrid = None
         self.incertae_sedis = None
         self.other_flags = None
+        self._child_set = None
+
+    @property
+    def child_set(self):
+        if self._child_set is None:
+            self._child_set = set()
+        return self._child_set
+
+    def find_valid_species(self, genus_name, species_name):
+        r = []
+        query_can_name = '{} {}'.format(genus_name, species_name)
+        if self.rank == 'species' and self.is_valid_for_sp_epithet(species_name):
+            r.append(self)
+        for c in self.child_set:
+            r.extend(c.find_valid_species(genus_name, species_name))
+        return r
 
     def explain(self, out):
         cn = self.canonical_name.name if self.canonical_name else ''
@@ -79,6 +95,29 @@ class TaxonConceptSemNode(SemGraphNode):
         else:
             out.write(' rank={}'.format(self.rank if self.rank else '?'))
 
+    def is_valid_for_sp_epithet(self, species_name):
+        if self._is_synonym_of:
+            return False
+        if self.has_name.sp_epithet and self.has_name.sp_epithet.name == species_name:
+            return True
+        if self.synonyms:
+            for syn in self.synonyms:
+                cn = syn.has_name.sp_epithet
+                if cn.name == species_name:
+                    return True
+        return False
+
+    def is_valid_for_name(self, genus_name):
+        if self._is_synonym_of:
+            return False
+        if self.canonical_name.name == genus_name:
+            return True
+        if self.synonyms:
+            for syn in self.synonyms:
+                cn = syn.canonical_name
+                if cn.name == genus_name:
+                    return True
+        return False
 
     @property
     def valid_name(self):
@@ -105,6 +144,7 @@ class TaxonConceptSemNode(SemGraphNode):
     def claim_is_child_of(self, par_sem_node):
         assert self.is_child_of is None
         self.is_child_of = par_sem_node
+        par_sem_node.child_set.add(self)
 
     def claim_rank(self, rank):
         assert self.rank is None
@@ -452,6 +492,22 @@ class SemGraph(object):
                 r[tcobj.canonical_id] = tcobj
         return r
 
+    def _all_higher_tax_con_dict(self):
+        raw = self._taxon_concepts if self._taxon_concepts else []
+        r = {}
+        for tcobj in raw:
+            if not tcobj.is_specimen_based:
+                r[tcobj.canonical_id] = tcobj
+        return r
+
+
+    def find_valid_genus(self, genus_name):
+        r = []
+        for tc in self._all_higher_tax_con_dict().values():
+            if tc.rank and tc.rank == 'genus':
+                if tc.is_valid_for_name(genus_name):
+                    r.append(tc)
+        return r
 
     def specimen_based_synonym_taxa(self):
         d = self._all_specimen_based_tax_con_dict()
