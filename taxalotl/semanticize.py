@@ -48,7 +48,7 @@ class SemGraphNode(object):
 def canonicalize(res_id, pred_id, entity_id):
     if pred_id:
         return '{}:{}:{}'.format(res_id, pred_id, entity_id)
-    return '{}:{}'.format(res_id, pred_id, entity_id)
+    return '{}:{}'.format(res_id, entity_id)
 
 KNOWN_FLAGS = frozenset(['hidden', 'sibling_higher'])
 
@@ -338,11 +338,20 @@ class NameSemNode(SemGraphNode):
         return NameSemNode.name_sem_nd_pred
 
     def claim_authority(self, auth):
-        self._authority = None
+        if self._authority is None:
+            self._authority = auth
+        else:
+            if not isinstance(self._authority, list):
+                self._authority = [self._authority]
+            self._authority.append(auth)
 
     @property
     def authority(self):
-        return None if self._authority is None else self._authority.canonical_id
+        if self._authority is None:
+            return None
+        if isinstance(self._authority, list):
+            return [i.canonical_id for i in self._authority]
+        return self._authority.canonical_id
 
 
 class CombinationSemNode(NameSemNode):
