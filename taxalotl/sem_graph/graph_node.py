@@ -26,12 +26,17 @@ def _serialize_triple_object(o):
 
 
 class AuthoritySemNode(SemGraphNode):
-    auth_sem_nd_pred = ('authors', 'year')
+    auth_sem_nd_pred = ('authors', 'year', 'taxon_concepts')
 
-    def __init__(self, sem_graph, id_minting_d, authors, year):
+    def __init__(self, sem_graph, id_minting_d, authors, year, tax_con_sem_node):
         super(AuthoritySemNode, self).__init__(sem_graph, id_minting_d)
         self._authors = authors
         self._year = year
+        self.taxon_concept_set = set([tax_con_sem_node])
+
+    @property
+    def taxon_concepts(self):
+        return [i.canonical_id for i in self.taxon_concept_set]
 
     @property
     def year(self):

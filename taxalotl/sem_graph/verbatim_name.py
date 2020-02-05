@@ -4,7 +4,6 @@ from .name import NameSemNode
 
 class VerbatimSemNode(NameSemNode):
     extra_pred = ('combination',
-                  'authority',
                   'genus_name',
                   'higher_group_name',
                   'infra_epithets',
@@ -133,8 +132,8 @@ class VerbatimSemNode(NameSemNode):
         self.claim_subgenus(n)
         return n
 
-    def add_sp_epithet(self, name_str, genus_sem_node):
-        n = self.graph._add_sp_epithet(self, name_str, genus_sem_node)
+    def add_sp_epithet(self, name_str, genus_sem_node, avoid_dup=True):
+        n = self.graph._add_sp_epithet(self, name_str, genus_sem_node, avoid_dup=avoid_dup)
         self.claim_sp_epithet(n)
         return n
 

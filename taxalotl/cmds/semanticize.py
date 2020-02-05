@@ -93,10 +93,10 @@ def _assure_nonbasionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_nam
     raise RuntimeError('"{}" is not a basionym'.format(fn))
 
 
-def add_authority_to_name(res, sem_graph, name_sem, authors, year):
+def add_authority_to_name(tax_con_sem_node, name_sem, authors, year):
     mtn = name_sem.most_terminal_name
     # _LOG.debug('auth for {} is {}'.format(mtn, authors))
-    sem_graph.add_authority(res.id, mtn, authors, year)
+    tax_con_sem_node.graph.add_authority(tax_con_sem_node, mtn, authors, year)
 
 
 def _assure_basionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
@@ -139,7 +139,7 @@ def _parse_auth_syn(res, sem_graph, taxon_sem_node, syn):
     ba = authorship.get('basionymAuthorship', {})
     assert ba
     authors, year = ba.get('authors', []), ba.get('year', {}).get('value')
-    add_authority_to_name(res, sem_graph, name_sem, authors, year)
+    add_authority_to_name(taxon_sem_node, name_sem, authors, year)
 
 
 def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):

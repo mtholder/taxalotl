@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
-
+import json
 from peyotl import (get_logger, )
 from .taxon_concept_node import TaxonConceptSemNode
 from .verbatim_name import VerbatimSemNode
@@ -50,17 +50,70 @@ class SemGraph(object):
         # for species ranK:
         #   multiple authority entries
         #   same valid epithet in multiple valid genera
-        to_mint = []
+        dup_auth_to_mint = {}
         for tc in self.taxon_concept_list:
             if tc.rank and tc.rank == 'species':
                 epithet = tc.most_terminal_name
                 if epithet is None:
-                    _LOG.warn('NO Epithet for  = {}'.format(tc.__dict__))
+                    if not (tc.hybrid or tc.undescribed):
+                        _LOG.warn('NO Epithet for  = {}'.format(tc.__dict__))
                     continue
                 if isinstance(epithet._authority, list):
-                    _LOG.warn('epithet = {}'.format(epithet.__dict__))
-        # import sys
-        # sys.exit(1)
+                    dup_auth_to_mint.setdefault(epithet, []).append(tc)
+
+        for name, tc_list in dup_auth_to_mint.items():
+            verb_name = tc_list[0].has_name
+            other_name_tc_pairs = []
+            same_name_tc = []
+            for tc in tc_list[1:]:
+                if tc.has_name is verb_name:
+                    same_name_tc.append(tc)
+                else:
+                    other_name_tc_pairs.append(tc)
+            for other in other_name_tc_pairs:
+                self._split_tc_with_shared_sp_epithet(tc_list[0], other)
+            for other in same_name_tc:
+                self._split_tc_with_shared_name(tc_list[0], other)
+
+        if self.res.id.startswith('cof'):
+            import sys
+            # sys.exit(1)
+
+    def _split_tc_with_shared_sp_epithet(self, fixed, other):
+        assert fixed is not other
+        fix_name, oth_name = fixed.has_name, other.has_name
+        _LOG.debug('splitting "{}" from ["{}"]'.format(fix_name.name, oth_name.name))
+        fix_genus, oth_genus = fix_name.genus_name, oth_name.genus_name
+        fix_sp_epi, oth_sp_epi = fix_name.sp_epithet, oth_name.sp_epithet
+        assert fix_sp_epi is oth_sp_epi
+        if fix_sp_epi in oth_genus.contained:
+            oth_genus.contained.remove(fix_sp_epi)
+        new_epi = self._add_sp_epithet(other, fix_sp_epi._name, oth_genus, avoid_dup=False)
+        oth_genus.contained.append(new_epi)
+        oth_name.sp_epithet = new_epi
+        vtc = other
+        if vtc._is_synonym_of:
+            vtc = vtc._is_synonym_of
+        for a in fix_sp_epi._authority:
+            if other in a.taxon_concept_set or vtc in a.taxon_concept_set:
+                new_epi.claim_authority(a)
+                break
+        assert new_epi._authority
+        fix_sp_epi._authority.remove(new_epi._authority)
+        if len(fix_sp_epi._authority) == 1:
+            fix_sp_epi._authority = fix_sp_epi._authority[0]
+
+    def _split_tc_with_shared_name(self, fixed, other):
+        fix_vname = fixed.has_name
+        assert fix_vname is other.has_name
+        new_vname = self._add_verbatim_name(other, fix_vname.name, avoid_dup=False)
+        assert not fix_vname.specimen_codes
+        for attr in VerbatimSemNode.extra_pred:
+            v = getattr(fix_vname, attr, None)
+            if v:
+                setattr(new_vname, attr, v)
+        other.has_name = new_vname
+        self._split_tc_with_shared_sp_epithet(fixed, other)
 
     @property
     def taxon_concept_list(self):
@@ -122,9 +175,9 @@ class SemGraph(object):
     def get_by_id(self, can_id, default=None):
         return self._by_id.get(can_id, default)
 
-    def _add_name(self, container, node_type, parent_sem_node, name, extra_container=None):
+    def _add_name(self, container, node_type, parent_sem_node, name, extra_container=None, avoid_dup=True):
         search_cont = container if extra_container is None else extra_container.contained
-        x = _find_by_name(search_cont, name)
+        x = None if (not avoid_dup) else _find_by_name(search_cont, name)
         if x is None:
             d = {'parent_id': parent_sem_node.canonical_id}
             if extra_container is not None:
@@ -135,7 +188,7 @@ class SemGraph(object):
                 container.append(x)
         return x
 
-    def add_authority(self, res_id, name_sem, authors, year):
+    def add_authority(self, tax_con_sem_node, name_sem, authors, year):
         auth_list = self.authorities
         x = None
         for a in auth_list:
@@ -144,7 +197,9 @@ class SemGraph(object):
                 break
         if x is None:
             d = {'parent_id': name_sem.canonical_id}
-            x = AuthoritySemNode(self, d, authors, year)
+            x = AuthoritySemNode(self, d, authors, year, tax_con_sem_node)
+        else:
+            x.taxon_concept_set.add(tax_con_sem_node)
         auth_list.append(x)
         name_sem.claim_authority(x)
         return x
@@ -155,8 +210,8 @@ class SemGraph(object):
     def _add_combination(self, par_sem_node, name_str):
         return self._add_name(self.combinations, CombinationSemNode, par_sem_node, name_str)
 
-    def _add_verbatim_name(self, tax_con_sem_node, name_str):
-        return self._add_name(self.verbatim_name, VerbatimSemNode, tax_con_sem_node, name_str)
+    def _add_verbatim_name(self, tax_con_sem_node, name_str, avoid_dup=True):
+        return self._add_name(self.verbatim_name, VerbatimSemNode, tax_con_sem_node, name_str, avoid_dup=avoid_dup)
 
     def _add_genus(self, par_sem_node, name_str):
         return self._add_name(self.genus_group_names, GenusGroupSemNode, par_sem_node, name_str)
@@ -166,8 +221,9 @@ class SemGraph(object):
     def _add_higher_group_name(self, par_sem_node, name_str):
         return self._add_name(self.higher_group_names, HigherGroupSemNode, par_sem_node, name_str)
 
-    def _add_sp_epithet(self, par_sem_node, name_str, prev_word_sn):
-        return self._add_name(self.species_group_epithets, SpeciesGroupSemNode, par_sem_node, name_str, prev_word_sn)
+    def _add_sp_epithet(self, par_sem_node, name_str, prev_word_sn, avoid_dup=True):
+        return self._add_name(self.species_group_epithets, SpeciesGroupSemNode,
+                              par_sem_node, name_str, prev_word_sn, avoid_dup=avoid_dup)
 
     _add_infra_epithet = _add_sp_epithet
 
