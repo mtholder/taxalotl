@@ -528,7 +528,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     @property
     def write_taxon_header(self):
         from taxalotl.ott_schema import INP_FLAGGED_OTT_TAXONOMY_HEADER, FULL_OTT_HEADER
-        from taxalotl.ott import OTTaxonomyWrapper
+        from taxalotl.parsing.ott import OTTaxonomyWrapper
         return FULL_OTT_HEADER if isinstance(self.res, OTTaxonomyWrapper) else INP_FLAGGED_OTT_TAXONOMY_HEADER
 
     @property

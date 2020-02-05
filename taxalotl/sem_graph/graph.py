@@ -59,8 +59,8 @@ class SemGraph(object):
                     continue
                 if isinstance(epithet._authority, list):
                     _LOG.warn('epithet = {}'.format(epithet.__dict__))
-        #import sys
-        #sys.exit(1)
+        # import sys
+        # sys.exit(1)
 
     @property
     def taxon_concept_list(self):

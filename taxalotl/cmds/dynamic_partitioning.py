@@ -7,8 +7,8 @@ from typing import Dict
 
 from peyotl import get_logger
 
-from taxalotl.partitions import (get_all_taxdir_and_misc_uncles,
-                                 )
+from taxalotl.cmds.partitions import (get_all_taxdir_and_misc_uncles,
+                                      )
 from taxalotl.tax_partition import (TAX_SLICE_CACHE,
                                     get_taxon_partition,
                                     PartitionedTaxDirBase)

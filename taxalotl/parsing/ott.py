@@ -9,10 +9,10 @@ from peyotl.utility.str_util import StringIO
 
 from taxalotl.ott_schema import (read_taxonomy_to_get_single_taxon,
                                  )
-from taxalotl.partitions import (fill_empty_anc_of_mapping,
-                                 MISC_DIRNAME,
-                                 PREORDER_PART_LIST,
-                                 NAME_TO_PARTS_SUBSETS)
+from taxalotl.cmds.partitions import (fill_empty_anc_of_mapping,
+                                      MISC_DIRNAME,
+                                      PREORDER_PART_LIST,
+                                      NAME_TO_PARTS_SUBSETS)
 from taxalotl.resource_wrapper import ResourceWrapper, TaxonomyWrapper
 from taxalotl.tax_partition import (get_roots_for_subset, )
 from taxalotl.util import get_true_false_repsonse

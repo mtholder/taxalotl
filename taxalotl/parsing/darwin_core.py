@@ -18,7 +18,7 @@ from peyotl import (assure_dir_exists,
 
 from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.resource_wrapper import TaxonomyWrapper
-from .util import OutFile
+from taxalotl.util import OutFile
 
 _LOG = get_logger(__name__)
 

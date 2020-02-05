@@ -8,27 +8,27 @@ from peyotl import (get_logger, read_as_json)
 
 from taxalotl import TaxalotlConfig
 from taxalotl.commands import (accumulate_separated_descendants,
-                               align,
-                               analyze_update,
-                               build_partition_maps,
-                               cache_separator_names,
-                               clean_resources,
-                               compare_taxonomies,
-                               diagnose_new_separators,
-                               enforce_new_separators,
-                               download_resources,
-                               info_on_resources,
-                               normalize_resources,
-                               partition_resources,
-                               pull_otifacts,
-                               status_of_resources,
-                               unpack_resources,
-                               SEP_NAMES,
-                               )
-from taxalotl.partitions import (PART_NAMES,
-                                 NAME_TO_PARTS_SUBSETS,
-                                 NONTERMINAL_PART_NAMES,
-                                 TERMINAL_PART_NAMES, )
+                           align,
+                           analyze_update,
+                           build_partition_maps,
+                           cache_separator_names,
+                           clean_resources,
+                           compare_taxonomies,
+                           diagnose_new_separators,
+                           enforce_new_separators,
+                           download_resources,
+                           info_on_resources,
+                           normalize_resources,
+                           partition_resources,
+                           pull_otifacts,
+                           status_of_resources,
+                           unpack_resources,
+                           SEP_NAMES,
+                           )
+from taxalotl.cmds.partitions import (PART_NAMES,
+                                      NAME_TO_PARTS_SUBSETS,
+                                      NONTERMINAL_PART_NAMES,
+                                      TERMINAL_PART_NAMES, )
 
 _LOG = get_logger(__name__)
 

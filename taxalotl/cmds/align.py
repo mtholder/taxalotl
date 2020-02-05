@@ -9,11 +9,11 @@ from typing import List
 
 from peyotl import (get_logger)
 
-from .config import TaxalotlConfig
-from .partitions import (PART_NAMES)
-from .resource_wrapper import TaxonomyWrapper
-from .taxonomic_ranks import (SPECIES_SORTING_NUMBER)
-from .util import get_true_false_repsonse, VirtCommand
+from taxalotl.config import TaxalotlConfig
+from taxalotl.cmds.partitions import (PART_NAMES)
+from taxalotl.resource_wrapper import TaxonomyWrapper
+from taxalotl.taxonomic_ranks import (SPECIES_SORTING_NUMBER)
+from taxalotl.util import get_true_false_repsonse, VirtCommand
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout
@@ -305,7 +305,7 @@ def separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, r
                 to_move_ids.update({i.id for i in to_move})
     if not to_move_ids:
         return None
-    from taxalotl.dynamic_partitioning import perform_dynamic_separation
+    from taxalotl.cmds.dynamic_partitioning import perform_dynamic_separation
     root_ott_taxon = ott_tree.root
     new_sep_val = {
         "name": root_ott_taxon.name,

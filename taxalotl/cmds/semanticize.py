@@ -7,14 +7,14 @@ import os
 from peyotl import (get_logger, write_as_json)
 
 from taxalotl.util import OutFile, OutDir
-from .taxonomic_ranks import (ABOVE_GENUS_SORTING_NUMBER,
-                              SPECIES_SORTING_NUMBER,
-                              GENUS_SORTING_NUMBER,
-                              MINIMUM_HIGHER_TAXON_NUMBER)
+from taxalotl.taxonomic_ranks import (ABOVE_GENUS_SORTING_NUMBER,
+                                      SPECIES_SORTING_NUMBER,
+                                      GENUS_SORTING_NUMBER,
+                                      MINIMUM_HIGHER_TAXON_NUMBER)
 
-from .name_parsing import parse_name_using_rank_hints, parse_name_to_dict
-from .tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
-from .sem_graph.graph import SemGraph
+from taxalotl.parsing.name_parsing import parse_name_using_rank_hints, parse_name_to_dict
+from taxalotl.tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
+from taxalotl.sem_graph.graph import SemGraph
 
 _LOG = get_logger(__name__)
 

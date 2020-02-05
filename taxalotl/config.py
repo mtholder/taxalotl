@@ -82,7 +82,7 @@ class TaxalotlConfig(object):
 
     def get_fragment_from_part_name(self, parts_key, recurse=True):
         try:
-            from taxalotl.partitions import PART_NAME_TO_FRAGMENT
+            from taxalotl.cmds.partitions import PART_NAME_TO_FRAGMENT
             x = PART_NAME_TO_FRAGMENT[parts_key]
         except:
             sd = self.get_separator_dict()
@@ -103,12 +103,12 @@ class TaxalotlConfig(object):
         return x
 
     def get_part_inp_taxdir(self, part_key, taxonomy_id):
-        from taxalotl.partitions import INP_TAXONOMY_DIRNAME
+        from taxalotl.cmds.partitions import INP_TAXONOMY_DIRNAME
         df = self.get_fragment_from_part_name(part_key)
         return os.path.join(self.partitioned_dir, df, INP_TAXONOMY_DIRNAME, taxonomy_id)
 
     def get_par_and_par_misc_taxdir(self, part_key, taxonomy_id):
-        from taxalotl.partitions import INP_TAXONOMY_DIRNAME, MISC_DIRNAME
+        from taxalotl.cmds.partitions import INP_TAXONOMY_DIRNAME, MISC_DIRNAME
         df = self.get_fragment_from_part_name(part_key)
         par_df = os.path.split(df)[0]
         misc_df = os.path.join(par_df, MISC_DIRNAME)

@@ -8,16 +8,16 @@ from typing import Dict, List
 
 from peyotl import (get_logger, write_as_json)
 
-from .config import TaxalotlConfig
-from .tree import TaxonTree
-from .partitions import (PART_NAMES)
-from .resource_wrapper import TaxonomyWrapper
-from .taxonomic_ranks import (GENUS_SORTING_NUMBER,
-                              MAX_INFRASPECIFIC_NUMBER,
-                              MINIMUM_HIGHER_TAXON_NUMBER,
-                              SPECIES_SORTING_NUMBER)
-from .tax_partition import IGNORE_SYN_TYPES
-from .util import OutFile, VirtCommand
+from taxalotl.config import TaxalotlConfig
+from taxalotl.tree import TaxonTree
+from taxalotl.cmds.partitions import (PART_NAMES)
+from taxalotl.resource_wrapper import TaxonomyWrapper
+from taxalotl.taxonomic_ranks import (GENUS_SORTING_NUMBER,
+                                      MAX_INFRASPECIFIC_NUMBER,
+                                      MINIMUM_HIGHER_TAXON_NUMBER,
+                                      SPECIES_SORTING_NUMBER)
+from taxalotl.tax_partition import IGNORE_SYN_TYPES
+from taxalotl.util import OutFile, VirtCommand
 
 _LOG = get_logger(__name__)
 out_stream = sys.stdout

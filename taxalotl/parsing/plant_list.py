@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup as Soup
 from peyotl import (assure_dir_exists, get_logger, download_large_file)
 
 from taxalotl.resource_wrapper import TaxonomyWrapper
-from .util import OutFile
+from taxalotl.util import OutFile
 
 _LOG = get_logger(__name__)
 DOMAIN = "http://www.theplantlist.org"

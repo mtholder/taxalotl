@@ -5,7 +5,7 @@ import io
 from peyotl import (get_logger, shorter_fp_form)
 
 from taxalotl.resource_wrapper import TaxonomyWrapper
-from .darwin_core import normalize_darwin_core_taxonomy
+from taxalotl.parsing.darwin_core import normalize_darwin_core_taxonomy
 _LOG = get_logger(__name__)
 
 COL_PARTMAP = {

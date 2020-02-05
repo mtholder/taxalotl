@@ -16,15 +16,15 @@ from taxalotl.ott_schema import (INP_OTT_SYNONYMS_HEADER,
                                  INP_OTT_TAXONOMY_HEADER,
                                  partition_ott_by_root_id)
 from taxalotl.newick import normalize_newick
-from taxalotl.partitions import (find_partition_dirs_for_taxonomy,
-                                 has_any_partition_dirs,
-                                 get_auto_gen_part_mapper,
-                                 get_inp_taxdir,
-                                 get_misc_inp_taxdir,
-                                 get_taxon_partition, )
+from taxalotl.cmds.partitions import (find_partition_dirs_for_taxonomy,
+                                      has_any_partition_dirs,
+                                      get_auto_gen_part_mapper,
+                                      get_inp_taxdir,
+                                      get_misc_inp_taxdir,
+                                      get_taxon_partition, )
 from taxalotl.tax_partition import TAX_SLICE_CACHE
 from taxalotl.util import unlink, OutFile, OutDir
-from .semanticize import SemGraph
+from taxalotl.cmds.semanticize import SemGraph
 
 _LOG = get_logger(__name__)
 
@@ -537,7 +537,7 @@ class TaxonomyWrapper(ResourceWrapper):
         return True
 
     def semanticize_node_entry(self, sem_graph, node, par_sem_node):
-        from .semanticize import semanticize_node_name
+        from taxalotl.cmds.semanticize import semanticize_node_name
         if not self.node_should_be_semanticized(node):
             return None
         tc = sem_graph.add_taxon_concept(node.id)
@@ -552,17 +552,17 @@ class TaxonomyWrapper(ResourceWrapper):
         return sem_node
 
     def semanticize_node_synonyms(self, sem_graph, node, sem_node, syn):
-        from .semanticize import semanticize_node_synonym
+        from taxalotl.cmds.semanticize import semanticize_node_synonym
         semanticize_node_synonym(self, sem_graph, node, sem_node, syn)
 
     def semanticize_node_authority_synonyms(self, sem_graph, node, sem_node, syn):
-        from .semanticize import semanticize_node_auth_synonym
+        from taxalotl.cmds.semanticize import semanticize_node_auth_synonym
         semanticize_node_auth_synonym(self, sem_graph, node, sem_node, syn)
 
     def semanticize(self, fragment, semantics_dir, tax_part=None, taxon_forest=None) -> SemGraph:
         if taxon_forest is None:
             tax_part, taxon_forest = self.get_tax_part_and_forest(fragment)
-        from .semanticize import semanticize_and_serialize_tax_part
+        from taxalotl.cmds.semanticize import semanticize_and_serialize_tax_part
         return semanticize_and_serialize_tax_part(self.config, self, fragment, semantics_dir,
                                                   tax_part, taxon_forest)
 

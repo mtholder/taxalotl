@@ -4,15 +4,15 @@ Imported by resource manager funtions.
 
 Holds mapping of base_id to class of wrapper to instantiate.
 """
-from taxalotl.col import CoLTaxonomyWrapper
-from taxalotl.darwin_core import GBIFWrapper
-from taxalotl.irmng import IRMNGWrapper
-from taxalotl.ncbi import NCBIWrapper
-from taxalotl.ott import OTTaxonomyWrapper, OTTaxonomyIdListWrapper
-from taxalotl.plant_list import PlantListWrapper
-from taxalotl.silva import SilvaIdListWrapper, SilvaWrapper, SilvaToNCBIMappingListWrapper
-from taxalotl.resource_wrapper import TaxonomyWrapper, GenericTaxonomyWrapper
-from taxalotl.worms import WormsTaxonomyWrapper
+from taxalotl.parsing.col import CoLTaxonomyWrapper
+from taxalotl.parsing.darwin_core import GBIFWrapper
+from taxalotl.parsing.irmng import IRMNGWrapper
+from taxalotl.parsing.ncbi import NCBIWrapper
+from taxalotl.parsing.ott import OTTaxonomyWrapper, OTTaxonomyIdListWrapper
+from taxalotl.parsing.plant_list import PlantListWrapper
+from taxalotl.parsing.silva import SilvaIdListWrapper, SilvaWrapper, SilvaToNCBIMappingListWrapper
+from taxalotl.resource_wrapper import TaxonomyWrapper
+from taxalotl.parsing.worms import WormsTaxonomyWrapper
 
 BASE_ID_TO_RES_TYPE = {
     'col': CoLTaxonomyWrapper,

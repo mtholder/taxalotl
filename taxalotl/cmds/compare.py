@@ -4,7 +4,7 @@ from peyotl import get_logger
 import sys
 import os
 from taxalotl.tax_partition import (get_taxon_partition, INP_TAXONOMY_DIRNAME, MISC_DIRNAME, OUTP_TAXONOMY_DIRNAME)
-from .util import OutFile, OutDir
+from taxalotl.util import OutFile, OutDir
 _LOG = get_logger(__name__)
 
 
@@ -127,14 +127,14 @@ def _diagnose_higher_taxa(out, matched, ott_id, ott_graph, res_id, ref_graph):
             else:
                 assert len(ref_tc.mapped_to) > 1
                 union = set()
-                for ott_tc in ref_tc.mapped_to:
-                    union.add(ott_tc)
+                for i_ott_tc in ref_tc.mapped_to:
+                    union.add(i_ott_tc)
                 assert len(union) > 1
                 key = frozenset(union)
                 ref_union = set()
                 dest = merge
-                for ott_tc in key:
-                    ref_union.update(ott_tc.mapped_to)
+                for i_ott_tc in key:
+                    ref_union.update(i_ott_tc.mapped_to)
                     if len(ref_union) > 1:
                         dest = snarl
                         break

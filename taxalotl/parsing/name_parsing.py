@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 from __future__ import print_function
-
-import re
 import json
 from peyotl import get_logger
-from .taxonomic_ranks import (SPECIES_SORTING_NUMBER,
-                              GENUS_SORTING_NUMBER)
-from .gnparser import parse_name_to_dict
+from taxalotl.taxonomic_ranks import (SPECIES_SORTING_NUMBER,
+                                      GENUS_SORTING_NUMBER)
+from taxalotl.parsing.gnparser import parse_name_to_dict
+
 _LOG = get_logger(__name__)
+
 
 def _add_apparent_rank_and_clade_name(name_dict):
     if 'infra_epithet' in name_dict:
@@ -22,6 +22,7 @@ def _add_apparent_rank_and_clade_name(name_dict):
             name_dict['clade_name'] = name_dict['genus']
         else:
             name_dict['clade_name'] = name_dict['higher_group_name']
+
 
 def _convert_gnparser_detail(deet, tnd, gnp_dict):
     annot = deet.get('annotationIdentification', '')
@@ -94,7 +95,7 @@ def parse_name(name):
             for deet in deets:
                 _convert_gnparser_detail(deet, tnd, gnp_dict)
     except Exception as x:
-        raise #raise RuntimeError(emsg.format(json.dumps(gnp_dict, indent=2), name, str(x)))
+        raise RuntimeError(emsg.format(json.dumps(gnp_dict, indent=2), name, str(x)))
     _add_apparent_rank_and_clade_name(tnd)
     if tnd['apparent_rank'] != 'clade':
         tnd['combination'] = gnp_dict['canonicalName']['full']
@@ -107,6 +108,7 @@ def parse_sp_name(name, rank):
     x = parse_name(name)
     return x
 
+
 def parse_genus_group_name(name, rank):
     x = parse_name(name)
     if rank:
@@ -116,6 +118,7 @@ def parse_genus_group_name(name, rank):
         else:
             assert False
     return x
+
 
 def parse_higher_name(name, rank):
     x = parse_name(name)
@@ -133,4 +136,3 @@ def parse_name_using_rank_hints(name, rank=None, rank_sorting_number=None):
         name_dict = parse_higher_name(name, rank)
 
     return name_dict
-

@@ -11,20 +11,20 @@ from peyotl import (get_logger,
                     filter_otifacts_by_type,
                     partition_otifacts_by_root_element,
                     write_as_json)
-from taxalotl.compare import compare_taxonomies_in_dir
-from taxalotl.partitions import (GEN_MAPPING_FILENAME,
-                                 do_partition,
-                                 get_part_dir_from_part_name,
-                                 NAME_TO_PARTS_SUBSETS,
-                                 PART_NAMES,
-                                 PREORDER_PART_LIST,
-                                 TERMINAL_PART_NAMES,
-                                 write_info_for_res)
+from taxalotl.cmds.compare import compare_taxonomies_in_dir
+from taxalotl.cmds.partitions import (GEN_MAPPING_FILENAME,
+                                      do_partition,
+                                      get_part_dir_from_part_name,
+                                      NAME_TO_PARTS_SUBSETS,
+                                      PART_NAMES,
+                                      PREORDER_PART_LIST,
+                                      TERMINAL_PART_NAMES,
+                                      write_info_for_res)
 from taxalotl.tax_partition import (use_tax_partitions, get_taxonomies_for_dir)
-from taxalotl.dynamic_partitioning import (perform_dynamic_separation,
-                                           return_sep_obj_copy_with_ott_fields)
-from taxalotl.analyze_update import analyze_update_to_resources
-from taxalotl.align import align_resource
+from taxalotl.cmds.dynamic_partitioning import (perform_dynamic_separation,
+                                                return_sep_obj_copy_with_ott_fields)
+from taxalotl.cmds.analyze_update import analyze_update_to_resources
+from taxalotl.cmds.align import align_resource
 from taxalotl.util import unlink, VirtCommand, OutFile
 
 _LOG = get_logger(__name__)
@@ -232,7 +232,7 @@ def normalize_resources(taxalotl_config, id_list):
 def _iter_norm_term_res_internal_level_pairs(taxalotl_config, id_list, level_list, cmd_name):
     """iterates over (non abstract resource, level) pairs
 
-    Several commands work on normalized resources and work on levels.
+    Several cmds work on normalized resources and work on levels.
     This generator serves as a common iterator for them.
     Working on the specified and (as the inner loop) over the requested levels.
     """

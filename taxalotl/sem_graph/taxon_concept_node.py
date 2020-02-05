@@ -249,7 +249,7 @@ class TaxonConceptSemNode(SemGraphNode):
         for expected in ('genus', 'sp_epithet', 'infra_epithet'):
             if expected not in kwargs:
                 raise ValueError("Expecting '{}' kwarg in claim_trinomial_synonym".format(expected))
-        return self._claim_syn_impl( name, syn_type, 'infraspecies', **kwargs)
+        return self._claim_syn_impl(name, syn_type, 'infraspecies', **kwargs)
 
     def _add_to_syn_list(self, syntc):
         if self.synonyms is None:
@@ -263,6 +263,6 @@ class TaxonConceptSemNode(SemGraphNode):
         tc.claim_is_synonym_of(self)
         if syn_type:
             tc.syn_type = syn_type
-        from ..semanticize import semanticize_names
+        from taxalotl.cmds.semanticize import semanticize_names
         semanticize_names(tc, name, kwargs, None)
         return tc
