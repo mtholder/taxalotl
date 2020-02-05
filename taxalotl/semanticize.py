@@ -167,7 +167,7 @@ def semanticize_names(tax_con_sem_node, name, name_dict, node=None):
     if name_dict.get('hybrid'):
         tcsn.claim_hybrid()
     vnsn = tcsn.add_verbatim_name(name)
-    _LOG.debug('semanticizing {} for {}'.format(name, tcsn.canonical_id))
+    # _LOG.debug('semanticizing {} for {}'.format(name, tcsn.canonical_id))
     valid_tcsn = tcsn if tcsn._is_synonym_of is None else tcsn._is_synonym_of
     valid_nph = valid_tcsn.has_name
     if undescribed:
