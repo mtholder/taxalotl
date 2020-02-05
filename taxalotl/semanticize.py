@@ -74,6 +74,12 @@ class TaxonConceptSemNode(SemGraphNode):
         self.mapped_to = None
 
     @property
+    def most_terminal_name(self):
+        if self.has_name is None:
+            return None
+        return self.has_name.most_terminal_name
+
+    @property
     def problematic_synonym_list(self):
         return self.problematic_synonyms if self.problematic_synonyms else []
 
@@ -519,6 +525,21 @@ class SemGraph(object):
         for att in SemGraph.att_list:
             setattr(self, att, None)
 
+    def denormalize_homonyms(self):
+        # for species ranK:
+        #   multiple authority entries
+        #   same valid epithet in multiple valid genera
+        to_mint = []
+        for tc in self.taxon_concept_list:
+            if tc.rank and tc.rank == 'species':
+                epithet = tc.most_terminal_name
+                if epithet is None:
+                    _LOG.warn('NO Epithet for  = {}'.format(tc.__dict__))
+                    continue
+                if isinstance(epithet._authority, list):
+                    _LOG.warn('epithet = {}'.format(epithet.__dict__))
+        import sys; sys.exit(1)
+
     @property
     def taxon_concept_list(self):
         return self._taxon_concepts if self._taxon_concepts else []
@@ -899,6 +920,7 @@ def semanticize_tax_part(taxolotl_config, res, fragment, tax_part, tax_forest):
     # now the "authority" synonyms...
     for node, sem_node, syn in delay_auth_syns:
         res.semanticize_node_authority_synonyms(sem_graph, node, sem_node, syn)
+    sem_graph.denormalize_homonyms()
     return sem_graph
 
 
