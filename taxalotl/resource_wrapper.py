@@ -540,7 +540,7 @@ class TaxonomyWrapper(ResourceWrapper):
         from .semanticize import semanticize_node_name
         if not self.node_should_be_semanticized(node):
             return None
-        tc = sem_graph.add_taxon_concept(self, node.id)
+        tc = sem_graph.add_taxon_concept(node.id)
         tc.claim_rank(node.rank)
         semanticize_node_name(self, sem_graph, tc, node)
         # _LOG.warn('node: {}'.format(node.__dict__))
