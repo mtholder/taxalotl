@@ -15,6 +15,7 @@ from .taxonomic_ranks import (ABOVE_GENUS_SORTING_NUMBER,
 from .name_parsing import parse_name_using_rank_hints, parse_name_to_dict
 from .tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
 from .sem_graph.graph import SemGraph
+
 _LOG = get_logger(__name__)
 
 
@@ -79,6 +80,7 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
     st = syn.syn_type
     '''
 
+
 def _assure_nonbasionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
     fn = canonical_name['full']
     vthn = valid_taxon.has_name
@@ -89,6 +91,7 @@ def _assure_nonbasionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_nam
         if shn and shn.name == fn:
             return shn
     raise RuntimeError('"{}" is not a basionym'.format(fn))
+
 
 def add_authority_to_name(res, sem_graph, name_sem, authors, year):
     mtn = name_sem.most_terminal_name
@@ -102,6 +105,7 @@ def _assure_basionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
     if vthn and vthn.canonical_name and vthn.canonical_name.name == fn:
         return vthn
     raise RuntimeError('"{}" is a basionym'.format(fn))
+
 
 def _parse_auth_syn(res, sem_graph, taxon_sem_node, syn):
     gnp = parse_name_to_dict(syn.name)
@@ -141,6 +145,7 @@ def _parse_auth_syn(res, sem_graph, taxon_sem_node, syn):
 def semanticize_node_auth_synonym(res, sem_graph, node, sem_node, syn):
     shn = sem_node.has_name
     _parse_auth_syn(res, sem_graph, sem_node, syn)
+
 
 def semanticize_node_name(res, sem_graph, tc, node):
     try:

@@ -201,7 +201,14 @@ class TaxonConceptSemNode(SemGraphNode):
 
     def _get_next_syn_id(self):
         ns = len(self.synonyms) if self.synonyms else 0
-        return '{}:syn{}'.format(self.canonical_id, ns)
+        try:
+            trimmed_canon = ':'.join(self.canonical_id.split(':')[2:])
+        except:
+            try:
+                trimmed_canon = ':'.join(self.canonical_id.split(':')[1:])
+            except:
+                trimmed_canon = self.canonical_id
+        return '{}:syn{}'.format(trimmed_canon, ns)
 
     @property
     def is_synonym(self):
