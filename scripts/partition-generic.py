@@ -56,6 +56,9 @@ def _write_line(out, fields):
 
 def write_taxonomy(fp, tax_headers, taxa, root_par_id):
     uid_ind = tax_headers.index('uid')
+    parent_dir = os.path.split(fp)[0]
+    if not os.path.isdir(parent_dir):
+        os.makedirs(parent_dir)
     with open(fp, 'w', encoding='utf-8') as outp:
         _write_line(outp, tax_headers)
         next_ids = [root_par_id]
