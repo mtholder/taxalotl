@@ -4,10 +4,11 @@ import json
 from peyotl import (get_logger, )
 from .taxon_concept_node import TaxonConceptSemNode
 from .verbatim_name import VerbatimSemNode
-from .names_for_ranks import (SpeciesGroupSemNode,
-                              GenusGroupSemNode,
+from .names_for_ranks import (GenusGroupSemNode,
                               HigherGroupSemNode,
                               SpecimenCodeSemNode,
+                              SpeciesGroupSemNode,
+                              TypeSpecimen
                               )
 from .name import CombinationSemNode
 from .graph_node import AuthoritySemNode
@@ -17,14 +18,16 @@ _LOG = get_logger(__name__)
 
 class SemGraph(object):
     att_list = ['_authorities',
-                '_specimens',
-                '_specimen_codes',
-                '_species_group_epithets',
-                '_genus_group_names',
                 '_combinations',
+                '_genus_group_names',
                 '_higher_group_names',
+                '_references',
+                '_species_group_epithets',
+                '_specimen_codes',
+                '_specimens',
+                '_taxon_concepts',
+                '_type_specimens',
                 '_verbatim_name',
-                '_taxon_concepts', '_references',
                 ]
     att_set = frozenset(att_list)
 
@@ -45,6 +48,25 @@ class SemGraph(object):
         self._verbatim_name = None
         self._taxon_concepts = None
         self._references = None
+        self._type_specimens = None
+
+    def impute_type_specimens(self):
+        for tc in self.taxon_concept_list:
+            if tc.hybrid or tc.undescribed or not tc.rank:
+                continue
+            if tc.rank == 'species':
+                epithet = tc.most_terminal_name
+                if not epithet.type_materials:
+                    self._add_type_specimen(None, epithet, tc.is_synonym_of)
+        for tc in self.taxon_concept_list:
+            if tc.hybrid or tc.undescribed or not tc.rank:
+                continue
+            if tc.is_specimen_based and tc.rank != 'species':
+                infra_epithet = tc.most_terminal_name
+                if infra_epithet is tc.has_name.sp_epithet:
+                    continue
+                if not infra_epithet.type_materials:
+                    self._add_type_specimen(None, infra_epithet, tc.is_synonym_of)
 
     def denormalize_homonyms(self):
         # for species ranK:
@@ -233,6 +255,13 @@ class SemGraph(object):
     def add_taxon_concept(self, foreign_id):
         x = TaxonConceptSemNode(self, foreign_id)
         self.taxon_concepts.append(x)
+        return x
+
+    def _add_type_specimen(self, spec_code, epithet_syn_name, valid_taxon):
+        d = {'parent_id': epithet_syn_name.canonical_id}
+        x = TypeSpecimen(self, d, spec_code, epithet_syn_name, valid_taxon)
+        self.type_specimens.append(x)
+        epithet_syn_name.claim_type_material(x)
         return x
 
     def __getattr__(self, item):

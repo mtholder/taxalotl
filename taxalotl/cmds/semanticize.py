@@ -239,6 +239,7 @@ def semanticize_tax_part(taxolotl_config, res, fragment, tax_part, tax_forest):
     for node, sem_node, syn in delay_auth_syns:
         res.semanticize_node_authority_synonyms(sem_graph, node, sem_node, syn)
     sem_graph.denormalize_homonyms()
+    sem_graph.impute_type_specimens()
     return sem_graph
 
 
