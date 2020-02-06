@@ -137,6 +137,30 @@ class SemGraph(object):
         other.has_name = new_vname
         self._split_tc_with_shared_sp_epithet(fixed, other)
 
+    def postorder_taxon_concepts(self):
+        yielded = set()
+        tcl = self.taxon_concept_list
+        todo = []
+        for tc in tcl:
+            if not tc.child_set:
+                yielded.add(tc)
+                yield tc
+            else:
+                todo.append(tc)
+        prev_todo_len = 1 + len(todo)
+        while todo:
+            assert prev_todo_len > len(todo)
+            prev_todo_len = len(todo)
+            ntd = []
+            for tc in todo:
+                if tc.child_set.issubset(yielded):
+                    yielded.add(tc)
+                    yield tc
+                else:
+                    ntd.append(tc)
+            todo = ntd
+
+
     @property
     def taxon_concept_list(self):
         return self._taxon_concepts if self._taxon_concepts else []
@@ -189,6 +213,10 @@ class SemGraph(object):
             if not tcobj.is_synonym_of:
                 r[tcobj.canonical_id] = tcobj
         return r
+
+    @property
+    def canonical_name_str_to_taxon_concept_map(self):
+        return {i.canonical_name.name: i for i in self._taxon_concepts}
 
     @property
     def valid_name_to_taxon_concept_map(self):

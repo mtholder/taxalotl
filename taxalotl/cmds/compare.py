@@ -130,7 +130,73 @@ def _write_report(out, ott_id, ott_graph, res_id, ref_graph):
     in_both = init_bipar['valid_in_both'] + init_bipar['bijection_with_1_invalid']
     _diagnose_higher_taxa(out, in_both, ott_id, ott_graph, res_id, ref_graph)
 
-def _diagnose_higher_taxa(out, matched, ott_id, ott_graph, res_id, ref_graph):
+def _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, res_id, ref_graph):
+    ott2ref, ref2ott = _gen_uniq_tc_maps(uniq_map)
+    _add_des_uniq_ids(ott_graph, ott2ref)
+    _add_des_uniq_ids(ref_graph, ref2ott)
+    ott_name_to_tc = ott_graph.canonical_name_str_to_taxon_concept_map
+    ref_name_to_tc = ref_graph.canonical_name_str_to_taxon_concept_map
+    checked_names = set()
+    for ott_name, tax_con in ott_name_to_tc.items():
+        if tax_con.is_specimen_based:
+            continue
+        checked_names.add(ott_name)
+        if not tax_con.is_the_valid_name:
+            rtc = ref_name_to_tc.get(ott_name)
+            if rtc and rtc.is_the_valid_name:
+                out.write('"{}" is valid in {}, but not in {}\n'.format(ott_name, res_id, ott_id))
+            continue
+        rtc = ref_name_to_tc.get(ott_name)
+        if not rtc:
+            out.write('"{}" is valid in {}, but not found in "{}"\n'.format(ott_name, ott_id, res_id))
+            continue
+        if not rtc.is_the_valid_name:
+            out.write('"{}" is valid in {}, but not in "{}"\n'.format(ott_name, ott_id, res_id))
+            continue
+        proj_to_ref = set([ott2ref[i] for i in tax_con.des_uniq_ids])
+        if proj_to_ref == rtc.des_uniq_ids:
+            out.write('{} and {} agree on the definition of "{}"\n'.format(ott_id, res_id, ott_name))
+        else:
+            in_both = proj_to_ref.intersection(rtc.des_uniq_ids)
+            missing_in_ott = rtc.des_uniq_ids - proj_to_ref
+            missing_in_ref = proj_to_ref - rtc.des_uniq_ids
+            missing_in_ott_str = '", "'.join([i.valid_name.name for i in missing_in_ott])
+            missing_in_ref_str = '", "'.join([i.valid_name.name for i in missing_in_ref])
+            mirs = ' {} contains ["{}"]'.format(ott_id, missing_in_ref_str) if missing_in_ref_str else ''
+            mios = ' {} contains ["{}"].'.format(res_id, missing_in_ott_str) if missing_in_ott_str else '.'
+            m = '"{}" shares {} uniq-mapping descendants. However:{}{}\n'
+            out.write(m.format(ott_name, len(in_both), mirs, mios))
+
+def _gen_uniq_tc_maps(uniq_map):
+    ott2ref = {}
+    ref2ott = {}
+    for ott_tax_con in uniq_map:
+        if isinstance(ott_tax_con, frozenset):
+            assert len(ott_tax_con) == 1
+            ott_tax_con = list(ott_tax_con)[0]
+        assert isinstance(ott_tax_con.mapped_to, set)
+        assert len(ott_tax_con.mapped_to) == 1
+        ref_tax_con = next(iter(ott_tax_con.mapped_to))
+        assert ott_tax_con not in ott2ref
+        ott2ref[ott_tax_con] = ref_tax_con
+        assert ref_tax_con not in ref2ott
+        ref2ott[ref_tax_con] = ott_tax_con
+        # sys.stdout.write('ott "{}" <-> cof "{}"\n'.format(ott_tax_con.valid_name.name, ref_tax_con.valid_name.name))
+    return ott2ref, ref2ott
+
+def _add_des_uniq_ids(graph, uniq_id_dict):
+    for tax_con in graph.postorder_taxon_concepts():
+        cs = tax_con.child_set
+        tax_con.des_uniq_ids = set()
+        if tax_con in uniq_id_dict:
+            tax_con.des_uniq_ids.add(tax_con)
+        if cs:
+            for c in cs:
+                tax_con.des_uniq_ids.update(c.des_uniq_ids)
+
+
+def _set_mapped_to_and_partition(matched):
+    # Reset the `mapped_to` field
     ott_tc_set, ref_tc_set = set(), set()
     for ott_name, ott_tc, ref_name, rtcl in matched:
         ott_tc.mapped_to = set()
@@ -138,11 +204,12 @@ def _diagnose_higher_taxa(out, matched, ott_id, ott_graph, res_id, ref_graph):
         for rtc in rtcl:
             ref_tc_set.add(rtc)
             rtc.mapped_to = set()
+    # initialize the `mapped_to` field
     for ott_name, ott_tc, ref_name, rtcl in matched:
         for rtc in rtcl:
             ott_tc.mapped_to.add(rtc)
             rtc.mapped_to.add(ott_tc)
-
+    # partition into uniq_map, merge, split, snarl
     uniq_map, merge, split, snarl = set(), set(), set(), set()
     for ott_tc in ott_tc_set:
         np = len(ott_tc.mapped_to)
@@ -186,8 +253,11 @@ def _diagnose_higher_taxa(out, matched, ott_id, ott_graph, res_id, ref_graph):
             red_snarl.add(x)
         for td in remove:
             red_snarl.remove(td)
-    snarl = red_snarl
+    return uniq_map, merge, split, red_snarl
 
+def _diagnose_higher_taxa(out, matched, ott_id, ott_graph, res_id, ref_graph):
+    uniq_map, merge, split, snarl = _set_mapped_to_and_partition(matched)
+    # Report partitions
     out.write('{} names in {} need to be split into multiple names in and {}:\n'.format(len(split), ott_id, res_id))
     _write_using_mapped_to(out, split)
     out.write('{} sets of names in {} need to be merged into names in and {}:\n'.format(len(merge), ott_id, res_id))
@@ -196,6 +266,8 @@ def _diagnose_higher_taxa(out, matched, ott_id, ott_graph, res_id, ref_graph):
     _write_using_mapped_to(out, snarl)
     out.write('{} names in {} map uniquely to a name in {}:\n'.format(len(uniq_map), ott_id, res_id))
     _write_using_mapped_to(out, uniq_map)
+    # Use uniq_mapped to generate taxon_concept definitions
+    _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, res_id, ref_graph)
 
 
 def _write_using_mapped_to(out, mapping_set):
