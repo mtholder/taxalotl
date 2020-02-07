@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from .graph_node import SemGraphNode
 
-KNOWN_FLAGS = frozenset(['hidden', 'sibling_higher'])
+KNOWN_FLAGS = frozenset(['hidden', 'sibling_higher', 'extinct'])
 
 
 class TaxonConceptSemNode(SemGraphNode):
