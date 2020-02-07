@@ -35,9 +35,10 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
     if not pnd:
         sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, "unparseable")
         return
-    arank = pnd['apparent_rank']
+
+    arank = pnd.get('apparent_rank', '')
     if arank == 'clade':
-        if rsn <= SPECIES_SORTING_NUMBER:
+        if rsn is not None and rsn <= SPECIES_SORTING_NUMBER:
             e = "higher taxon name synonym for taxon rank = {}".format(node.rank)
             sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, e)
         else:
@@ -58,8 +59,7 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
             #                             syn.syn_type, pnd.get('specimen_code'))
         else:
             sem_node.claim_formerly_full_species(res, syn.name, syn_type=syn.syn_type, **pnd)
-    else:
-        assert arank == 'infraspecies'
+    elif arank == 'infraspecies':
         if rsn > SPECIES_SORTING_NUMBER:
             e = "infraspecies synonym for taxon rank = {}".format(node.rank)
             sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, e)
@@ -67,6 +67,9 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
             sem_node.claim_formerly_subspecies(res, syn.name, syn_type=syn.syn_type, **pnd)
         else:
             sem_node.claim_trinomial_synonym(res, syn.name, syn_type=syn.syn_type, **pnd)
+    else:
+        assert arank == ''
+        assert 'hybrid' in pnd
     '''
 
     
@@ -129,7 +132,11 @@ def _parse_auth_syn(res, sem_graph, taxon_sem_node, syn):
     if isinstance(target_name, list):
         assert len(target_name) == 1
         target_name = target_name[0]
-    authorship = target_name['authorship']
+    try:
+        authorship = target_name['authorship']
+    except:
+        _LOG.warn('Could not parse synonym "{}"'.format(syn.name))
+        return
     parens_preserved = authorship['value'].strip()
     is_basionym = parens_preserved.startswith('(')
     if is_basionym:
@@ -155,6 +162,8 @@ def semanticize_node_name(res, sem_graph, tc, node):
     name_dict = parse_name_using_rank_hints(node.name, node.rank, rsn)
     semanticize_names(tc, node.name, name_dict, node)
 
+class NameParsingError(Exception):
+    pass
 
 def semanticize_names(tax_con_sem_node, name, name_dict, node=None):
     """Translates content in the parsed `name_dict` in to graph nodes for this taxon_concept_sem_node
@@ -166,6 +175,21 @@ def semanticize_names(tax_con_sem_node, name, name_dict, node=None):
         tcsn.claim_undescribed()
     if name_dict.get('hybrid'):
         tcsn.claim_hybrid()
+    genus = name_dict.get('genus')
+    subgenus = name_dict.get('subgenus')
+    sp_epithet = name_dict.get('sp_epithet')
+    infra_epithet = name_dict.get('infra_epithet')
+    higher_group_name = name_dict.get('higher_group_name')
+    specimen_code = name_dict.get('specimen_code')
+    if node and node.flags:
+        for flag in node.flags:
+            if flag == 'infraspecific':
+                if infra_epithet is None:
+                    m = 'taxon "{}" flagged as infraspecific, but not parsed as such'
+                    raise NameParsingError(m.format(name))
+            else:
+                tcsn.claim_flag(flag)
+
     vnsn = tcsn.add_verbatim_name(name)
     # _LOG.debug('semanticizing {} for {}'.format(name, tcsn.canonical_id))
     valid_tcsn = tcsn if tcsn._is_synonym_of is None else tcsn._is_synonym_of
@@ -178,36 +202,22 @@ def semanticize_names(tax_con_sem_node, name, name_dict, node=None):
         combination = name_dict.get('combination')
         if combination:
             vnsn.add_combination(combination)
-    genus = name_dict.get('genus')
     if genus:
         vnsn.add_genus(genus)
     valid_genus = valid_nph.genus_name
-    subgenus = name_dict.get('subgenus')
     if subgenus:
         vnsn.add_subgenus(subgenus)
-    sp_epithet = name_dict.get('sp_epithet')
     valid_sp = None
     if sp_epithet:
         assert valid_genus is not None
         valid_sp = vnsn.add_sp_epithet(sp_epithet, valid_genus)
-    infra_epithet = name_dict.get('infra_epithet')
     if infra_epithet:
         assert valid_sp is not None
         vnsn.add_infra_epithet(infra_epithet, valid_sp)
-    higher_group_name = name_dict.get('higher_group_name')
     if higher_group_name:
         vnsn.add_higher_group_name(higher_group_name)
-    specimen_code = name_dict.get('specimen_code')
     if specimen_code:
         vnsn.add_specimen_code(specimen_code)
-    if node and node.flags:
-        for flag in node.flags:
-            if flag == 'infraspecific':
-                if infra_epithet is None:
-                    m = 'taxon "{}" flagged as infraspecific, but not parsed as such'
-                    raise ValueError(m.format(name))
-            else:
-                tcsn.claim_flag(flag)
     return vnsn
 
 

@@ -341,4 +341,4 @@ class GBIFWrapper(TaxonomyWrapper):
     def node_should_be_semanticized(self, node):
         if _BOLD_NAME.match(node.name):
             return False
-        return True
+        return super(GBIFWrapper, self).node_should_be_semanticized(node)

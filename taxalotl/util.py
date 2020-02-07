@@ -141,3 +141,12 @@ class OutFile(object):
         if self.out_stream is not None:
             self.out_stream.close()
             self.out_stream = None
+
+def get_frag_from_dir(taxalotl_conf, tax_dir):
+    res = taxalotl_conf.get_terminalized_res_by_id("ott")
+    pd = res.partitioned_filepath
+    assert tax_dir.startswith(pd)
+    f = tax_dir[len(pd):]
+    while f.startswith('/'):
+        f = f[1:]
+    return f

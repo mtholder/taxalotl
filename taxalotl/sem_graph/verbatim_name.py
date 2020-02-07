@@ -44,7 +44,9 @@ class VerbatimSemNode(NameSemNode):
         return VerbatimSemNode.name_sem_nd_pred
 
     def claim_higher_group_name(self, n):
-        assert self.higher_group_name is None
+        assert self.higher_group_name is None or self.higher_group_name.name == n.name
+        if self.higher_group_name and self.higher_group_name.name == n.name:
+            return
         self.higher_group_name = n
 
     def claim_combination(self, n):
@@ -66,7 +68,9 @@ class VerbatimSemNode(NameSemNode):
             self.subgenus_names.append(n)
 
     def claim_sp_epithet(self, n):
-        assert self.sp_epithet is None or self.sp_epithet is n
+        assert self.sp_epithet is None or self.sp_epithet.name == n.name
+        if self.sp_epithet and self.sp_epithet.name == n.name:
+            return
         self.sp_epithet = n
 
     def claim_infra_epithet(self, n):

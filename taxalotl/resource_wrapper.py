@@ -534,15 +534,23 @@ class TaxonomyWrapper(ResourceWrapper):
         # print("ET obj = {}".format(obj))
 
     def node_should_be_semanticized(self, node):
+        if 'environmental sample' in node.name:
+            _LOG.warn('Not semanticizing env. sample: "{}"'.format(node.line))
+            return False
         return True
 
     def semanticize_node_entry(self, sem_graph, node, par_sem_node):
-        from taxalotl.cmds.semanticize import semanticize_node_name
+        from taxalotl.cmds.semanticize import semanticize_node_name, NameParsingError
         if not self.node_should_be_semanticized(node):
             return None
         tc = sem_graph.add_taxon_concept(node.id)
         tc.claim_rank(node.rank)
-        semanticize_node_name(self, sem_graph, tc, node)
+        try:
+            semanticize_node_name(self, sem_graph, tc, node)
+        except NameParsingError as x:
+            _LOG.warn('Failed to parse a name for "{}"'.format(node.line))
+            sem_graph.remove_taxon_concept(tc)
+            return None
         # _LOG.warn('node: {}'.format(node.__dict__))
         return tc
 

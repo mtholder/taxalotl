@@ -12,6 +12,7 @@ from peyotl import (get_logger,
                     partition_otifacts_by_root_element,
                     write_as_json)
 from taxalotl.cmds.compare import compare_taxonomies_in_dir
+from taxalotl.cmds.deseparte import deseparate_taxonomies_in_dir
 from taxalotl.cmds.partitions import (GEN_MAPPING_FILENAME,
                                       do_partition,
                                       get_part_dir_from_part_name,
@@ -384,19 +385,32 @@ def cache_separator_names(taxalotl_config):
     _LOG.info("Separator name to dir mapping written to {}".format(outfn))
 
 
-def compare_taxonomies(taxalotl_config, levels):
+def _leveled_in_dir_command(taxalotl_config, levels, func, name, lev_dir_fmt=None):
     assert levels != [None]
     todir = taxalotl_config.get_separator_dict()
     for level in levels:
-        with VirtCommand(name='compare-taxonomies', level=level):
+        with VirtCommand(name=name, level=level):
             try:
                 tax_dir_list = todir[level]
             except KeyError:
                 raise ValueError('The level "{}" is not separator name'.format(level))
             for tax_dir in tax_dir_list:
-                m = 'Will compare taxonomies for "{}" based on {}'
-                _LOG.info(m.format(level, tax_dir))
-                compare_taxonomies_in_dir(taxalotl_config, tax_dir)
+                if lev_dir_fmt:
+                    _LOG.info(lev_dir_fmt.format(level, tax_dir))
+                func(taxalotl_config, tax_dir)
+
+def compare_taxonomies(taxalotl_config, levels):
+    return _leveled_in_dir_command(taxalotl_config, levels,
+                                   compare_taxonomies_in_dir,
+                                   name='compare-taxonomies',
+                                   lev_dir_fmt='Will compare taxonomies for "{}" based on {}')
+
+def deseparate_taxonomies(taxalotl_config, levels):
+    return _leveled_in_dir_command(taxalotl_config, levels,
+                                   deseparate_taxonomies_in_dir,
+                                   name='compare-taxonomies',
+                                   lev_dir_fmt='Will compare taxonomies for "{}" based on {}')
+
 
 
 def remove_sep_artifacts_and_empty_dirs(d):

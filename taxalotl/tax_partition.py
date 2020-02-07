@@ -15,6 +15,8 @@ OUTP_TAXONOMY_DIRNAME = '__outputs__'
 MISC_DIRNAME = '__misc__'
 GEN_MAPPING_FILENAME = '__mapping__.json'
 ROOTS_FILENAME = '__roots__.json'
+TAXONOMY_FN = 'taxonomy.tsv'
+SYNONYMS_FN = 'synonyms.tsv'
 ACCUM_DES_FILENAME = '__accum_des__.json'
 
 _LOG = get_logger(__name__)
@@ -211,7 +213,7 @@ _VALID_SYN_TYPES = {'acronym', 'ambiguous synonym',
                     'genbank common name',
                     'genbank synonym',
                     'homotypic synonym', 'heterotypic synonym',
-                    'includes', 'misapplied name',
+                    'includes', 'misapplied name', 'invalid',
                     'misnomer',
                     'misspelling',
                     'orthographia',

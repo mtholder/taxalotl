@@ -8,23 +8,24 @@ from peyotl import (get_logger, read_as_json)
 
 from taxalotl import TaxalotlConfig
 from taxalotl.commands import (accumulate_separated_descendants,
-                           align,
-                           analyze_update,
-                           build_partition_maps,
-                           cache_separator_names,
-                           clean_resources,
-                           compare_taxonomies,
-                           diagnose_new_separators,
-                           enforce_new_separators,
-                           download_resources,
-                           info_on_resources,
-                           normalize_resources,
-                           partition_resources,
-                           pull_otifacts,
-                           status_of_resources,
-                           unpack_resources,
-                           SEP_NAMES,
-                           )
+                               align,
+                               analyze_update,
+                               build_partition_maps,
+                               cache_separator_names,
+                               clean_resources,
+                               compare_taxonomies,
+                               deseparate_taxonomies,
+                               diagnose_new_separators,
+                               enforce_new_separators,
+                               download_resources,
+                               info_on_resources,
+                               normalize_resources,
+                               partition_resources,
+                               pull_otifacts,
+                               status_of_resources,
+                               unpack_resources,
+                               SEP_NAMES,
+                               )
 from taxalotl.cmds.partitions import (PART_NAMES,
                                       NAME_TO_PARTS_SUBSETS,
                                       NONTERMINAL_PART_NAMES,
@@ -37,6 +38,7 @@ res_indep_cmds = ['build-partition-maps',
                   'cache-separator-names',
                   'clean-separation',
                   'compare-taxonomies',
+                  'deseparate-taxonomies',
                   'diagnose-new-separators',
                   'pull-otifacts',
                   ]
@@ -83,6 +85,8 @@ def main_post_parse(args):
             cache_separator_names(taxalotl_config)
         elif args.which == 'compare-taxonomies':
             compare_taxonomies(taxalotl_config, [args.level])
+        elif args.which == 'deseparate-taxonomies':
+            deseparate_taxonomies(taxalotl_config, [args.level])
         elif args.which == 'download':
             download_resources(taxalotl_config, args.resources)
         elif args.which == 'status':
@@ -174,6 +178,11 @@ def main():
                           default=False,
                           help="Report only on the terminalized resource of each type.")
     status_p.set_defaults(which="status")
+    # deseparate
+    deseparate_p = subp.add_parser('deseparate-taxonomies',
+                                   help="reverses the action of one separate action")
+    _add_level_arg(deseparate_p)
+    deseparate_p.set_defaults(which="deseparate-taxonomies")
     # CACHE-separator-names
     compare_tax_p = subp.add_parser('compare-taxonomies',
                                     help="compare taxonomies for a separated dir")

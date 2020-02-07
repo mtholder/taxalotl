@@ -315,7 +315,7 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
     def node_should_be_semanticized(self, node):
         if node.flags and _skip_semanticizing_set.intersection(node.flags):
             return False
-        return True
+        return super(OTTaxonomyWrapper, self).node_should_be_semanticized(node)
 
     def get_source_for_sep_or_part(self, current_partition_key):
         try:

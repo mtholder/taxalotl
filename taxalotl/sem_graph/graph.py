@@ -290,6 +290,12 @@ class SemGraph(object):
         self.taxon_concepts.append(x)
         return x
 
+    def remove_taxon_concept(self, tc):
+        if tc in self._taxon_concepts:
+            self._taxon_concepts.remove(tc)
+        if tc.canonical_id in self._by_id:
+            del self._by_id[tc.canonical_id]
+
     def _add_type_specimen(self, spec_code, epithet_syn_name, valid_taxon):
         d = {'parent_id': epithet_syn_name.canonical_id}
         x = TypeSpecimen(self, d, spec_code, epithet_syn_name, valid_taxon)

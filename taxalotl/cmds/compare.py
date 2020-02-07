@@ -4,18 +4,10 @@ from peyotl import get_logger
 import sys
 import os
 from taxalotl.tax_partition import (get_taxon_partition, INP_TAXONOMY_DIRNAME, MISC_DIRNAME, OUTP_TAXONOMY_DIRNAME)
-from taxalotl.util import OutFile, OutDir
+from taxalotl.util import OutFile, OutDir, get_frag_from_dir
 _LOG = get_logger(__name__)
 
 
-def get_frag_from_dir(taxalotl_conf, tax_dir):
-    res = taxalotl_conf.get_terminalized_res_by_id("ott")
-    pd = res.partitioned_filepath
-    assert tax_dir.startswith(pd)
-    f = tax_dir[len(pd):]
-    while f.startswith('/'):
-        f = f[1:]
-    return f
 
 JUST_COF = True
 
