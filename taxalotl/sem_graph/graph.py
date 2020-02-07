@@ -52,12 +52,17 @@ class SemGraph(object):
 
     def impute_type_specimens(self):
         for tc in self.taxon_concept_list:
+            if not tc.is_specimen_based:
+                continue
             if tc.hybrid or tc.undescribed or not tc.rank:
                 continue
             if tc.rank == 'species':
                 epithet = tc.most_terminal_name
-                if not epithet.type_materials:
-                    self._add_type_specimen(None, epithet, tc.is_synonym_of)
+                try:
+                    if not epithet.type_materials:
+                        self._add_type_specimen(None, epithet, tc.is_synonym_of)
+                except:
+                    _LOG.exception("problem adding type materials")
         for tc in self.taxon_concept_list:
             if tc.hybrid or tc.undescribed or not tc.rank:
                 continue
