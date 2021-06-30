@@ -122,6 +122,7 @@ def _write_report(out, ott_id, ott_graph, res_id, ref_graph):
     in_both = init_bipar['valid_in_both'] + init_bipar['bijection_with_1_invalid']
     _diagnose_higher_taxa(out, in_both, ott_id, ott_graph, res_id, ref_graph)
 
+
 def _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, res_id, ref_graph):
     ott2ref, ref2ott = _gen_uniq_tc_maps(uniq_map)
     _add_des_uniq_ids(ott_graph, ott2ref)
@@ -260,7 +261,22 @@ def _diagnose_higher_taxa(out, matched, ott_id, ott_graph, res_id, ref_graph):
     _write_using_mapped_to(out, uniq_map)
     # Use uniq_mapped to generate taxon_concept definitions
     _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, res_id, ref_graph)
+    _LOG.warn("Moving taxa in OTT to rerun _use_uniq_mapping_to_diagnose_higher_taxa")
+    _move_using_mapped_to(uniq_map, ott_graph, ref_graph)
+    _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, res_id, ref_graph)
 
+def _move_using_mapped_to(mapping_set, ott_graph, ref_graph):
+    for n, k in enumerate(mapping_set):
+        if isinstance(k, frozenset):
+            continue
+        usl = [i.canonical_name.name for i in k.mapped_to]
+        usl.sort()
+        osl = k.canonical_name.name
+        if len(usl) == 1 and osl != usl[0]:
+            move_in_first(k, ott_graph, next(iter(k.mapped_to)), ref_graph)
+
+def move_in_first(ott_tc, ott_graph, ref_tc, ref_graph):
+    print("move_in_first {} -> {}".format(ott_tc.canonical_name.name, ref_tc.canonical_name.name))
 
 def _write_using_mapped_to(out, mapping_set):
     for n, k in enumerate(mapping_set):

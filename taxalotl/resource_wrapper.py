@@ -535,7 +535,7 @@ class TaxonomyWrapper(ResourceWrapper):
 
     def node_should_be_semanticized(self, node):
         if 'environmental sample' in node.name:
-            _LOG.warn('Not semanticizing env. sample: "{}"'.format(node.line))
+            _LOG.warn('Not semanticizing env. sample: "{}"'.format(node.line[:-1]))
             return False
         return True
 
@@ -548,7 +548,7 @@ class TaxonomyWrapper(ResourceWrapper):
         try:
             semanticize_node_name(self, sem_graph, tc, node)
         except NameParsingError as x:
-            _LOG.warn('Failed to parse a name for "{}"'.format(node.line))
+            _LOG.warn('Failed to parse a name for "{}"'.format(node.line[:-1]))
             sem_graph.remove_taxon_concept(tc)
             return None
         # _LOG.warn('node: {}'.format(node.__dict__))

@@ -3,12 +3,13 @@ from .graph_node import SemGraphNode
 
 
 class NameSemNode(SemGraphNode):
-    name_sem_nd_pred = ('name', 'authority')
+    name_sem_nd_pred = ('name', 'authority', 'type_materials', )
 
     def __init__(self, sem_graph, id_minting_d, name):
         super(NameSemNode, self).__init__(sem_graph, id_minting_d)
         self._name = name
         self._authority = None
+        self.type_materials = None
 
     @property
     def name(self):
@@ -17,6 +18,12 @@ class NameSemNode(SemGraphNode):
     @property
     def predicates(self):
         return NameSemNode.name_sem_nd_pred
+
+    def claim_type_material(self, type_str):
+        if self.type_materials is None:
+            self.type_materials = []
+        self.type_materials.append(type_str)
+
 
     def claim_authority(self, auth):
         if self._authority is None:

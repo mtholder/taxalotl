@@ -23,18 +23,12 @@ class GenusGroupSemNode(NameSemNode):
 
 
 class SpeciesGroupSemNode(NameSemNode):
-    sp_grp_name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + ['type_materials', 'authority'])
+    sp_grp_name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + ['authority'])
 
     def __init__(self, sem_graph, id_minting_d, name):
         super(SpeciesGroupSemNode, self).__init__(sem_graph, id_minting_d, name)
-        self.type_materials = None
         self._authority = None
         self.contained = []
-
-    def claim_type_material(self, type_str):
-        if self.type_materials is None:
-            self.type_materials = []
-        self.type_materials.append(type_str)
 
 
 class HigherGroupSemNode(NameSemNode):
