@@ -5,8 +5,9 @@ import sys
 import os
 from enum import IntEnum, IntFlag
 from typing import Dict, List
+import logging
 
-from peyotl import (get_logger, write_as_json)
+from peyutil import write_as_json
 
 from taxalotl.config import TaxalotlConfig
 from taxalotl.tree import TaxonTree
@@ -19,7 +20,7 @@ from taxalotl.taxonomic_ranks import (GENUS_SORTING_NUMBER,
 from taxalotl.tax_partition import IGNORE_SYN_TYPES
 from taxalotl.util import OutFile, VirtCommand
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 out_stream = sys.stdout
 
 SEP_NAMES = '__separator_names__.json'

@@ -6,8 +6,7 @@ import os
 import sys
 from enum import IntEnum, IntFlag
 from typing import List
-
-from peyotl import (get_logger)
+import logging
 
 from taxalotl.config import TaxalotlConfig
 from taxalotl.cmds.partitions import (PART_NAMES)
@@ -15,7 +14,7 @@ from taxalotl.resource_wrapper import TaxonomyWrapper
 from taxalotl.taxonomic_ranks import (SPECIES_SORTING_NUMBER)
 from taxalotl.util import get_true_false_repsonse, VirtCommand
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 out_stream = sys.stdout
 
 

@@ -2,11 +2,12 @@
 from __future__ import print_function
 
 import os
-from peyotl import get_logger
+import logging
 from taxalotl.resource_manager import ResourceManager
 from .resource_wrapper import GenericTaxonomyWrapper
 from .util import OutDir
-_LOG = get_logger(__name__)
+
+_LOG = logging.getLogger(__name__)
 
 
 def _none_for_missing_config_get(config, section, option, default=None):
@@ -74,7 +75,7 @@ class TaxalotlConfig(object):
 
     def get_separator_dict(self):
         from taxalotl.commands import SEP_MAPPING, cache_separator_names
-        from peyotl import read_as_json
+        from peyutil import read_as_json
         fn = os.path.join(self.partitioned_dir, SEP_MAPPING)
         if not os.path.exists(fn):
             cache_separator_names(self)

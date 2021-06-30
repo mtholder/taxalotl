@@ -3,12 +3,12 @@
 ###################################################################################################
 # Much of following code is from by JAR
 from __future__ import print_function
+import logging
 
-from peyotl import (get_logger)
 
 from taxalotl.resource_wrapper import TaxonomyWrapper
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 class WormsTaxonomyWrapper(TaxonomyWrapper):

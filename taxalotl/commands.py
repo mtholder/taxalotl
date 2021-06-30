@@ -5,12 +5,11 @@ import os
 import subprocess
 import sys
 
-from peyotl import (get_logger,
-                    read_all_otifacts,
-                    read_as_json,
+from peyutil import (read_as_json,
+                     write_as_json)
+from peyotl import (read_all_otifacts,
                     filter_otifacts_by_type,
-                    partition_otifacts_by_root_element,
-                    write_as_json)
+                    partition_otifacts_by_root_element, )
 from taxalotl.cmds.compare import compare_taxonomies_in_dir
 from taxalotl.cmds.deseparte import deseparate_taxonomies_in_dir
 from taxalotl.cmds.partitions import (GEN_MAPPING_FILENAME,
@@ -27,8 +26,9 @@ from taxalotl.cmds.dynamic_partitioning import (perform_dynamic_separation,
 from taxalotl.cmds.analyze_update import analyze_update_to_resources
 from taxalotl.cmds.align import align_resource
 from taxalotl.util import unlink, VirtCommand, OutFile
+import logging
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 out_stream = sys.stdout
 
 SEP_NAMES = '__separator_names__.json'

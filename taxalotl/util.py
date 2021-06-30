@@ -4,9 +4,9 @@
 import json
 import os
 import io
-from peyotl import get_logger
+import logging
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 INTERACTIVE_MODE = True
 

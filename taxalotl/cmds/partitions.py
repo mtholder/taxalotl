@@ -3,8 +3,9 @@ from __future__ import print_function
 
 import copy
 import os
+import logging
 
-from peyotl import get_logger, read_as_json
+from peyutil import read_as_json
 
 from taxalotl.tax_partition import (INP_TAXONOMY_DIRNAME,
                                     MISC_DIRNAME,
@@ -12,7 +13,7 @@ from taxalotl.tax_partition import (INP_TAXONOMY_DIRNAME,
                                     get_taxon_partition,
                                     use_tax_partitions)
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 _LIFE = 'Life'
 ####################################################################################################
 # Some data (to later be refactored

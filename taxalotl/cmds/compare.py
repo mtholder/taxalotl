@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from peyotl import get_logger
+import logging
 import sys
 import os
+
 from taxalotl.tax_partition import (get_taxon_partition, INP_TAXONOMY_DIRNAME, MISC_DIRNAME, OUTP_TAXONOMY_DIRNAME)
 from taxalotl.util import OutFile, OutDir, get_frag_from_dir
-_LOG = get_logger(__name__)
 
-
-
+_LOG = logging.getLogger(__name__)
 JUST_COF = True
 
 def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):

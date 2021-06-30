@@ -6,11 +6,12 @@ import os
 import shutil
 import urllib
 import urllib.request
+import logging
 
-from peyotl import (assure_dir_exists,
-                    download_large_file,
-                    get_logger, gunzip, gunzip_and_untar,
-                    unzip)
+from peyutil import (assure_dir_exists,
+                     download_large_file,
+                     gunzip, gunzip_and_untar,
+                     unzip)
 
 from taxalotl.ott_schema import (INP_OTT_SYNONYMS_HEADER,
                                  INP_OTT_TAXONOMY_HEADER,
@@ -26,7 +27,7 @@ from taxalotl.tax_partition import TAX_SLICE_CACHE
 from taxalotl.util import unlink, OutFile, OutDir
 from taxalotl.cmds.semanticize import SemGraph
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 ######################################################################################

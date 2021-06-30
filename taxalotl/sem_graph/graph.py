@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import json
-from peyotl import (get_logger, )
+import logging
+
 from .taxon_concept_node import TaxonConceptSemNode
 from .verbatim_name import VerbatimSemNode
 from .names_for_ranks import (GenusGroupSemNode,
@@ -13,7 +14,7 @@ from .names_for_ranks import (GenusGroupSemNode,
 from .name import CombinationSemNode
 from .graph_node import AuthoritySemNode
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 class SemGraph(object):

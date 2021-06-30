@@ -4,7 +4,7 @@ from __future__ import print_function
 import os
 import sys
 
-from peyotl import (get_logger, read_as_json)
+from peyutil import read_as_json
 
 from taxalotl import TaxalotlConfig
 from taxalotl.commands import (accumulate_separated_descendants,
@@ -30,8 +30,8 @@ from taxalotl.cmds.partitions import (PART_NAMES,
                                       NAME_TO_PARTS_SUBSETS,
                                       NONTERMINAL_PART_NAMES,
                                       TERMINAL_PART_NAMES, )
-
-_LOG = get_logger(__name__)
+import logging
+_LOG = logging.getLogger(__name__)
 
 # Commands that don't take a resource ID
 res_indep_cmds = ['build-partition-maps',

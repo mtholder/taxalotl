@@ -3,8 +3,9 @@ from __future__ import print_function
 
 import json
 import os
+import logging
 
-from peyotl import (get_logger, write_as_json)
+from peyutil import write_as_json
 
 from taxalotl.util import OutFile, OutDir
 from taxalotl.taxonomic_ranks import (ABOVE_GENUS_SORTING_NUMBER,
@@ -16,7 +17,7 @@ from taxalotl.parsing.name_parsing import parse_name_using_rank_hints, parse_nam
 from taxalotl.tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
 from taxalotl.sem_graph.graph import SemGraph
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):

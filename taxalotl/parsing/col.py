@@ -1,12 +1,13 @@
 from __future__ import print_function
 
 import io
+import logging
 
-from peyotl import (get_logger, shorter_fp_form)
+from peyutil import shorter_fp_form
 
 from taxalotl.resource_wrapper import TaxonomyWrapper
 from taxalotl.parsing.darwin_core import normalize_darwin_core_taxonomy
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 COL_PARTMAP = {
     'Archaea': frozenset([52435722]),

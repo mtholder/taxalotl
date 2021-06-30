@@ -3,8 +3,8 @@
 
 import os
 from collections import defaultdict
+import logging
 
-from peyotl import get_logger
 from peyotl.utility.str_util import StringIO
 
 from taxalotl.ott_schema import (read_taxonomy_to_get_single_taxon,
@@ -17,7 +17,7 @@ from taxalotl.resource_wrapper import ResourceWrapper, TaxonomyWrapper
 from taxalotl.tax_partition import (get_roots_for_subset, )
 from taxalotl.util import get_true_false_repsonse
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 OTT_PARTMAP = {
     'Archaea': frozenset([996421]),

@@ -3,11 +3,12 @@ from __future__ import print_function
 import io
 import os
 import time
-from peyotl import (add_or_append_to_dict, get_logger)
+import logging
+from peyutil import add_or_append_to_dict
 from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.resource_wrapper import TaxonomyWrapper
 from taxalotl.util import OutFile
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 ###################################################################################################

@@ -3,13 +3,13 @@
 
 from __future__ import print_function
 from typing import Dict, List
-from peyotl import get_logger
+import logging
 from .taxon import Taxon
 from .taxonomic_ranks import (GENUS_SORTING_NUMBER,
                               MINIMUM_SORTING_NUMBER,
                               SPECIES_SORTING_NUMBER)
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 def write_indented_subtree(out, node, indent_level):

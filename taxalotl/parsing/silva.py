@@ -7,11 +7,11 @@ from __future__ import print_function
 
 import io
 import os
+import logging
 
-from peyotl import (assure_dir_exists,
-                    get_logger,
-                    read_as_json,
-                    write_as_json)
+from peyutil import (assure_dir_exists,
+                     read_as_json,
+                     write_as_json)
 
 from taxalotl.commands import unpack_resources
 from taxalotl.ott_schema import InterimTaxonomyData
@@ -19,7 +19,7 @@ from taxalotl.cmds.partitions import GEN_MAPPING_FILENAME
 from taxalotl.resource_wrapper import TaxonomyWrapper
 from taxalotl.util import OutFile
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 def parse_silva_ids(fn):

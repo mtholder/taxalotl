@@ -2,8 +2,11 @@
 import os
 from contextlib import contextmanager
 from copy import copy
+import logging
 
-from peyotl import get_logger, assure_dir_exists, read_as_json, write_as_json
+from peyutil import (assure_dir_exists, 
+                     read_as_json,
+                     write_as_json, )
 
 from .ott_schema import HEADER_TO_LINE_PARSER
 from .taxon import Taxon
@@ -19,7 +22,7 @@ TAXONOMY_FN = 'taxonomy.tsv'
 SYNONYMS_FN = 'synonyms.tsv'
 ACCUM_DES_FILENAME = '__accum_des__.json'
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 def get_taxonomies_for_dir(taxon_dir):

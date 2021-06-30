@@ -8,14 +8,16 @@ import csv
 import io
 import os
 import time
+import logging
+
 
 from bs4 import BeautifulSoup as Soup
-from peyotl import (assure_dir_exists, get_logger, download_large_file)
+from peyutil import (assure_dir_exists, download_large_file)
 
 from taxalotl.resource_wrapper import TaxonomyWrapper
 from taxalotl.util import OutFile
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 DOMAIN = "http://www.theplantlist.org"
 THROTTLE_BREAK = 10
 

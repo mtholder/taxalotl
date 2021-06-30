@@ -4,8 +4,8 @@ import copy
 import os
 import re
 from typing import Dict
+import logging
 
-from peyotl import get_logger
 
 from taxalotl.cmds.partitions import (get_all_taxdir_and_misc_uncles,
                                       )
@@ -14,7 +14,7 @@ from taxalotl.tax_partition import (TAX_SLICE_CACHE,
                                     PartitionedTaxDirBase)
 from taxalotl.util import get_true_false_repsonse, OutDir
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 _norm_char_pat = re.compile(r'[-a-zA-Z0-9._]')
 
 

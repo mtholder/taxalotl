@@ -12,15 +12,15 @@ import os
 import re
 # noinspection PyPep8Naming
 import xml.etree.ElementTree as ET
+import logging
 
-from peyotl import (assure_dir_exists,
-                    get_logger)
+from peyutil import assure_dir_exists
 
 from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.resource_wrapper import TaxonomyWrapper
 from taxalotl.util import OutFile
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 # Cases to deal with:
 #  Foo bar

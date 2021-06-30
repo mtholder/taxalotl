@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import json
-from peyotl import get_logger
+import logging
+
 from taxalotl.taxonomic_ranks import (SPECIES_SORTING_NUMBER,
                                       GENUS_SORTING_NUMBER)
 from taxalotl.parsing.gnparser import parse_name_to_dict
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 def _add_apparent_rank_and_clade_name(name_dict):

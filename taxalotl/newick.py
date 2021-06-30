@@ -2,10 +2,10 @@
 from __future__ import print_function
 from taxalotl.ott_schema import InterimTaxonomyData
 from peyotl.phylo.tree import parse_newick
-from peyotl import get_logger
+import logging
 import os
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 def normalize_newick(unpacked_fp, normalized_fp, resource_wrapper):

@@ -6,10 +6,9 @@ import json
 import os
 from .resource_wrapper import AbstractResourceWrapper
 from .util import OutFile
+import logging
 
-from peyotl import (get_logger)
-
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 def read_resource_file(fp):

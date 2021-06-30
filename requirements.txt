@@ -1,4 +1,4 @@
-peyotl
+peyutil
 beautifulsoup4
 requests
 unidecode

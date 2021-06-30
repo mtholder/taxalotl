@@ -7,13 +7,13 @@ from __future__ import print_function
 import csv
 import os
 import re
+import logging
 
-from peyotl import (get_logger)
 
 from taxalotl.ott_schema import InterimTaxonomyData
 from taxalotl.resource_wrapper import TaxonomyWrapper
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 def _find_irmng_input_files(source):

@@ -9,14 +9,14 @@ import csv
 import io
 import os
 
-from peyotl import (add_or_append_to_dict, assure_dir_exists,
-                    get_logger,
-                    shorter_fp_form,
-                    write_as_json)
+from peyutil import (add_or_append_to_dict, assure_dir_exists,
+                     shorter_fp_form,
+                     write_as_json)
 from .taxon import Taxon
 from .util import OutFile
+import logging
 
-_LOG = get_logger(__name__)
+_LOG = logging.getLogger('taxalotl')
 
 INP_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n"
 INP_FLAGGED_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\t|\t\n"
