@@ -83,7 +83,7 @@ def _gen_line(ls):
         m = u'Could not serialize to ASCII: "{}"   converted to "{}"'
         old = u'", "'.join(ls)
         new = '", "'.join(conv)
-        _LOG.warn(m.format(old, new))
+        _LOG.warning(m.format(old, new))
         # import sys; sys.exit('{}\n{}'.format(repr(conv), repr(ls)))
         return '{}\n'.format('\t|\t'.join(conv))
 
@@ -141,7 +141,7 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
             if tax_stat.lower() == 'accepted':
                 if name in name_to_id:
                     m = 'Name "{}" repeated in {}. IDs {} and {}. Ignoring the second...'
-                    _LOG.warn(m.format(name, family, name_to_id[name], taxon_id))
+                    _LOG.warning(m.format(name, family, name_to_id[name], taxon_id))
                     continue
                 if rank == 'species' or rank == 'genus':
                     name_to_id[name] = taxon_id

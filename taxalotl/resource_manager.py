@@ -86,7 +86,7 @@ def wrap_otifact_resources(res, refs=None):
             for rk, v in rk_v_list:
                 # _LOG.debug('rk,v = {}, {}'.format(rk, v))
                 rd[rk] = get_subclass_resource_wrapper(v, rd, refs)
-    # _LOG.warn('rd = {}'.format(rd))
+    # _LOG.warning('rd = {}'.format(rd))
     aliases = {}
     for w in rd.values():
         if w.aliases:
@@ -98,7 +98,7 @@ def wrap_otifact_resources(res, refs=None):
                 if a in rd:
                     raise RuntimeError("Previously registered for an id: {}".format(a))
                 aliases[a] = w
-    # _LOG.warn('aliases = {}'.format(aliases))
+    # _LOG.warning('aliases = {}'.format(aliases))
     rd.update(aliases)
     return rd
 

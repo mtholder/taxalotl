@@ -125,7 +125,7 @@ class TaxalotlConfig(object):
                 raise RuntimeError(m)
             if not os.path.isdir(self.resources_dir):
                 m = 'The resources dir "{}" does not exist. Creating an empty one...'
-                _LOG.warn(m.format(self.resources_dir))
+                _LOG.warning(m.format(self.resources_dir))
                 with OutDir(self.resources_dir):
                     pass
             self._resources_mgr = ResourceManager(self.resources_dir)

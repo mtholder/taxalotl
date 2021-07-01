@@ -580,16 +580,16 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                         some_part_found = True
                         having_inp_to_read.add(subname)
                     else:
-                        _LOG.warn("no previous taxonomic content for {}".format(subfrag))
+                        _LOG.warning("no previous taxonomic content for {}".format(subfrag))
                         req_fulfilled = False
                 else:
-                    _LOG.warn("no previous subdir for {}".format(subname))
+                    _LOG.warning("no previous subdir for {}".format(subname))
                     req_fulfilled = False
             if some_part_found:
                 do_part_if_reading = False
                 quant = 'All' if req_fulfilled else 'Some'
                 m = "{} subdir partitions found for {}. No more partitioning will be done!"
-                _LOG.warn(m.format(quant, self.fragment))
+                _LOG.warning(m.format(quant, self.fragment))
         for subname, subroot in list_of_subdirname_and_roots:
             subfrag = os.path.join(self.fragment, subname)
             subtp = get_taxon_partition(self.res, subfrag)
@@ -669,7 +669,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                     warnings.append(m)
         if warnings:
             m = '{} warning(s): {}'.format(len(warnings), '\n'.join(warnings))
-            _LOG.warn(m)
+            _LOG.warning(m)
         if errs:
             m = '{} error(s): {}'.format(len(errs), '\n'.join(errs))
             raise ValueError(m)
@@ -856,7 +856,7 @@ def write_taxon_json(obj, filepath):
         else:
             dtw[k] = v
     with OutFile(filepath) as outs:
-        write_as_json(dtw, outs, separators=(',', ": "), indent=1)
+        write_as_json(dtw, outs, indent=1)
 
 
 def get_taxon_partition(res, fragment):

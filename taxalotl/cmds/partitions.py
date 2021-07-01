@@ -291,7 +291,7 @@ def check_partition_union(fragment, misc, subs, unpartitioned):
     for p in subs:
         p_ids = p._debug_validity_check()[1]
         slice_ids.update(p_ids)
-        _LOG.warn('{} IDs from {} bring total in {} up to {}'.format(len(p_ids), p.fragment,
+        _LOG.warning('{} IDs from {} bring total in {} up to {}'.format(len(p_ids), p.fragment,
                                                                      len(slice_ids), misc.fragment))
         for p_root_id, root_obj in p._roots.items():
             pr = root_obj['par_id']

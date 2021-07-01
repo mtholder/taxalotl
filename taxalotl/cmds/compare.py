@@ -260,7 +260,7 @@ def _diagnose_higher_taxa(out, matched, ott_id, ott_graph, res_id, ref_graph):
     _write_using_mapped_to(out, uniq_map)
     # Use uniq_mapped to generate taxon_concept definitions
     _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, res_id, ref_graph)
-    _LOG.warn("Moving taxa in OTT to rerun _use_uniq_mapping_to_diagnose_higher_taxa")
+    _LOG.warning("Moving taxa in OTT to rerun _use_uniq_mapping_to_diagnose_higher_taxa")
     _move_using_mapped_to(uniq_map, ott_graph, ref_graph)
     _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, res_id, ref_graph)
 

@@ -32,7 +32,7 @@ class AuthoritySemNode(SemGraphNode):
         super(AuthoritySemNode, self).__init__(sem_graph, id_minting_d)
         self._authors = authors
         self._year = year
-        self.taxon_concept_set = set([tax_con_sem_node])
+        self.taxon_concept_set = {tax_con_sem_node}
 
     @property
     def taxon_concepts(self):

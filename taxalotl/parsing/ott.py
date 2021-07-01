@@ -5,7 +5,7 @@ import os
 from collections import defaultdict
 import logging
 
-from peyotl.utility.str_util import StringIO
+from peyutil import StringIO
 
 from taxalotl.ott_schema import (read_taxonomy_to_get_single_taxon,
                                  )

@@ -27,7 +27,7 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
         rsn = ABOVE_GENUS_SORTING_NUMBER
     if syn.syn_type == 'type material':
         if rsn >= MINIMUM_HIGHER_TAXON_NUMBER:
-            _LOG.warn('PROBLEM: "{}" rsn={} node.rank={}'.format(syn.name, rsn, node.rank))
+            _LOG.warning('PROBLEM: "{}" rsn={} node.rank={}'.format(syn.name, rsn, node.rank))
             sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, "type_material for higher taxon")
         else:
             sem_node.claim_type_material(syn.name.strip())
@@ -136,7 +136,7 @@ def _parse_auth_syn(res, sem_graph, taxon_sem_node, syn):
     try:
         authorship = target_name['authorship']
     except:
-        _LOG.warn('Could not parse synonym "{}"'.format(syn.name))
+        _LOG.warning('Could not parse synonym "{}"'.format(syn.name))
         return
     parens_preserved = authorship['value'].strip()
     is_basionym = parens_preserved.startswith('(')

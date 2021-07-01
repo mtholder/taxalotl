@@ -135,7 +135,7 @@ def write_ott_taxonomy_tsv(out_fp,
                 try:
                     name = id_to_name[curr_id]
                 except KeyError:
-                    _LOG.warn('Could not find a name for ID "{}"'.format(curr_id))
+                    _LOG.warning('Could not find a name for ID "{}"'.format(curr_id))
                     continue
                 try:
                     par_id = id_to_par.get(curr_id)

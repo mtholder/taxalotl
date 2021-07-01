@@ -84,7 +84,7 @@ class SemGraph(object):
                 epithet = tc.most_terminal_name
                 if epithet is None:
                     if not (tc.hybrid or tc.undescribed):
-                        _LOG.warn('NO Epithet for  = {}'.format(tc.__dict__))
+                        _LOG.warning('NO Epithet for  = {}'.format(tc.__dict__))
                     continue
                 if isinstance(epithet._authority, list):
                     dup_auth_to_mint.setdefault(epithet, []).append(tc)

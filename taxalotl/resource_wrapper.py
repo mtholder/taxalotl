@@ -280,7 +280,7 @@ class ResourceWrapper(FromOTifacts):
                 for r in x:
                     if r not in refs:
                         m = "reference '{}' in resource '{}' was not recognized."
-                        _LOG.warn(m.format(r, self.id))
+                        _LOG.warning(m.format(r, self.id))
         self._config = config
 
     @property
@@ -398,7 +398,7 @@ class ResourceWrapper(FromOTifacts):
         try:
             os.rmdir(directory)
         except:
-            _LOG.warn('Could not remove "{}" that directory may not be empty'.format(directory))
+            _LOG.warning('Could not remove "{}" that directory may not be empty'.format(directory))
         else:
             _LOG.info('Removed "{}"'.format(directory))
 
@@ -424,7 +424,7 @@ class ResourceWrapper(FromOTifacts):
         if self.url.startswith("ftp://"):
             _LOG.debug("Starting FTP download from {} to {}".format(self.url, dfp))
             with urllib.request.urlopen(self.url) as req:
-                with OutFile(dfp) as outp:
+                with OutFile(dfp, mode='wb') as outp:
                     outp.write(req.read())
             _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
         else:
@@ -536,7 +536,7 @@ class TaxonomyWrapper(ResourceWrapper):
 
     def node_should_be_semanticized(self, node):
         if 'environmental sample' in node.name:
-            _LOG.warn('Not semanticizing env. sample: "{}"'.format(node.line[:-1]))
+            _LOG.warning('Not semanticizing env. sample: "{}"'.format(node.line[:-1]))
             return False
         return True
 
@@ -549,10 +549,10 @@ class TaxonomyWrapper(ResourceWrapper):
         try:
             semanticize_node_name(self, sem_graph, tc, node)
         except NameParsingError as x:
-            _LOG.warn('Failed to parse a name for "{}"'.format(node.line[:-1]))
+            _LOG.warning('Failed to parse a name for "{}"'.format(node.line[:-1]))
             sem_graph.remove_taxon_concept(tc)
             return None
-        # _LOG.warn('node: {}'.format(node.__dict__))
+        # _LOG.warning('node: {}'.format(node.__dict__))
         return tc
 
     def semanticize_node_exit(self, sem_graph, node, sem_node, child_sem_nodes):
@@ -639,7 +639,7 @@ class TaxonomyWrapper(ResourceWrapper):
         tax_part = self.get_read_only_tax_part(current_partition_key)
         if not os.path.isfile(tax_part.tax_fp):
             m = 'Skipping {} due to lack of file at "{}"'
-            _LOG.warn(m.format(current_partition_key, tax_part.tax_fp))
+            _LOG.warning(m.format(current_partition_key, tax_part.tax_fp))
             return tax_part, {}
         _LOG.info('converting taxonomy from {} to a tree'.format(tax_part.tax_fp))
         tax_forest = tax_part.get_taxa_as_forest()

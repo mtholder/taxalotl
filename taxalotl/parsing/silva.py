@@ -68,7 +68,7 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
     itd.write_to_dir(destination)
     mapping_file = os.path.join(destination, GEN_MAPPING_FILENAME)
     with OutFile(mapping_file) as outs:
-        write_as_json(part_name_to_silva_id, outs, indent=2, separators=(',', ': '))
+        write_as_json(part_name_to_silva_id, outs, indent=2)
 
 
 def gen_all_namepaths(path, name, prim_acc):
@@ -182,7 +182,7 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
             par_silva_id = "0"
         if silva_id in to_par:
             m = '{} remains mapped to ({}, {}) rather than ({}, {})'
-            _LOG.warn(
+            _LOG.warning(
                 m.format(silva_id, to_par[silva_id], to_name[silva_id], par_silva_id, name_path[1]))
         else:
             to_par[silva_id] = par_silva_id

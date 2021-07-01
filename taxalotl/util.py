@@ -17,7 +17,7 @@ def _startswith_y(r):
 
 def get_true_false_repsonse(p, true_func=_startswith_y, def_value=False):
     if not INTERACTIVE_MODE:
-        _LOG.warn('non-interactive mode. Answering {} to "{}"'.format(def_value, p))
+        _LOG.warning('non-interactive mode. Answering {} to "{}"'.format(def_value, p))
         return def_value
     try:
         resp = input(p)
@@ -133,7 +133,10 @@ class OutFile(object):
         self.out_stream = None
 
     def __enter__(self):
-        self.out_stream = io.open(self.filepath, mode=self.mode, encoding=self.encoding)
+        if 'b' in self.mode:
+            self.out_stream = io.open(self.filepath, mode=self.mode)
+        else:
+            self.out_stream = io.open(self.filepath, mode=self.mode, encoding=self.encoding)
         _FILES_WRITTEN.append(self.filepath)
         return self.out_stream
 

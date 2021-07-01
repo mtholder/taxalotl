@@ -70,7 +70,7 @@ def read_irmng_file(irmng_file_name):
             try:
                 syn_target_id = int(row[12]) if row[12] else None
             except:
-                _LOG.warn('Dropping unparseable line {}'.format(row))
+                _LOG.warning('Dropping unparseable line {}'.format(row))
                 continue
             parent = row[-4]
             diff_target = syn_target_id is not None and syn_target_id != taxon_id

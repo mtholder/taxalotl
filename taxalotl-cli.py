@@ -31,6 +31,8 @@ from taxalotl.cmds.partitions import (PART_NAMES,
                                       NONTERMINAL_PART_NAMES,
                                       TERMINAL_PART_NAMES, )
 import logging
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
+logging.basicConfig(level=LOGLEVEL)
 _LOG = logging.getLogger(__name__)
 
 # Commands that don't take a resource ID
@@ -319,7 +321,7 @@ def main():
                         comp_list = list(
                             taxalotl_config.resources_mgr.abstract_input_resource_types())
                 except Exception as _excep:
-                    _LOG.warn('Exception: {}'.format(_excep))
+                    _LOG.warning('Exception: {}'.format(_excep))
                     pass
 
                 if sel_cmd == 'status':

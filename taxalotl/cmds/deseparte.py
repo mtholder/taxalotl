@@ -38,12 +38,12 @@ def deseparate_taxonomies_in_dir(taxalotl_conf, tax_dir):
         if os.path.isfile(tax_fp):
             tax_dest = _find_destination_fp(res_id, TAXONOMY_FN, par_inp, par_misc)
             if tax_dest is None:
-                _LOG.warn(m.format(tax_fp, par_inp, res_id))
+                _LOG.warning(m.format(tax_fp, par_inp, res_id))
                 continue
         if os.path.isfile(syn_fp):
             syn_dest = _find_destination_fp(res_id, TAXONOMY_FN, par_inp, par_misc)
             if syn_dest is None:
-                _LOG.warn(m.format(syn_fp, par_inp, res_id))
+                _LOG.warning(m.format(syn_fp, par_inp, res_id))
                 continue
         if tax_dest:
             _move_all_but_first_line(tax_fp, tax_dest)

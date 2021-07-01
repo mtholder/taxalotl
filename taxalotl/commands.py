@@ -278,7 +278,7 @@ def exec_or_runtime_error(invocation, working_dir='.'):
 def clone_otifacts(otifacts_dir):
     otifacts_url = 'git@github.com:mtholder/OTifacts.git'
     m = 'Expecting OTifacts to be cloned at "{}". Will attempt to clone it from {}...'
-    _LOG.warn(m.format(otifacts_dir, otifacts_url))
+    _LOG.warning(m.format(otifacts_dir, otifacts_url))
     exec_or_runtime_error(['git', 'clone', otifacts_url, otifacts_dir])
 
 
@@ -306,7 +306,7 @@ def pull_otifacts(taxalotl_config):
         for root_key, res_dict in by_root_id.items():
             fp = os.path.join(dest_dir, root_key + '.json')
             with OutFile(fp) as outs:
-                write_as_json(res_dict, outs, indent=2, separators=(',', ': '))
+                write_as_json(res_dict, outs, indent=2)
 
 
 NEW_SEP_FILENAME = '__sep__.json'
@@ -434,7 +434,7 @@ def remove_sep_artifacts_and_empty_dirs(d):
                 _LOG.info('Removing empty dir "{}" '.format(directory))
                 os.rmdir(directory)
             except:
-                _LOG.warn('Could not remove "{}" that directory (?!)'.format(directory))
+                _LOG.warning('Could not remove "{}" that directory (?!)'.format(directory))
 
 
 def clean_resources(taxalotl_config, action, id_list, levels=None):

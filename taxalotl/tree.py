@@ -115,7 +115,7 @@ class TaxonTree(object):
                 continue
             for c in nd.children_refs:
                 while c.best_rank_sort_number >= nd.best_rank_sort_number:
-                    _LOG.warn('rank conflict {} and child {}, bumping parent up...'.format(nd, c))
+                    _LOG.warning('rank conflict {} and child {}, bumping parent up...'.format(nd, c))
                     nd.best_rank_sort_number += 1
 
     def _get_highest_child_rank(self, nd):
@@ -233,7 +233,7 @@ class TaxonTree(object):
                 taxon = self.id_to_taxon[uid]
             except:
                 if warn_missing_target:
-                    _LOG.warn('could not find target taxon for {}'.format(synonym_set))
+                    _LOG.warning('could not find target taxon for {}'.format(synonym_set))
                 continue
             taxon.synonyms = synonym_set
 

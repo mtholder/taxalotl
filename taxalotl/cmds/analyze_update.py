@@ -321,14 +321,14 @@ class UpdateStatusLog(object):
         #   parent to be new
         assert other_nd is not None
         if tree.node_is_specimen_typed(nd):
-            _LOG.warn('SPEC  ')
+            _LOG.warning('SPEC  ')
             # self._write_nd(nd, True)
         else:
             max_sn, min_csn = tree.node_rank_sorting_number_range(nd)
             if max_sn == min_csn and max_sn == GENUS_SORTING_NUMBER:
                 self._par_is_genus_report(nd, is_in_curr_tree, tree, status, other_nd)
             else:
-                _LOG.warn('CLADE ')
+                _LOG.warning('CLADE ')
                 # self._write_nd(nd, True)
 
     def _detect_cascading_name_change(self, curr_nd, curr_child):
@@ -374,7 +374,7 @@ class UpdateStatusLog(object):
                                 if self.prev_tree.does_first_contain_second(other_genus, other):
                                     _alter_update_flag(nd, UpdateStatus.DEMOTED_TO_INFRA_SP)
                 if _get_nonsyn_flag_and_other(nd)[0] == UpdateStatus.UNDIAGNOSED_CHANGE:
-                    _LOG.warn('persistent UNDIAGNOSED_CHANGE for {} and {}'.format(nd, other))
+                    _LOG.warning('persistent UNDIAGNOSED_CHANGE for {} and {}'.format(nd, other))
             if (not nd.children_refs) and nd.best_rank_sort_number >= MINIMUM_HIGHER_TAXON_NUMBER:
                 if other \
                         and (not other.children_refs) \
@@ -567,7 +567,7 @@ class UpdateStatusLog(object):
                 tsyn = []
                 for i in sd:
                     if f != UpdateStatus.SYN_CHANGED:
-                        # _LOG.warn('i = {}'.format(repr(i)))
+                        # _LOG.warning('i = {}'.format(repr(i)))
                         tsyn.append(i.to_serializable_dict())
                     else:
                         assert len(i) == 2
