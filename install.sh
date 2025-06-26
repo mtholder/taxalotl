@@ -1,15 +1,31 @@
 #!/bin/bash
-virtualenv -p$(which python3) env || exit
-source env/bin/activate || exit
-git clone https://github.com/mtholder/peyotl.git || exit
+set -x
 
-cd peyotl || exit
-git checkout -b taxalotl origin/taxalotl || exit
+cd .. || exit
+python3 -mvenv env || exit
+source env/bin/activate || exit
+
+if ! test -d peyutil ; then
+    git clone git@github.com:OpenTreeOfLife/peyutil.git || exit
+fi
+cd peyutil || exit
+git checkout -b modern-taxalotl origin/modern-taxalotl || exit
 pip install -r requirements.txt || exit
-python setup.py develop || exit
+pip install -e . || exit
 cd - 2>/dev/null || exit
 
-python setup.py develop || exit
+if ! test -d peyotl ; then
+    git clone git@github.com:OpenTreeOfLife/peyotl.git || exit
+fi
+cd peyotl || exit
+git checkout -b modern-taxalotl origin/modern-taxalotl || exit
+pip install -r requirements.txt || exit
+pip install -e . || exit
+cd - 2>/dev/null || exit
+
+cd taxalotl || exit
+pip install -r requirements.txt || exit
+pip install -e . || exit
 
 echo
 echo 'Taxalotl installed, but you will still need to run:'

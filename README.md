@@ -27,10 +27,9 @@ So, the easiest way to install right now is:
     ./install.sh
 
 which will:
-   1. create a virtualenv called `venv`,
+   1. create a virtualenv called `env` sister to this (taxalotl) dir,
    2. install prerequisites in it,
-   3. install the correct version of `peyotl` using the "develop"
-    command to pip (to make a symlink), and
+   3. clone (as sister to this dir) and install the correct version of `peyutil` and `peyotl` 
    4. install the taxalotl package (also using the "develop" 
    command)
 

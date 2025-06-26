@@ -6,8 +6,8 @@ import sys
 
 from peyutil import read_as_json
 
-from taxalotl import TaxalotlConfig
-from taxalotl.commands import (accumulate_separated_descendants,
+from . import TaxalotlConfig
+from .commands import (accumulate_separated_descendants,
                                align,
                                analyze_update,
                                build_partition_maps,
@@ -26,7 +26,7 @@ from taxalotl.commands import (accumulate_separated_descendants,
                                unpack_resources,
                                SEP_NAMES,
                                )
-from taxalotl.cmds.partitions import (PART_NAMES,
+from .cmds.partitions import (PART_NAMES,
                                       NAME_TO_PARTS_SUBSETS,
                                       NONTERMINAL_PART_NAMES,
                                       TERMINAL_PART_NAMES, )
