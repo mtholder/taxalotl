@@ -56,21 +56,21 @@ the `taxolotl.conf` file.
 ### status command
 `taxalotlcli status` reports on the status of each "resource".
 
-`taxolotl-cli.py status ncbi` reports just on the status of the
+`taxalotlcli status ncbi` reports just on the status of the
     ncbi resource.
 
 ### download command
-`taxolotl-cli.py download ID` downloads the archive for
+`taxalotlcli download ID` downloads the archive for
     the `ID` resource into the `${raw}` directory if that
     archive is not present.
 
 ### unpack command
-`taxolotl-cli.py unpack ID` unpacks the archive for
+`taxalotlcli unpack ID` unpacks the archive for
     the `ID` resource to the `${raw}/ID`.
 Downloads the archive if necessary.
 
 ### normalize command
-`taxolotl-cli.py normalize ID` unpacks the raw archive
+`taxalotlcli normalize ID` unpacks the raw archive
 for `ID` from `${raw}/ID` into the 
 [OTT Interim Taxonomy](https://github.com/OpenTreeOfLife/reference-taxonomy/wiki/Interim-taxonomy-file-format)
 format in `${normalized}/ID`
