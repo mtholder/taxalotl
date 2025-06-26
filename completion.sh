@@ -19,6 +19,6 @@ _taxalotl()
     fi
 }
 
-complete -F _taxalotl taxalotl-cli.py
+complete -F _taxalotl taxalotlcli
 
 

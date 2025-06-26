@@ -14,8 +14,8 @@ import logging
 from bs4 import BeautifulSoup as Soup
 from peyutil import (assure_dir_exists, download_large_file)
 
-from .resource_wrapper import TaxonomyWrapper
-from .util import OutFile
+from ..resource_wrapper import TaxonomyWrapper
+from ..util import OutFile
 
 _LOG = logging.getLogger(__name__)
 DOMAIN = "http://www.theplantlist.org"
