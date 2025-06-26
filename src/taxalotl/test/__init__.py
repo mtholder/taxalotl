@@ -35,7 +35,7 @@ def get_test_file_names():
 
 def get_test_suite(test_file_names=None):
     """
-    Creates a unittest.TestSuite from all of the modules in
+    Creates an unittest.TestSuite from all of the modules in
     `taxalotl.test`. Right now, assumes (a) no subdirectories (though
     this can easily be accommodated) and (b) every test to be run is
     sitting in a module with a file name of 'test*.py', and, conversely,

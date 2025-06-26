@@ -304,7 +304,7 @@ def separate_based_on_tip_overlap(taxalotl_config, ott_res, ott_lls, ott_tree, r
                 to_move_ids.update({i.id for i in to_move})
     if not to_move_ids:
         return None
-    from .cmds.dynamic_partitioning import perform_dynamic_separation
+    from ..cmds.dynamic_partitioning import perform_dynamic_separation
     root_ott_taxon = ott_tree.root
     new_sep_val = {
         "name": root_ott_taxon.name,
