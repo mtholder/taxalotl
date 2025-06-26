@@ -9,9 +9,9 @@ _taxalotl()
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     NUM_ARGS=${#COMP_WORDS[@]}
     if test ${NUM_ARGS} -lt 2 ; then
-        opts=$(taxalotl-cli.py --show-completions)
+        opts=$(taxalotlcli --show-completions)
     else
-        opts=$(taxalotl-cli.py --show-completions ${COMP_WORDS[*]})
+        opts=$(taxalotlcli --show-completions ${COMP_WORDS[*]})
     fi
     if [[ ${cur} == * ]] ; then
         COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
