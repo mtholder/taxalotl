@@ -5,8 +5,8 @@ import os
 import time
 import logging
 from peyutil import add_or_append_to_dict
-from .ott_schema import InterimTaxonomyData
-from .resource_wrapper import TaxonomyWrapper
+from ..ott_schema import InterimTaxonomyData
+from ..resource_wrapper import TaxonomyWrapper
 _LOG = logging.getLogger(__name__)
 
 

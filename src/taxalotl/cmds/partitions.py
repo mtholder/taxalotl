@@ -7,7 +7,7 @@ import logging
 
 from peyutil import read_as_json
 
-from .tax_partition import (INP_TAXONOMY_DIRNAME,
+from ..tax_partition import (INP_TAXONOMY_DIRNAME,
                                     MISC_DIRNAME,
                                     GEN_MAPPING_FILENAME,
                                     get_taxon_partition,

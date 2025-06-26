@@ -3,10 +3,6 @@ from __future__ import print_function
 
 import os
 import logging
-from .resource_manager import (
-    GenericTaxonomyWrapper, 
-    ResourceManager,
-)
 from .util import OutDir
 
 _LOG = logging.getLogger(__name__)
@@ -130,6 +126,7 @@ class TaxalotlConfig(object):
                 _LOG.warning(m.format(self.resources_dir))
                 with OutDir(self.resources_dir):
                     pass
+            from .resource_manager import ResourceManager
             self._resources_mgr = ResourceManager(self.resources_dir)
             for v in self._resources_mgr.resources.values():
                 v.config = self
@@ -141,6 +138,7 @@ class TaxalotlConfig(object):
             return self.resources_mgr.resources[res_id]
         except Exception:
             if self.resources_mgr.generic_handler_can_be_used(res_id):
+                from .resource_manager import  GenericTaxonomyWrapper
                 return GenericTaxonomyWrapper(res_id, config=self)
             raise ValueError("Unknown resource ID '{}'".format(res_id))
 

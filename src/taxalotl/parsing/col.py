@@ -5,8 +5,8 @@ import logging
 
 from peyutil import shorter_fp_form
 
-from .resource_wrapper import TaxonomyWrapper
-from .parsing.darwin_core import normalize_darwin_core_taxonomy
+from ..resource_wrapper import TaxonomyWrapper
+from ..parsing.darwin_core import normalize_darwin_core_taxonomy
 _LOG = logging.getLogger(__name__)
 
 COL_PARTMAP = {

@@ -16,9 +16,9 @@ import logging
 
 from peyutil import assure_dir_exists
 
-from .ott_schema import InterimTaxonomyData
-from .resource_wrapper import TaxonomyWrapper
-from .util import OutFile
+from ..ott_schema import InterimTaxonomyData
+from ..resource_wrapper import TaxonomyWrapper
+from ..util import OutFile
 
 _LOG = logging.getLogger(__name__)
 

@@ -13,11 +13,11 @@ from peyutil import (assure_dir_exists,
                      read_as_json,
                      write_as_json)
 
-from .commands import unpack_resources
-from .ott_schema import InterimTaxonomyData
-from .cmds.partitions import GEN_MAPPING_FILENAME
-from .resource_wrapper import TaxonomyWrapper
-from .util import OutFile
+from ..commands import unpack_resources
+from ..ott_schema import InterimTaxonomyData
+from ..cmds.partitions import GEN_MAPPING_FILENAME
+from ..resource_wrapper import TaxonomyWrapper
+from ..util import OutFile
 
 _LOG = logging.getLogger(__name__)
 

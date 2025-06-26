@@ -24,3 +24,6 @@ license-files = ["License.txt"]
 [project.urls]
 Homepage = "https://github.com/OpenTreeOfLife/taxalotl"
 Issues = "https://github.com/OpenTreeOfLife/taxalotl/issues"
+
+[project.scripts]
+taxalotlcli = "taxalotl.cli:main"

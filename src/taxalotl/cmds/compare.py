@@ -4,8 +4,8 @@ import logging
 import sys
 import os
 
-from .tax_partition import (get_taxon_partition, INP_TAXONOMY_DIRNAME, MISC_DIRNAME, OUTP_TAXONOMY_DIRNAME)
-from .util import OutFile, OutDir, get_frag_from_dir
+from ..tax_partition import (get_taxon_partition, INP_TAXONOMY_DIRNAME, MISC_DIRNAME, OUTP_TAXONOMY_DIRNAME)
+from ..util import OutFile, OutDir, get_frag_from_dir
 
 _LOG = logging.getLogger(__name__)
 JUST_COF = True

@@ -10,8 +10,8 @@ import re
 import logging
 
 
-from .ott_schema import InterimTaxonomyData
-from .resource_wrapper import TaxonomyWrapper
+from ..ott_schema import InterimTaxonomyData
+from ..resource_wrapper import TaxonomyWrapper
 
 _LOG = logging.getLogger(__name__)
 

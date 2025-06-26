@@ -8,11 +8,11 @@ from enum import IntEnum, IntFlag
 from typing import List
 import logging
 
-from .config import TaxalotlConfig
-from .cmds.partitions import (PART_NAMES)
-from .resource_wrapper import TaxonomyWrapper
-from .taxonomic_ranks import (SPECIES_SORTING_NUMBER)
-from .util import get_true_false_repsonse, VirtCommand
+from ..config import TaxalotlConfig
+from ..cmds.partitions import (PART_NAMES)
+from ..resource_wrapper import TaxonomyWrapper
+from ..taxonomic_ranks import (SPECIES_SORTING_NUMBER)
+from ..util import get_true_false_repsonse, VirtCommand
 
 _LOG = logging.getLogger(__name__)
 out_stream = sys.stdout

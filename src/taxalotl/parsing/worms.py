@@ -6,7 +6,7 @@ from __future__ import print_function
 import logging
 
 
-from .resource_wrapper import TaxonomyWrapper
+from ..resource_wrapper import TaxonomyWrapper
 
 _LOG = logging.getLogger(__name__)
 

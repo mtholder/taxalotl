@@ -4,9 +4,9 @@ import logging
 import sys
 import os
 
-from .tax_partition import (TAXONOMY_FN, SYNONYMS_FN, ROOTS_FILENAME,
+from ..tax_partition import (TAXONOMY_FN, SYNONYMS_FN, ROOTS_FILENAME,
                                     INP_TAXONOMY_DIRNAME, MISC_DIRNAME, OUTP_TAXONOMY_DIRNAME)
-from .util import OutFile, OutDir, get_frag_from_dir
+from ..util import OutFile, OutDir, get_frag_from_dir
 
 _LOG = logging.getLogger(__name__)
 

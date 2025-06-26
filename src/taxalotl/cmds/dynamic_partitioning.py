@@ -7,12 +7,12 @@ from typing import Dict
 import logging
 
 
-from .cmds.partitions import (get_all_taxdir_and_misc_uncles,
+from ..cmds.partitions import (get_all_taxdir_and_misc_uncles,
                                       )
-from .tax_partition import (TAX_SLICE_CACHE,
+from ..tax_partition import (TAX_SLICE_CACHE,
                                     get_taxon_partition,
                                     PartitionedTaxDirBase)
-from .util import get_true_false_repsonse, OutDir
+from ..util import get_true_false_repsonse, OutDir
 
 _LOG = logging.getLogger(__name__)
 _norm_char_pat = re.compile(r'[-a-zA-Z0-9._]')

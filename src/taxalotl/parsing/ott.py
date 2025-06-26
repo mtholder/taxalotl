@@ -7,15 +7,15 @@ import logging
 
 from peyutil import StringIO
 
-from .ott_schema import (read_taxonomy_to_get_single_taxon,
+from ..ott_schema import (read_taxonomy_to_get_single_taxon,
                                  )
-from .cmds.partitions import (fill_empty_anc_of_mapping,
+from ..cmds.partitions import (fill_empty_anc_of_mapping,
                                       MISC_DIRNAME,
                                       PREORDER_PART_LIST,
                                       NAME_TO_PARTS_SUBSETS)
-from .resource_wrapper import ResourceWrapper, TaxonomyWrapper
-from .tax_partition import (get_roots_for_subset, )
-from .util import get_true_false_repsonse
+from ..resource_wrapper import ResourceWrapper, TaxonomyWrapper
+from ..tax_partition import (get_roots_for_subset, )
+from ..util import get_true_false_repsonse
 
 _LOG = logging.getLogger(__name__)
 

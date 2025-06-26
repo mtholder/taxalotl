@@ -3,9 +3,9 @@ from __future__ import print_function
 import json
 import logging
 
-from .taxonomic_ranks import (SPECIES_SORTING_NUMBER,
+from ..taxonomic_ranks import (SPECIES_SORTING_NUMBER,
                                       GENUS_SORTING_NUMBER)
-from .parsing.gnparser import parse_name_to_dict
+from ..parsing.gnparser import parse_name_to_dict
 
 _LOG = logging.getLogger(__name__)
 

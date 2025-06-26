@@ -7,15 +7,15 @@ import logging
 
 from peyutil import write_as_json
 
-from .util import OutFile, OutDir
-from .taxonomic_ranks import (ABOVE_GENUS_SORTING_NUMBER,
+from ..util import OutFile, OutDir
+from ..taxonomic_ranks import (ABOVE_GENUS_SORTING_NUMBER,
                                       SPECIES_SORTING_NUMBER,
                                       GENUS_SORTING_NUMBER,
                                       MINIMUM_HIGHER_TAXON_NUMBER)
 
-from .parsing.name_parsing import parse_name_using_rank_hints, parse_name_to_dict
-from .tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
-from .sem_graph.graph import SemGraph
+from ..parsing.name_parsing import parse_name_using_rank_hints, parse_name_to_dict
+from ..tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
+from ..sem_graph.graph import SemGraph
 
 _LOG = logging.getLogger(__name__)
 

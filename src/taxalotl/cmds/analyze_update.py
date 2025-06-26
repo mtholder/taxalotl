@@ -9,16 +9,16 @@ import logging
 
 from peyutil import write_as_json
 
-from .config import TaxalotlConfig
-from .tree import TaxonTree
-from .cmds.partitions import (PART_NAMES)
-from .resource_wrapper import TaxonomyWrapper
-from .taxonomic_ranks import (GENUS_SORTING_NUMBER,
+from ..config import TaxalotlConfig
+from ..tree import TaxonTree
+from .partitions import (PART_NAMES)
+from ..resource_wrapper import TaxonomyWrapper
+from ..taxonomic_ranks import (GENUS_SORTING_NUMBER,
                                       MAX_INFRASPECIFIC_NUMBER,
                                       MINIMUM_HIGHER_TAXON_NUMBER,
                                       SPECIES_SORTING_NUMBER)
-from .tax_partition import IGNORE_SYN_TYPES
-from .util import OutFile, VirtCommand
+from ..tax_partition import IGNORE_SYN_TYPES
+from ..util import OutFile, VirtCommand
 
 _LOG = logging.getLogger(__name__)
 out_stream = sys.stdout
