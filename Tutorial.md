@@ -26,7 +26,7 @@ to `false`, but you probably want to leave it set to true now so that you can
 submit more useful bug reports.
 
 ## Grokking taxalotl
-The script `taxalotl-cli.py` should be on your PATH, this is the front-end to taxalotl.
+The script `taxalotlcli` should be on your PATH, this is the front-end to taxalotl.
 Sourcing the `completion.sh` script (as was done above) should enable tab-completion of
     commands and options in taxalotl; this makes the front-end **much easier** to work with.
 
@@ -37,7 +37,7 @@ taxalotl uses its scratch directory to manage you local copies (and manipulation
 resources.
 In the context of taxalotl, a "resource" is almost always a taxonomy.
 
-    taxalotl-cli.py status
+    taxalotlcli status
 
 reports on the state of "your" local copies of the taxonomic resources. If you run this
 immediately after installation, your taxalotl resource directory will be empty.
@@ -47,20 +47,20 @@ It is a copy of the relevant information in the OTifacts repo.
 If there is any chance that your local resources view lags behind the OTifacts repo on the web,
     you'll want to run:
 
-    taxalotl-cli.py pull-otifacts
+    taxalotlcli pull-otifacts
 
 to populate your local clone of the OTifacts repo and process for access via taxalotl.
 This action fills the TAXALOTL_SCRATCH/resources directory with JSON files about the
 resources.
 After running that
 
-    taxalotl-cli.py status
+    taxalotlcli status
 
 should report on the status of your local copies of each of the taxonomy-oriented artifacts
 that are listed in OTifacts.
 You can use:
 
-    taxalotl-cli.py status ott
+    taxalotlcli status ott
 
 to see info just on OTT, or you can substitute a series of other resource IDs in place
 of "ott" in that command to a more targeted status report.
@@ -92,7 +92,7 @@ which requires downloading...
 
 So,
 
-    taxalotl-cli.py partition ott
+    taxalotlcli partition ott
 
 is sufficient to trigger download, unpack, normalize, and partitions actions on the latest
 version of OTT.
@@ -108,5 +108,5 @@ OTT version 3.0 (the start point for the taxalotl updating of taxonomy) and
 information that it gleans from the taxonomy.
 Before you parition other resources, you'll need to run:
 
-    taxalotl-cli.py build-partition-maps
+    taxalotlcli build-partition-maps
 

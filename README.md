@@ -42,7 +42,7 @@ These affect the logging message handling of Taxalotl.
 
 
 ## Usage
-The `taxalotl-cli.py` script provides the command-line interface which
+The `taxalotlcli` script provides the command-line interface which
 is broken up into several commands.
 The command-level documentation is below.
 See the [Tutorial.md](./Tutorial.md) for an overview of usage.
@@ -54,7 +54,7 @@ the `taxolotl.conf` file.
     
 
 ### status command
-`taxalotl-cli.py status` reports on the status of each "resource".
+`taxalotlcli status` reports on the status of each "resource".
 
 `taxolotl-cli.py status ncbi` reports just on the status of the
     ncbi resource.
