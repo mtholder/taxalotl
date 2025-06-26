@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-from __future__ import print_function
+"""Taxonomy exploration tool."""
+__version__ = '1.0.0'  # sync with setup.py
+
 from .config import TaxalotlConfig
 from .ott_schema import InterimTaxonomyData
 
