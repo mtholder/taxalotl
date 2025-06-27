@@ -292,8 +292,10 @@ def pull_otifacts(taxalotl_config):
     repo_dir = os.path.split(taxalotl_dir)[0]
     otifacts_dir = os.path.join(repo_dir, 'OTifacts')
     if not os.path.isdir(otifacts_dir):
+        _LOG.debug(f"cloning to {otifacts_dir}")
         clone_otifacts(otifacts_dir)
     else:
+        _LOG.debug(f"pulling to refresh {otifacts_dir}")
         git_pull_otifacts(otifacts_dir)
     all_res = read_all_otifacts(otifacts_dir)
     for res_type in ['external taxonomy',
