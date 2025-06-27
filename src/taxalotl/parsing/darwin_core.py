@@ -90,7 +90,7 @@ def write_gbif_projection_file(source, destination, fields2index):
     tr_ind = fields2index['taxonRank']
     ts_ind = fields2index['taxonomicStatus']
     nat_ind = fields2index['nameAccordingTo']
-    with io.open(source, 'rU', encoding='utf-8') as infile:
+    with io.open(source, 'r', encoding='utf-8') as infile:
         with OutFile(destination) as outfile:
             for line in infile:
                 row = line.split('\t')
@@ -140,7 +140,7 @@ def read_gbif_projection(proj_filepath, itd, field_to_index, do_gbif_checks):
     to_ignore = set()
     count = 0
     n_syn = 0
-    with io.open(proj_filepath, 'rU', encoding='utf-8') as inp:
+    with io.open(proj_filepath, 'r', encoding='utf-8') as inp:
         for line_num, row in enumerate(inp):
             fields = row.split('\t')
             # acceptedNameUsageID

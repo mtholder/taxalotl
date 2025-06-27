@@ -13,7 +13,7 @@ _LOG = logging.getLogger(__name__)
 
 def read_resource_file(fp):
     try:
-        with io.open(fp, 'rU', encoding='utf-8') as inp:
+        with io.open(fp, 'r', encoding='utf-8') as inp:
             return json.load(inp)
     except:
         _LOG.exception("Error reading JSON from \"{}\"".format(fp))

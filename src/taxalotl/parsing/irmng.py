@@ -52,7 +52,7 @@ def read_irmng_file(irmng_file_name):
     to_tsta_nstat_keep = itd.extra_blob
     itd.syn_id_to_valid = {}
     syn_id_to_valid = itd.syn_id_to_valid
-    with open(irmng_file_name, 'rU', encoding='utf-8') as csvfile:
+    with open(irmng_file_name, 'r', encoding='utf-8') as csvfile:
         csvreader = csv.reader(csvfile)
         header = next(csvreader)
         if header[5] != 'FAMILY':
@@ -285,7 +285,7 @@ def read_extinct_info(profile_file_name, itd):
                              ])
     to_par = itd.to_par
     d = {}
-    with open(profile_file_name, 'rU', encoding='utf-8') as csvfile:
+    with open(profile_file_name, 'r', encoding='utf-8') as csvfile:
         csvreader = csv.reader(csvfile)
         header = next(csvreader)
         if header[1] != 'ISEXTINCT':

@@ -71,7 +71,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
         return
     ptp = shorter_fp_form(complete_taxon_fp)
     _LOG.debug('parsing taxa from "{}" ...'.format(ptp))
-    with io.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
+    with io.open(complete_taxon_fp, 'r', encoding='utf-8') as inp:
         iinp = iter(inp)
         try:
             tax_part.taxon_header = next(iinp)
@@ -204,7 +204,7 @@ def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
     i = 0
     fp = os.path.join(tax_dir, 'taxonomy.tsv')
     try:
-        with io.open(fp, 'rU', encoding='utf-8') as inp:
+        with io.open(fp, 'r', encoding='utf-8') as inp:
             reader = csv.reader(inp, delimiter='\t')
             header = next(reader)
             uidx = header.index('uid')
@@ -309,7 +309,7 @@ def read_taxonomy_to_get_id_to_fields(tax_dir):
     if not os.path.exists(fp):
         return {}
     try:
-        with io.open(fp, 'rU', encoding='utf-8') as inp:
+        with io.open(fp, 'r', encoding='utf-8') as inp:
             iinp = iter(inp)
             header = next(iinp)
             assert header == expected_header
@@ -331,7 +331,7 @@ def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
     fields = ['uid', 'parent_uid', 'name', 'rank', 'sourceinfo', 'uniqname', 'flags', '\n']
     expected_header = '\t|\t'.join(fields)
     try:
-        with io.open(fp, 'rU', encoding='utf-8') as inp:
+        with io.open(fp, 'r', encoding='utf-8') as inp:
             iinp = iter(inp)
             header = next(iinp)
             assert header == expected_header

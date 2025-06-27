@@ -24,7 +24,7 @@ _LOG = logging.getLogger(__name__)
 
 def parse_silva_ids(fn):
     preferred = set()
-    with io.open(fn, 'rU', encoding='utf-8') as inp:
+    with io.open(fn, 'r', encoding='utf-8') as inp:
         for line in inp:
             ls = line.strip()
             if ls:
@@ -104,7 +104,7 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
     trim_pref = (fung_pref, animal_pref, pl_pref, mito_pref, chloro_pref)
 
     namepath_to_id_pair = {}
-    with io.open(expect_tax_fp, 'rU', encoding='utf-8') as inp:
+    with io.open(expect_tax_fp, 'r', encoding='utf-8') as inp:
         eh = 'primaryAccession\tstart\tstop\tpath\torganism_name\ttaxid\n'
         iinp = iter(inp)
         h = next(iinp)
@@ -217,7 +217,7 @@ class SilvaToNCBIMappingListWrapper(TaxonomyWrapper):
                         }
 
         to_trim = set()
-        with io.open(self.normalized_filepath, 'rU', encoding='utf-8') as inp:
+        with io.open(self.normalized_filepath, 'r', encoding='utf-8') as inp:
             for n, line in enumerate(inp):
                 ls = line.strip()
                 if not ls:

@@ -26,7 +26,7 @@ _num_downloads_this_session = 0
 
 def download_csv_for_family(fam_dir, fam_html_fp, url_pref):
     global _num_downloads_this_session
-    fam_html_content = io.open(fam_html_fp, 'rU', encoding='utf-8').read()
+    fam_html_content = io.open(fam_html_fp, 'r', encoding='utf-8').read()
     soup = Soup(fam_html_content, 'html.parser')
     csva = soup.find_all("a", attrs={"type": "text/csv"})
     if len(csva) != 1:
@@ -48,7 +48,7 @@ def scrape_families_from_higher_group(out_dir, top_file):
     dirname = os.path.split(top_file)[1] + '_families'
     fam_dir = os.path.join(out_dir, dirname)
     assure_dir_exists(fam_dir)
-    top_content = io.open(top_file, 'rU', encoding='utf-8').read()
+    top_content = io.open(top_file, 'r', encoding='utf-8').read()
     soup = Soup(top_content, 'html.parser')
     nametree_list = soup.select("#nametree > li")
     _LOG.debug("will write to {}".format(dirname))
@@ -102,7 +102,7 @@ def normalize_plantlist_file(inp_fp, out_dir, family, maj_group_id):
     legit_ids = {fam_name, }
     illegit_ids = set()
     name_to_id = {}
-    with io.open(inp_fp, 'rU', encoding='utf-8') as csvfile:
+    with io.open(inp_fp, 'r', encoding='utf-8') as csvfile:
         csvreader = csv.reader(csvfile)
         header = next(csvreader)
         _LOG.info(u'header = {}'.format(header))

@@ -127,7 +127,7 @@ def copy_and_add_ott_headers(unpacked_dirp, normalized_dirp, resource_wrapper):
     for fn, header in special:
         tf = os.path.join(unpacked_dirp, fn)
         if os.path.isfile(tf):
-            content = io.open(tf, 'rU', encoding='utf-8').read()
+            content = io.open(tf, 'r', encoding='utf-8').read()
             outfp = os.path.join(normalized_dirp, fn)
             with OutFile(outfp) as out:
                 out.write(header)
@@ -145,7 +145,7 @@ def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
         tf = os.path.join(unpacked_dirp, fn)
         if os.path.isfile(tf):
             outfp = os.path.join(normalized_dirp, fn)
-            with io.open(tf, 'rU', encoding='utf-8') as inp:
+            with io.open(tf, 'r', encoding='utf-8') as inp:
                 with OutFile(outfp) as out:
                     for line in inp:
                         ls = line.split('\t')
@@ -161,7 +161,7 @@ def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):
     if resource_wrapper.schema.lower() == 'silva taxmap':
         shutil.copyfile(inpfp, outfp)
     else:
-        with io.open(inpfp, 'rU', encoding='utf-8') as inp:
+        with io.open(inpfp, 'r', encoding='utf-8') as inp:
             with OutFile(outfp) as outp:
                 for line in inp:
                     ls = line.strip()

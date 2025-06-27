@@ -263,6 +263,6 @@ class TaxonConceptSemNode(SemGraphNode):
         tc.claim_is_synonym_of(self)
         if syn_type:
             tc.syn_type = syn_type
-        from .cmds.semanticize import semanticize_names
+        from ..cmds.semanticize import semanticize_names
         semanticize_names(tc, name, kwargs, None)
         return tc

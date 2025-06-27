@@ -23,7 +23,7 @@ from .cmds.partitions import (GEN_MAPPING_FILENAME,
 from .tax_partition import (use_tax_partitions, get_taxonomies_for_dir)
 from .cmds.dynamic_partitioning import (perform_dynamic_separation,
                                                 return_sep_obj_copy_with_ott_fields)
-from .cmds.analyze_update import analyze_update_to_resources
+# from .cmds.analyze_update import analyze_update_to_resources
 from .cmds.align import align_resource
 from .util import unlink, VirtCommand, OutFile
 import logging
@@ -43,15 +43,15 @@ def align(taxalotl_config, id_list, level_list):
     align_resource(taxalotl_config, ott_res, res, level_list)
 
 
-def analyze_update(taxalotl_config, id_list, level_list):
-    assert len(id_list) == 2
-    eid, lid = id_list
-    earlier = taxalotl_config.get_terminalized_res_by_id(eid)
-    later = taxalotl_config.get_terminalized_res_by_id(lid)
-    if earlier.base_id != later.base_id:
-        m = 'Can only analyze updates of the same taxonomy base: {}( base = {}), but {} (base = {})'
-        raise ValueError(m.format(eid, earlier.base_id, lid, later.base_id))
-    analyze_update_to_resources(taxalotl_config, earlier, later, level_list)
+# def analyze_update(taxalotl_config, id_list, level_list):
+#     assert len(id_list) == 2
+#     eid, lid = id_list
+#     earlier = taxalotl_config.get_terminalized_res_by_id(eid)
+#     later = taxalotl_config.get_terminalized_res_by_id(lid)
+#     if earlier.base_id != later.base_id:
+#         m = 'Can only analyze updates of the same taxonomy base: {}( base = {}), but {} (base = {})'
+#         raise ValueError(m.format(eid, earlier.base_id, lid, later.base_id))
+#     analyze_update_to_resources(taxalotl_config, earlier, later, level_list)
 
 
 def download_resources(taxalotl_config, id_list):

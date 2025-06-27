@@ -9,7 +9,7 @@ from peyutil import read_as_json
 from . import TaxalotlConfig
 from .commands import (accumulate_separated_descendants,
                                align,
-                               analyze_update,
+                               # analyze_update,
                                build_partition_maps,
                                cache_separator_names,
                                clean_resources,
@@ -75,9 +75,10 @@ def _validate_level_arg(taxalotl_config, level):
 def main_post_parse(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config)
     try:
-        if args.which == 'analyze-update':
-            analyze_update(taxalotl_config, args.resources, [args.level])
-        elif args.which == 'align':
+        # if args.which == 'analyze-update':
+        #     analyze_update(taxalotl_config, args.resources, [args.level])
+        # elif
+        if args.which == 'align':
             align(taxalotl_config, args.resources, [args.level])
         elif args.which == 'clean-partition':
             clean_resources(taxalotl_config, 'partition', args.resources)
@@ -152,12 +153,12 @@ def main():
     p.set_defaults(which="all")
     subp = p.add_subparsers(help="command help")
     # ANALYZE UPDATE
-    analyze_update_p = subp.add_parser('analyze-update',
-                                       help="calculates a diff between the last version of a "
-                                            "taxonomy used and the latest version downloaded.")
-    analyze_update_p.add_argument('resources', nargs=2, help="IDs of the resources to analyzed.")
-    _add_level_arg(analyze_update_p)
-    analyze_update_p.set_defaults(which="analyze-update")
+    # analyze_update_p = subp.add_parser('analyze-update',
+    #                                    help="calculates a diff between the last version of a "
+    #                                         "taxonomy used and the latest version downloaded.")
+    # analyze_update_p.add_argument('resources', nargs=2, help="IDs of the resources to analyzed.")
+    # _add_level_arg(analyze_update_p)
+    # analyze_update_p.set_defaults(which="analyze-update")
 
     # PULL OTifacts
     pull_otifacts_p = subp.add_parser('pull-otifacts',

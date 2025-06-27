@@ -70,7 +70,7 @@ def partition_col_by_root_id(tax_part):  # type (TaxonPartition) -> None
     assert not syn_fp
     syn_by_id = tax_part._syn_by_id
     ptp = shorter_fp_form(complete_taxon_fp)
-    with io.open(complete_taxon_fp, 'rU', encoding='utf-8') as inp:
+    with io.open(complete_taxon_fp, 'r', encoding='utf-8') as inp:
         iinp = iter(inp)
         tax_part.taxon_header = next(iinp)
         prev_line = None
