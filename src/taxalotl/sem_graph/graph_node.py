@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+
 class SemGraphNode(object):
     def __init__(self, sem_graph, id_minting_d):
         self.canonical_id = sem_graph.register_obj(id_minting_d, self)
@@ -26,7 +27,7 @@ def _serialize_triple_object(o):
 
 
 class AuthoritySemNode(SemGraphNode):
-    auth_sem_nd_pred = ('authors', 'year', 'taxon_concepts')
+    auth_sem_nd_pred = ("authors", "year", "taxon_concepts")
 
     def __init__(self, sem_graph, id_minting_d, authors, year, tax_con_sem_node):
         super(AuthoritySemNode, self).__init__(sem_graph, id_minting_d)
@@ -49,4 +50,3 @@ class AuthoritySemNode(SemGraphNode):
     @property
     def predicates(self):
         return AuthoritySemNode.auth_sem_nd_pred
-

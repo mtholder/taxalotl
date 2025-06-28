@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 from .graph_node import SemGraphNode
 
-KNOWN_FLAGS = frozenset(['hidden', 'sibling_higher', 'extinct'])
+KNOWN_FLAGS = frozenset(["hidden", "sibling_higher", "extinct"])
 
 
 class TaxonConceptSemNode(SemGraphNode):
     def __init__(self, sem_graph, foreign_id):
-        d = {'class_tag': 'tc', 'context_id': foreign_id}
+        d = {"class_tag": "tc", "context_id": foreign_id}
         super(TaxonConceptSemNode, self).__init__(sem_graph, d)
         self.is_child_of = None
         self.rank = None
@@ -58,27 +58,31 @@ class TaxonConceptSemNode(SemGraphNode):
 
     def find_valid_species(self, genus_name, species_name):
         def test_fn(tc):
-            return ((not tc.undescribed)
-                    and (tc.rank == 'species')
-                    and tc.is_valid_for_sp_epithet(species_name))
+            return (
+                (not tc.undescribed)
+                and (tc.rank == "species")
+                and tc.is_valid_for_sp_epithet(species_name)
+            )
 
         return self.find_in_subtree(test=test_fn)
 
     def find_undescribed_species_for_name(self, genus_name, species_name):
         def test_fn(tc):
-            return (tc.undescribed
-                    and (tc.rank == 'species')
-                    and tc.is_valid_for_sp_epithet(species_name))
+            return (
+                tc.undescribed
+                and (tc.rank == "species")
+                and tc.is_valid_for_sp_epithet(species_name)
+            )
 
         return self.find_in_subtree(test=test_fn)
 
     def explain(self, out):
-        cn = self.canonical_name.name if self.canonical_name else ''
+        cn = self.canonical_name.name if self.canonical_name else ""
         out.write('"{}" Taxon({}) '.format(cn, self.canonical_id))
         if self._is_synonym_of:
             out.write('synonym of "{}"'.format(self.valid_name.name))
         else:
-            out.write(' rank={}'.format(self.rank if self.rank else '?'))
+            out.write(" rank={}".format(self.rank if self.rank else "?"))
 
     def is_valid_for_sp_epithet(self, species_name):
         if self._is_synonym_of:
@@ -126,7 +130,7 @@ class TaxonConceptSemNode(SemGraphNode):
 
     @property
     def is_specimen_based(self):
-        return self.rank in ['species', 'subspecies', 'infraspecies']
+        return self.rank in ["species", "subspecies", "infraspecies"]
 
     def claim_is_child_of(self, par_sem_node):
         assert self.is_child_of is None
@@ -151,9 +155,9 @@ class TaxonConceptSemNode(SemGraphNode):
         self.incertae_sedis = True
 
     def claim_flag(self, flag):
-        if flag == 'incertae_sedis':
+        if flag == "incertae_sedis":
             self.claim_incertae_sedis()
-        elif flag == 'hybrid':
+        elif flag == "hybrid":
             self.claim_hybrid()
         else:
             if flag not in KNOWN_FLAGS:
@@ -171,11 +175,21 @@ class TaxonConceptSemNode(SemGraphNode):
 
     @property
     def predicates(self):
-        return ['hybrid', 'is_child_of', 'rank', 'has_name', 'id', 'undescribed',
-                'is_synonym',
-                'incertae_sedis', 'other_flags',
-                'syn_type', 'former_ranks',
-                'problematic_synonyms', 'synonyms']
+        return [
+            "hybrid",
+            "is_child_of",
+            "rank",
+            "has_name",
+            "id",
+            "undescribed",
+            "is_synonym",
+            "incertae_sedis",
+            "other_flags",
+            "syn_type",
+            "former_ranks",
+            "problematic_synonyms",
+            "synonyms",
+        ]
 
     @property
     def valid_combination(self):
@@ -192,23 +206,27 @@ class TaxonConceptSemNode(SemGraphNode):
         try:
             n.claim_type_material(type_str)
         except:
-            e = 'could not find name that was type-material-based attached to TaxonConcept'
-            self.claim_problematic_synonym_statement(type_str, 'type material', e)
+            e = "could not find name that was type-material-based attached to TaxonConcept"
+            self.claim_problematic_synonym_statement(type_str, "type material", e)
 
     @property
     def name_attached_to_type_specimen(self):
-        return None if self.has_name is None else self.has_name.name_attached_to_type_specimen
+        return (
+            None
+            if self.has_name is None
+            else self.has_name.name_attached_to_type_specimen
+        )
 
     def _get_next_syn_id(self):
         ns = len(self.synonyms) if self.synonyms else 0
         try:
-            trimmed_canon = ':'.join(self.canonical_id.split(':')[2:])
+            trimmed_canon = ":".join(self.canonical_id.split(":")[2:])
         except:
             try:
-                trimmed_canon = ':'.join(self.canonical_id.split(':')[1:])
+                trimmed_canon = ":".join(self.canonical_id.split(":")[1:])
             except:
                 trimmed_canon = self.canonical_id
-        return '{}:syn{}'.format(trimmed_canon, ns)
+        return "{}:syn{}".format(trimmed_canon, ns)
 
     @property
     def is_synonym(self):
@@ -224,32 +242,38 @@ class TaxonConceptSemNode(SemGraphNode):
             self.former_ranks.append(rank)
 
     def claim_uninomial_synonym(self, name, syn_type, **kwargs):
-        if 'genus' in kwargs:
-            return self._claim_syn_impl(name, syn_type, 'genus', **kwargs)
-        if 'higher_group_name' not in kwargs:
-            raise ValueError("Expecting 'higher_group_name' or 'genus' kwarg "
-                             "in claim_uninomial_synonym")
-        return self._claim_syn_impl(name, syn_type, 'clade', **kwargs)
+        if "genus" in kwargs:
+            return self._claim_syn_impl(name, syn_type, "genus", **kwargs)
+        if "higher_group_name" not in kwargs:
+            raise ValueError(
+                "Expecting 'higher_group_name' or 'genus' kwarg "
+                "in claim_uninomial_synonym"
+            )
+        return self._claim_syn_impl(name, syn_type, "clade", **kwargs)
 
     def claim_formerly_full_species(self, res, name, syn_type, **kwargs):
-        self.claim_former_rank('species')
+        self.claim_former_rank("species")
         return self.claim_binom_synonym(res, name, syn_type, **kwargs)
 
     def claim_formerly_subspecies(self, res, name, syn_type, **kwargs):
-        self.claim_former_rank('subspecies')
+        self.claim_former_rank("subspecies")
         return self.claim_trinomial_synonym(res, name, syn_type, **kwargs)
 
     def claim_binom_synonym(self, res, name, syn_type, **kwargs):
-        for expected in ('genus', 'sp_epithet'):
+        for expected in ("genus", "sp_epithet"):
             if expected not in kwargs:
-                raise ValueError("Expecting '{}' kwarg in claim_binom_synonym".format(expected))
-        return self._claim_syn_impl(name, syn_type, 'species', **kwargs)
+                raise ValueError(
+                    "Expecting '{}' kwarg in claim_binom_synonym".format(expected)
+                )
+        return self._claim_syn_impl(name, syn_type, "species", **kwargs)
 
     def claim_trinomial_synonym(self, res, name, syn_type, **kwargs):
-        for expected in ('genus', 'sp_epithet', 'infra_epithet'):
+        for expected in ("genus", "sp_epithet", "infra_epithet"):
             if expected not in kwargs:
-                raise ValueError("Expecting '{}' kwarg in claim_trinomial_synonym".format(expected))
-        return self._claim_syn_impl(name, syn_type, 'infraspecies', **kwargs)
+                raise ValueError(
+                    "Expecting '{}' kwarg in claim_trinomial_synonym".format(expected)
+                )
+        return self._claim_syn_impl(name, syn_type, "infraspecies", **kwargs)
 
     def _add_to_syn_list(self, syntc):
         if self.synonyms is None:
@@ -264,5 +288,6 @@ class TaxonConceptSemNode(SemGraphNode):
         if syn_type:
             tc.syn_type = syn_type
         from ..cmds.semanticize import semanticize_names
+
         semanticize_names(tc, name, kwargs, None)
         return tc

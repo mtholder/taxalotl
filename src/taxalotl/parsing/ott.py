@@ -7,48 +7,53 @@ import logging
 
 from peyutil import StringIO
 
-from ..ott_schema import (read_taxonomy_to_get_single_taxon,
-                                 )
-from ..cmds.partitions import (fill_empty_anc_of_mapping,
-                                      MISC_DIRNAME,
-                                      PREORDER_PART_LIST,
-                                      NAME_TO_PARTS_SUBSETS)
+from ..ott_schema import (
+    read_taxonomy_to_get_single_taxon,
+)
+from ..cmds.partitions import (
+    fill_empty_anc_of_mapping,
+    MISC_DIRNAME,
+    PREORDER_PART_LIST,
+    NAME_TO_PARTS_SUBSETS,
+)
 from ..resource_wrapper import ResourceWrapper, TaxonomyWrapper
-from ..tax_partition import (get_roots_for_subset, )
+from ..tax_partition import (
+    get_roots_for_subset,
+)
 from ..util import get_true_false_repsonse
 
 _LOG = logging.getLogger(__name__)
 
 OTT_PARTMAP = {
-    'Archaea': frozenset([996421]),
-    'Bacteria': frozenset([844192]),
-    'Eukaryota': frozenset([304358]),
-    'SAR': frozenset([5246039]),
-    'Haptophyta': frozenset([151014]),
-    'Rhodophyta': frozenset([878953]),
-    'Archaeplastida': frozenset([5268475]),
-    'Glaucophyta': frozenset([664970]),
-    'Chloroplastida': frozenset([361838]),
-    'Fungi': frozenset([352914]),
-    'Metazoa': frozenset([691846]),
-    'Annelida': frozenset([941620]),
-    'Arthropoda': frozenset([632179]),
-    'Malacostraca': frozenset([212701]),
-    'Arachnida': frozenset([511967]),
-    'Insecta': frozenset([1062253]),
-    'Diptera': frozenset([661378]),
-    'Coleoptera': frozenset([865243]),
-    'Lepidoptera': frozenset([965954]),
-    'Hymenoptera': frozenset([753726]),
-    'Bryozoa': frozenset([442934]),
-    'Chordata': frozenset([125642]),
-    'Cnidaria': frozenset([641033]),
-    'Ctenophora': frozenset([641212]),
-    'Mollusca': frozenset([802117]),
-    'Nematoda': frozenset([395057]),
-    'Platyhelminthes': frozenset([555379]),
-    'Porifera': frozenset([67819]),
-    'Viruses': frozenset([4807313]),
+    "Archaea": frozenset([996421]),
+    "Bacteria": frozenset([844192]),
+    "Eukaryota": frozenset([304358]),
+    "SAR": frozenset([5246039]),
+    "Haptophyta": frozenset([151014]),
+    "Rhodophyta": frozenset([878953]),
+    "Archaeplastida": frozenset([5268475]),
+    "Glaucophyta": frozenset([664970]),
+    "Chloroplastida": frozenset([361838]),
+    "Fungi": frozenset([352914]),
+    "Metazoa": frozenset([691846]),
+    "Annelida": frozenset([941620]),
+    "Arthropoda": frozenset([632179]),
+    "Malacostraca": frozenset([212701]),
+    "Arachnida": frozenset([511967]),
+    "Insecta": frozenset([1062253]),
+    "Diptera": frozenset([661378]),
+    "Coleoptera": frozenset([865243]),
+    "Lepidoptera": frozenset([965954]),
+    "Hymenoptera": frozenset([753726]),
+    "Bryozoa": frozenset([442934]),
+    "Chordata": frozenset([125642]),
+    "Cnidaria": frozenset([641033]),
+    "Ctenophora": frozenset([641212]),
+    "Mollusca": frozenset([802117]),
+    "Nematoda": frozenset([395057]),
+    "Platyhelminthes": frozenset([555379]),
+    "Porifera": frozenset([67819]),
+    "Viruses": frozenset([4807313]),
 }
 
 # Unused separation taxa: cellular organisms	93302
@@ -60,13 +65,16 @@ OTT_3_SEPARATION_TAXA = OTT_PARTMAP
 def ott_fetch_root_taxon_for_partition(res, parts_key, root_id):
     tax_dir = res.get_taxdir_for_root_of_part(parts_key)
     if not tax_dir:
-        _LOG.info('No taxon file found for {}'.format(parts_key))
+        _LOG.info("No taxon file found for {}".format(parts_key))
         return None
     # _LOG.info('{} root should be in {}'.format(parts_key, tax_dir))
     taxon_obj = read_taxonomy_to_get_single_taxon(tax_dir, root_id)
     if not tax_dir:
         _LOG.info(
-            'Root taxon for {} with ID {} not found in {}'.format(parts_key, root_id, tax_dir))
+            "Root taxon for {} with ID {} not found in {}".format(
+                parts_key, root_id, tax_dir
+            )
+        )
         return None
     return taxon_obj
 
@@ -76,7 +84,7 @@ def ott_build_paritition_maps(res):
     src_pre_to_map = {}
     all_part_keys = set()
     for part_key in PREORDER_PART_LIST:
-        if part_key != 'Life':
+        if part_key != "Life":
             all_part_keys.add(part_key)
         all_part_keys.update(NAME_TO_PARTS_SUBSETS[part_key])
     for pk in all_part_keys:
@@ -89,10 +97,11 @@ def ott_build_paritition_maps(res):
             continue
         assert len(roots) == 1
         root_id, taxon = roots.popitem()
-        _LOG.info('root for {} has sources: {}'.format(pk, taxon.src_dict))
+        _LOG.info("root for {} has sources: {}".format(pk, taxon.src_dict))
         for src_pre, src_ids in taxon.src_dict.items():
             src_pre_to_map.setdefault(src_pre, {})[pk] = src_ids
     import copy
+
     filled = {}
     for src_pre, mapping in src_pre_to_map.items():
         pm = copy.deepcopy(mapping)
@@ -105,18 +114,18 @@ def ott_build_paritition_maps(res):
             else:
                 assert v == pv
     # @TODO: hard copying the fact that OTT was built with SILVA-115
-    if 'silva' in filled:
-        filled['silva_115'] = filled['silva']
-        del filled['silva']
+    if "silva" in filled:
+        filled["silva_115"] = filled["silva"]
+        del filled["silva"]
     # @TODO: make this automatic not generic
-    gbif = filled['gbif']
+    gbif = filled["gbif"]
     assert "Chloroplastida" not in gbif
     gbif["Chloroplastida"] = [13, 9, 7707728, 7819616, 36, 35]
 
     return filled
 
 
-UNSTABLE_SRC_PREFIXES = frozenset(['h2007', 'study713', 'https', 'http'])
+UNSTABLE_SRC_PREFIXES = frozenset(["h2007", "study713", "https", "http"])
 
 
 class NewSeparator(object):
@@ -129,14 +138,15 @@ class NewSeparator(object):
         self.write_str(out)
         return out.getvalue()
 
-    def write_str(self, out, pref=''):
+    def write_str(self, out, pref=""):
         t = self.taxon
         if pref:
-            pref = pref + '/'
-        out.write('{}{} ott{} sources={}\n'.format(pref,
-                                                   t.name_that_is_unique,
-                                                   t.id,
-                                                   t.src_dict))
+            pref = pref + "/"
+        out.write(
+            "{}{} ott{} sources={}\n".format(
+                pref, t.name_that_is_unique, t.id, t.src_dict
+            )
+        )
         for name, sep in self.sub_separators.items():
             if pref:
                 ns = pref + name
@@ -188,14 +198,16 @@ class NestedNewSeparator(object):
                 else:
                     ns = NewSeparator(child)
                     par_dict[child.id] = ns
-                    self._add_separtors_for_descendants(child, sep_ids, ns.sub_separators)
+                    self._add_separtors_for_descendants(
+                        child, sep_ids, ns.sub_separators
+                    )
             else:
                 self._add_separtors_for_descendants(child, sep_ids, par_dict)
 
     def __str__(self):
         out = StringIO()
         for name, sep in self.separators.items():
-            out.write('top-level name={}\n'.format(name))
+            out.write("top-level name={}\n".format(name))
             sep.write_str(out)
         return out.getvalue()
 
@@ -225,14 +237,23 @@ def _add_nst_subtree_el_to_dict(rd, nst_el, par_to_child):
         _add_nst_subtree_el_to_dict(nd, next_el, par_to_child)
 
 
-NON_SEP_RANKS = frozenset(['forma', 'no rank - terminal', 'species',
-                           'species group', 'species subgroup', 'varietas', 'variety', ])
+NON_SEP_RANKS = frozenset(
+    [
+        "forma",
+        "no rank - terminal",
+        "species",
+        "species group",
+        "species subgroup",
+        "varietas",
+        "variety",
+    ]
+)
 MIN_SEP_SIZE = 20
 
 
 def get_stable_source_keys(taxon):
     all_src_keys = taxon.src_dict.keys()
-    filtered = [i for i in all_src_keys if not i.startswith('additions')]
+    filtered = [i for i in all_src_keys if not i.startswith("additions")]
     r = [i for i in filtered if i not in UNSTABLE_SRC_PREFIXES]
     r.sort()
     return r
@@ -260,19 +281,20 @@ def _diagnose_relevant_sources(tree):
     return frozenset(ac_src)
 
 
-DEFAULT_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi', 'worms'])
-NO_WORMS_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi'])
-SILVA_NOT_WORMS_REL_SRC_SET = frozenset(['gbif', 'irmng', 'ncbi', 'silva'])
-PART_KEY_TO_REL_SRC_SET = {'Insecta': NO_WORMS_REL_SRC_SET,
-                           'Hymenoptera': NO_WORMS_REL_SRC_SET,
-                           'Diptera': NO_WORMS_REL_SRC_SET,
-                           'Coleoptera': NO_WORMS_REL_SRC_SET,
-                           'Lepidoptera': NO_WORMS_REL_SRC_SET,
-                           'Chordata': NO_WORMS_REL_SRC_SET,
-                           'Fungi': NO_WORMS_REL_SRC_SET,
-                           'Bacteria': SILVA_NOT_WORMS_REL_SRC_SET,
-                           'Archaea': SILVA_NOT_WORMS_REL_SRC_SET,
-                           }
+DEFAULT_REL_SRC_SET = frozenset(["gbif", "irmng", "ncbi", "worms"])
+NO_WORMS_REL_SRC_SET = frozenset(["gbif", "irmng", "ncbi"])
+SILVA_NOT_WORMS_REL_SRC_SET = frozenset(["gbif", "irmng", "ncbi", "silva"])
+PART_KEY_TO_REL_SRC_SET = {
+    "Insecta": NO_WORMS_REL_SRC_SET,
+    "Hymenoptera": NO_WORMS_REL_SRC_SET,
+    "Diptera": NO_WORMS_REL_SRC_SET,
+    "Coleoptera": NO_WORMS_REL_SRC_SET,
+    "Lepidoptera": NO_WORMS_REL_SRC_SET,
+    "Chordata": NO_WORMS_REL_SRC_SET,
+    "Fungi": NO_WORMS_REL_SRC_SET,
+    "Bacteria": SILVA_NOT_WORMS_REL_SRC_SET,
+    "Archaea": SILVA_NOT_WORMS_REL_SRC_SET,
+}
 
 
 def add_confirmed_sep(nns, tree, list_num_id_taxon, sep_name):
@@ -292,7 +314,7 @@ def add_confirmed_sep(nns, tree, list_num_id_taxon, sep_name):
                 continue
         if sep_name is None:
             m = '"{}" has {} tips below it.'.format(obj.name_that_is_unique, nt)
-            p = '{} Enter (y) to treat is a separator: '.format(m)
+            p = "{} Enter (y) to treat is a separator: ".format(m)
             if get_true_false_repsonse(p, def_value=True):
                 top_sep_set.add(i)
         else:
@@ -301,13 +323,13 @@ def add_confirmed_sep(nns, tree, list_num_id_taxon, sep_name):
         nns.add_separtors_for_tree(tree, top_sep_set)
 
 
-_skip_semanticizing_set = frozenset(['not_otu', 'was_container', 'barren'])
+_skip_semanticizing_set = frozenset(["not_otu", "was_container", "barren"])
 
 
 # noinspection PyAbstractClass
 class OTTaxonomyWrapper(TaxonomyWrapper):
-    resource_type = 'open tree taxonomy'
-    schema = {'ott'}
+    resource_type = "open tree taxonomy"
+    schema = {"ott"}
 
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
@@ -319,12 +341,18 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
 
     def get_source_for_sep_or_part(self, current_partition_key):
         try:
-            return PART_KEY_TO_REL_SRC_SET.get(current_partition_key, DEFAULT_REL_SRC_SET)
+            return PART_KEY_TO_REL_SRC_SET.get(
+                current_partition_key, DEFAULT_REL_SRC_SET
+            )
         except:
             dn = self.config.get_fragment_from_part_name(current_partition_key)
             higher = os.path.split(os.path.split(dn)[0])[-1]
-            if higher.lower() == 'life':
-                raise ValueError('partition/separator name "{}" not found'.format(current_partition_key))
+            if higher.lower() == "life":
+                raise ValueError(
+                    'partition/separator name "{}" not found'.format(
+                        current_partition_key
+                    )
+                )
             return self.get_source_for_sep_or_part(higher)
 
     def diagnose_new_separators(self, current_partition_key, sep_name):
@@ -338,11 +366,16 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
             try:
                 ac_src = self.get_source_for_sep_or_part(current_partition_key)
             except:
-                m = 'Might try calling _diagnose_relevant_sources for "{}", but in Jan 2019 moved to ' \
-                    'making this hard coded in PART_KEY_TO_REL_SRC_SET.'
+                m = (
+                    'Might try calling _diagnose_relevant_sources for "{}", but in Jan 2019 moved to '
+                    "making this hard coded in PART_KEY_TO_REL_SRC_SET."
+                )
                 raise NotImplementedError(m.format(current_partition_key))
-            _LOG.info("Relevant sources for {} are recorded as to be: {}. size = {}".format(current_partition_key,
-                                                                                            ac_src, len(ac_src)))
+            _LOG.info(
+                "Relevant sources for {} are recorded as to be: {}. size = {}".format(
+                    current_partition_key, ac_src, len(ac_src)
+                )
+            )
             for tree in tax_forest.trees:
                 tree.add_num_tips_below()
                 assert ac_src
@@ -354,8 +387,9 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
                         continue  # no point in partitioning leaves...
                     if sep_name is not None:
                         obn, obun = obj.name, obj.uniqname
-                        if (obn and (len(obn) == lsn and obn.lower() == lsep)) \
-                                or (obun and (len(obun) == lsn and obun.lower() == lsep)):
+                        if (obn and (len(obn) == lsn and obn.lower() == lsep)) or (
+                            obun and (len(obun) == lsn and obun.lower() == lsep)
+                        ):
                             nst.append((obj.num_tips_below, i, obj))
                             break
                     else:
@@ -369,7 +403,9 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
         if len(nns.separators) == 0:
             _LOG.info('No new separators found for "{}"'.format(current_partition_key))
             return None
-        rel_dir_for_part = self.config.get_fragment_from_part_name(current_partition_key)
+        rel_dir_for_part = self.config.get_fragment_from_part_name(
+            current_partition_key
+        )
         return {rel_dir_for_part: nns}
 
     def build_paritition_maps(self):
@@ -387,9 +423,9 @@ class OTTaxonomyWrapper(TaxonomyWrapper):
 
 # noinspection PyAbstractClass
 class OTTaxonomyIdListWrapper(ResourceWrapper):
-    resource_type = 'open tree taxonomy idlist'
-    schema = {resource_type, 'ott id csv'}
-    _norm_filename = 'by_qid.csv'
+    resource_type = "open tree taxonomy idlist"
+    schema = {resource_type, "ott id csv"}
+    _norm_filename = "by_qid.csv"
 
     def __init__(self, obj, parent=None, refs=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs)

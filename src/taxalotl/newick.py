@@ -17,9 +17,11 @@ def normalize_newick(unpacked_fp, normalized_fp, resource_wrapper):
         par = nd.parent
         label = nd.id
         if not label:
-            raise RuntimeError("Expecting every node to have a label in an input newick")
-        if '=' in label:
-            rank, name = [i.strip() for i in label.split('=')]
+            raise RuntimeError(
+                "Expecting every node to have a label in an input newick"
+            )
+        if "=" in label:
+            rank, name = [i.strip() for i in label.split("=")]
             itd.to_rank[taxon_id] = rank
         else:
             name = label

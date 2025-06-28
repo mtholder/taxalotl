@@ -8,24 +8,32 @@ import urllib
 import urllib.request
 import logging
 
-from peyutil import (assure_dir_exists,
-                     download_large_file,
-                     gunzip, gunzip_and_untar,
-                     unzip)
+from peyutil import (
+    assure_dir_exists,
+    download_large_file,
+    gunzip,
+    gunzip_and_untar,
+    unzip,
+)
 
-from .ott_schema import (INP_OTT_SYNONYMS_HEADER,
-                                 INP_OTT_TAXONOMY_HEADER,
-                                 partition_ott_by_root_id)
+from .ott_schema import (
+    INP_OTT_SYNONYMS_HEADER,
+    INP_OTT_TAXONOMY_HEADER,
+    partition_ott_by_root_id,
+)
 from .newick import normalize_newick
-from .cmds.partitions import (find_partition_dirs_for_taxonomy,
-                                      has_any_partition_dirs,
-                                      get_auto_gen_part_mapper,
-                                      get_inp_taxdir,
-                                      get_misc_inp_taxdir,
-                                      get_taxon_partition, )
+from .cmds.partitions import (
+    find_partition_dirs_for_taxonomy,
+    has_any_partition_dirs,
+    get_auto_gen_part_mapper,
+    get_inp_taxdir,
+    get_misc_inp_taxdir,
+    get_taxon_partition,
+)
 from .tax_partition import TAX_SLICE_CACHE
 from .util import unlink, OutFile, OutDir
 from .cmds.semanticize import SemGraph
+from .wikispecies import parse_wikispecies
 
 _LOG = logging.getLogger(__name__)
 
@@ -33,15 +41,15 @@ _LOG = logging.getLogger(__name__)
 ######################################################################################
 def unpack_archive(archive_fp, unpack_fp, archive_format, wrapper):
     afl = archive_format.lower()
-    if afl in ['tar+gzip']:
+    if afl in ["tar+gzip"]:
         _LOG.debug("gunzip_and_untar from {} to {} ...".format(archive_fp, unpack_fp))
         gunzip_and_untar(archive_fp, unpack_fp)
         _LOG.debug("gunzip_and_untar from {} to {} done.".format(archive_fp, unpack_fp))
-    elif afl == 'zip':
+    elif afl == "zip":
         _LOG.debug("unzip from {} to {} ...".format(archive_fp, unpack_fp))
         unzip(archive_fp, unpack_fp)
         _LOG.debug("unzip from {} to {} done.".format(archive_fp, unpack_fp))
-    elif afl == 'gzip':
+    elif afl == "gzip":
         afn = os.path.split(archive_fp)[-1]
         if archive_fp.endswith(".gz"):
             fn = afn[:-3]
@@ -57,7 +65,7 @@ def unpack_archive(archive_fp, unpack_fp, archive_format, wrapper):
         _LOG.debug("gunzip from {} to {} ...".format(archive_fp, dest))
         gunzip(archive_fp, dest)
         _LOG.debug("gunzip from {} to {} done.".format(archive_fp, dest))
-    elif afl == 'text':
+    elif afl == "text":
         assure_dir_exists(unpack_fp)
         try:
             lfn = wrapper.local_filename
@@ -71,23 +79,25 @@ def unpack_archive(archive_fp, unpack_fp, archive_format, wrapper):
 
 
 ######################################################################################
-OTT_TAXONOMY_FILENAMES = ("about.json",
-                          "alignment_summary.json",
-                          "choices.tsv",
-                          "conflicts.tsv",
-                          "deprecated.tsv",
-                          "differences.tsv",
-                          "forwards.tsv",
-                          "log.tsv",
-                          "merge_summary.json",
-                          "otu_differences.tsv",
-                          "README.html",
-                          "synonyms.tsv",
-                          "taxonomy.tsv",
-                          "transcript.out",
-                          "version.txt",)
+OTT_TAXONOMY_FILENAMES = (
+    "about.json",
+    "alignment_summary.json",
+    "choices.tsv",
+    "conflicts.tsv",
+    "deprecated.tsv",
+    "differences.tsv",
+    "forwards.tsv",
+    "log.tsv",
+    "merge_summary.json",
+    "otu_differences.tsv",
+    "README.html",
+    "synonyms.tsv",
+    "taxonomy.tsv",
+    "transcript.out",
+    "version.txt",
+)
 
-OTT_TAXONOMY_ID_FILES = ('by_qid.csv',)
+OTT_TAXONOMY_ID_FILES = ("by_qid.csv",)
 
 
 def copy_file_list_by_linking(unpacked_dirp, normalized_dirp, file_list):
@@ -97,37 +107,37 @@ def copy_file_list_by_linking(unpacked_dirp, normalized_dirp, file_list):
         if os.path.exists(ufp):
             dfp = os.path.join(normalized_dirp, fn)
             if os.path.exists(dfp):
-                _LOG.info('File already exists at "{}". Skipping link creation.'.format(dfp))
+                _LOG.info(
+                    'File already exists at "{}". Skipping link creation.'.format(dfp)
+                )
             else:
                 os.symlink(ufp, dfp)
 
 
 # noinspection PyUnusedLocal
 def copy_taxonomy_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
-    copy_file_list_by_linking(unpacked_dirp,
-                              normalized_dirp,
-                              OTT_TAXONOMY_FILENAMES)
+    copy_file_list_by_linking(unpacked_dirp, normalized_dirp, OTT_TAXONOMY_FILENAMES)
 
 
 # noinspection PyUnusedLocal
 def copy_id_list_by_linking(unpacked_dirp, normalized_dirp, resource_wrapper):
-    copy_file_list_by_linking(unpacked_dirp,
-                              normalized_dirp,
-                              OTT_TAXONOMY_ID_FILES)
+    copy_file_list_by_linking(unpacked_dirp, normalized_dirp, OTT_TAXONOMY_ID_FILES)
 
 
 # noinspection PyUnusedLocal
 def copy_and_add_ott_headers(unpacked_dirp, normalized_dirp, resource_wrapper):
     motf = list(OTT_TAXONOMY_FILENAMES)
-    special = [('taxonomy.tsv', INP_OTT_TAXONOMY_HEADER),
-               ('synonyms.tsv', INP_OTT_SYNONYMS_HEADER)]
+    special = [
+        ("taxonomy.tsv", INP_OTT_TAXONOMY_HEADER),
+        ("synonyms.tsv", INP_OTT_SYNONYMS_HEADER),
+    ]
     for fn, header in special:
         motf.remove(fn)
     copy_file_list_by_linking(unpacked_dirp, normalized_dirp, motf)
     for fn, header in special:
         tf = os.path.join(unpacked_dirp, fn)
         if os.path.isfile(tf):
-            content = io.open(tf, 'r', encoding='utf-8').read()
+            content = io.open(tf, "r", encoding="utf-8").read()
             outfp = os.path.join(normalized_dirp, fn)
             with OutFile(outfp) as out:
                 out.write(header)
@@ -137,7 +147,7 @@ def copy_and_add_ott_headers(unpacked_dirp, normalized_dirp, resource_wrapper):
 # noinspection PyUnusedLocal
 def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
     motf = list(OTT_TAXONOMY_FILENAMES)
-    special = [('taxonomy.tsv', INP_OTT_TAXONOMY_HEADER)]
+    special = [("taxonomy.tsv", INP_OTT_TAXONOMY_HEADER)]
     for fn, header in special:
         motf.remove(fn)
     copy_file_list_by_linking(unpacked_dirp, normalized_dirp, motf)
@@ -145,11 +155,20 @@ def normalize_tab_sep_ott(unpacked_dirp, normalized_dirp, resource_wrapper):
         tf = os.path.join(unpacked_dirp, fn)
         if os.path.isfile(tf):
             outfp = os.path.join(normalized_dirp, fn)
-            with io.open(tf, 'r', encoding='utf-8') as inp:
+            with io.open(tf, "r", encoding="utf-8") as inp:
                 with OutFile(outfp) as out:
                     for line in inp:
-                        ls = line.split('\t')
-                        out.write('\t|\t'.join(ls))
+                        ls = line.split("\t")
+                        out.write("\t|\t".join(ls))
+
+
+def normalize_wikispecies(unpacked_dirp, normalized_dirp, resource_wrapper):
+    # import sys; sys.exit(f"{unpacked_dirp}\n{normalized_dirp}\n{resource_wrapper.__dict__}\n")
+    fn = "pages-meta-current.xml"
+    infp = os.path.join(unpacked_dirp, fn)
+    if not os.path.isfile(infp):
+        raise RuntimeError(f"{infp} does not exist")
+    parse_wikispecies(infp)
 
 
 def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):
@@ -158,67 +177,73 @@ def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):
     with OutDir(outfd):
         pass
     outfp = resource_wrapper.normalized_filepath
-    if resource_wrapper.schema.lower() == 'silva taxmap':
+    if resource_wrapper.schema.lower() == "silva taxmap":
         shutil.copyfile(inpfp, outfp)
     else:
-        with io.open(inpfp, 'r', encoding='utf-8') as inp:
+        with io.open(inpfp, "r", encoding="utf-8") as inp:
             with OutFile(outfp) as outp:
                 for line in inp:
                     ls = line.strip()
                     if not ls:
                         continue
-                    if ls[0] != '>':
+                    if ls[0] != ">":
                         raise ValueError(
-                            'Expecting each line to start with > found:\n{}'.format(ls))
-                    spl = ls.split(' ')
+                            "Expecting each line to start with > found:\n{}".format(ls)
+                        )
+                    spl = ls.split(" ")
                     silva_info = spl[0][1:]
-                    rest = ' '.join(spl[1:])
-                    sispl = silva_info.split('.')
-                    first_col = '.'.join(sispl[:-2])
+                    rest = " ".join(spl[1:])
+                    sispl = silva_info.split(".")
+                    first_col = ".".join(sispl[:-2])
                     sec_col, third_col = sispl[-2:]
-                    label = rest.split(';')[-1]
-                    if not rest.endswith(';'):
-                        rest += ';'
-                    ol = '\t'.join([first_col, sec_col, third_col, rest, label])
-                    outp.write('{}\n'.format(ol))
+                    label = rest.split(";")[-1]
+                    if not rest.endswith(";"):
+                        rest += ";"
+                    ol = "\t".join([first_col, sec_col, third_col, rest, label])
+                    outp.write("{}\n".format(ol))
 
 
-_schema_to_norm_fn = {"headerless ott": copy_and_add_ott_headers,
-                      "newick": normalize_newick,
-                      "ott": copy_taxonomy_by_linking,
-                      "ott id csv": copy_id_list_by_linking,
-                      "silva_ncbi": normalize_silva_ncbi,
-                      'fasta silva taxmap': normalize_silva_ncbi,
-                      "tab-separated ott": normalize_tab_sep_ott,
-                      }
+_schema_to_norm_fn = {
+    "headerless ott": copy_and_add_ott_headers,
+    "newick": normalize_newick,
+    "ott": copy_taxonomy_by_linking,
+    "ott id csv": copy_id_list_by_linking,
+    "silva_ncbi": normalize_silva_ncbi,
+    "fasta silva taxmap": normalize_silva_ncbi,
+    "tab-separated ott": normalize_tab_sep_ott,
+    "wikispecies": normalize_wikispecies,
+}
 
-_known_res_attr = frozenset(['aliases',
-                             'base_id',  # base ID in inherits from graph
-                             'copy_status',
-                             'date',
-                             'depends_on',
-                             'doc_url',
-                             'format',
-                             'id',
-                             'inherits_from',
-                             'inputs',
-                             'id_list',
-                             'latest_download_url',
-                             'license_url',
-                             'license_or_tou_info',
-                             'local_filename',
-                             'maintainer',
-                             'notes',
-                             'preceded_by',
-                             'references',
-                             'resource_type',
-                             'schema',
-                             'source',
-                             'stats',
-                             'url',
-                             'url_list',
-                             'version'
-                             ])
+_known_res_attr = frozenset(
+    [
+        "aliases",
+        "base_id",  # base ID in inherits from graph
+        "copy_status",
+        "date",
+        "depends_on",
+        "doc_url",
+        "format",
+        "id",
+        "inherits_from",
+        "inputs",
+        "id_list",
+        "latest_download_url",
+        "license_url",
+        "license_or_tou_info",
+        "local_filename",
+        "maintainer",
+        "notes",
+        "preceded_by",
+        "references",
+        "resource_type",
+        "schema",
+        "source",
+        "stats",
+        "url",
+        "url_list",
+        "version",
+    ]
+)
 
 
 class FromOTifacts(object):
@@ -252,9 +277,9 @@ class FromOTifacts(object):
 
 
 class ResourceWrapper(FromOTifacts):
-    taxon_filename = 'taxonomy.tsv'
+    taxon_filename = "taxonomy.tsv"
     _norm_filename = taxon_filename
-    synonyms_filename = 'synonyms.tsv'
+    synonyms_filename = "synonyms.tsv"
     partition_parsing_fn = staticmethod(partition_ott_by_root_id)
 
     def __init__(self, obj, parent=None, refs=None, config=None):
@@ -273,9 +298,13 @@ class ResourceWrapper(FromOTifacts):
                 pv = getattr(parent, k, None)
                 if obj.get(k) is None and pv is not None:
                     setattr(self, k, pv)
-        self.id = obj['id']
+        self.id = obj["id"]
         if self.references:
-            x = [self.references] if not isinstance(self.references, list) else self.references
+            x = (
+                [self.references]
+                if not isinstance(self.references, list)
+                else self.references
+            )
             if refs:
                 for r in x:
                     if r not in refs:
@@ -286,8 +315,10 @@ class ResourceWrapper(FromOTifacts):
     @property
     def config(self):
         if self._config is None:
-            m = "Inadequately initialized ResourceWrapper: " \
+            m = (
+                "Inadequately initialized ResourceWrapper: "
                 "config attribute of a resource must be set."
+            )
             raise RuntimeError(m)
         return self._config
 
@@ -347,9 +378,11 @@ class ResourceWrapper(FromOTifacts):
 
     @property
     def is_abstract(self):
-        return self.format is None \
-               or (self.url is None and not self.url_list) \
-               or self.schema is None
+        return (
+            self.format is None
+            or (self.url is None and not self.url_list)
+            or self.schema is None
+        )
 
     @property
     def is_abstract_input_resource_type(self):
@@ -365,9 +398,11 @@ class ResourceWrapper(FromOTifacts):
 
     def has_been_normalized(self):
         dfp = self.normalized_filedir
-        return (dfp is not None
-                and os.path.exists(dfp)
-                and os.path.exists(self.normalized_filepath))
+        return (
+            dfp is not None
+            and os.path.exists(dfp)
+            and os.path.exists(self.normalized_filepath)
+        )
 
     def has_been_partitioned(self):
         return has_any_partition_dirs(self.partitioned_filepath, self.id)
@@ -376,19 +411,22 @@ class ResourceWrapper(FromOTifacts):
         self._remove_taxonomy_dir(self.normalized_filedir)
 
     def remove_partition_artifacts(self):
-        part_dir_list = find_partition_dirs_for_taxonomy(self.partitioned_filepath, self.id)
+        part_dir_list = find_partition_dirs_for_taxonomy(
+            self.partitioned_filepath, self.id
+        )
         for d in part_dir_list:
             self._remove_taxonomy_dir(d)
 
     def _remove_taxonomy_dir(self, directory):
         if not os.path.isdir(directory):
             return
-        f_to_remove = [self.taxon_filename,
-                       '__roots__.json',
-                       'about.json',
-                       'details.json',
-                       '__accum_des__.json',
-                       ]
+        f_to_remove = [
+            self.taxon_filename,
+            "__roots__.json",
+            "about.json",
+            "details.json",
+            "__accum_des__.json",
+        ]
         if self.synonyms_filename:
             f_to_remove.append(self.synonyms_filename)
         for f in f_to_remove:
@@ -398,7 +436,11 @@ class ResourceWrapper(FromOTifacts):
         try:
             os.rmdir(directory)
         except:
-            _LOG.warning('Could not remove "{}" that directory may not be empty'.format(directory))
+            _LOG.warning(
+                'Could not remove "{}" that directory may not be empty'.format(
+                    directory
+                )
+            )
         else:
             _LOG.info('Removed "{}"'.format(directory))
 
@@ -424,7 +466,7 @@ class ResourceWrapper(FromOTifacts):
         if self.url.startswith("ftp://"):
             _LOG.debug("Starting FTP download from {} to {}".format(self.url, dfp))
             with urllib.request.urlopen(self.url) as req:
-                with OutFile(dfp, mode='wb') as outp:
+                with OutFile(dfp, mode="wb") as outp:
                     outp.write(req.read())
             _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
         else:
@@ -433,36 +475,42 @@ class ResourceWrapper(FromOTifacts):
             _LOG.debug("Download from {} to {} completed.".format(self.url, dfp))
 
     def unpack(self):
-        unpack_archive(self.download_filepath, self.unpacked_filepath, self.format, self)
+        unpack_archive(
+            self.download_filepath, self.unpacked_filepath, self.format, self
+        )
 
     def normalize(self):
         schema = self.schema.lower()
         try:
             norm_fn = _schema_to_norm_fn[schema]
         except KeyError:
-            m = "Normalization from \"{}\" is not currently supported"
+            m = 'Normalization from "{}" is not currently supported'
             raise NotImplementedError(m.format(self.base_id))
         norm_fn(self.unpacked_filepath, self.normalized_filedir, self)
 
-    def write_status(self, out, indent='', list_all_artifacts=False, hanging_indent='  '):
+    def write_status(
+        self, out, indent="", list_all_artifacts=False, hanging_indent="  "
+    ):
         dfp = self.download_filepath
-        src_str = '{} '.format(self.source) if self.source else ''
+        src_str = "{} ".format(self.source) if self.source else ""
         if dfp is None:
             lo = self.get_leaf_obj()
             if lo == self:
-                suff = ''
+                suff = ""
             else:
                 suff = ' the most recent version appears to be "{}"'.format(lo.id)
             template = "{}{}: {}. {}This is a class of resource, not a downloadable artifact{}.\n"
-            out.write(template.format(indent, self.id, self.resource_type, src_str, suff))
+            out.write(
+                template.format(indent, self.id, self.resource_type, src_str, suff)
+            )
             return
-        out.write('{}{}: {} {}'.format(indent, self.id, self.resource_type, src_str))
+        out.write("{}{}: {} {}".format(indent, self.id, self.resource_type, src_str))
         if self.version:
-            out.write('version {}. '.format(self.version))
+            out.write("version {}. ".format(self.version))
         else:
-            out.write('(unversioned). ')
-        out.write("date={}\n".format(self.date if self.date else 'unknown'))
-        hi = '{}{}'.format(indent, hanging_indent)
+            out.write("(unversioned). ")
+        out.write("date={}\n".format(self.date if self.date else "unknown"))
+        hi = "{}{}".format(indent, hanging_indent)
         s = "is at" if self.has_been_downloaded() else "not yet downloaded to"
         down_str = "{}Raw ({} format) {} {}\n".format(hi, self.format, s, dfp)
         ufp = self.unpacked_filepath
@@ -472,11 +520,13 @@ class ResourceWrapper(FromOTifacts):
         s = "is at" if self.has_been_normalized() else "not yet normalized to"
         norm_str = "{}OTT formatted form {} {}\n".format(hi, s, nfp)
         if self.has_been_partitioned():
-            part_str = "{}Has been partitioned at {}\n".format(hi, self.partitioned_filepath)
+            part_str = "{}Has been partitioned at {}\n".format(
+                hi, self.partitioned_filepath
+            )
         else:
             part_str = "{}Has not been partitioned yet.\n".format(hi)
         if list_all_artifacts:
-            out.write('{}{}{}{}'.format(down_str, unp_str, norm_str, part_str))
+            out.write("{}{}{}{}".format(down_str, unp_str, norm_str, part_str))
         else:
             if self.has_been_partitioned():
                 out.write(part_str)
@@ -491,7 +541,9 @@ class ResourceWrapper(FromOTifacts):
         return os.path.join(self.get_taxon_dir_for_part(fragment), self.taxon_filename)
 
     def get_misc_taxon_filepath_for_part(self, fragment):
-        return os.path.join(self.get_misc_taxon_dir_for_part(fragment), self.taxon_filename)
+        return os.path.join(
+            self.get_misc_taxon_dir_for_part(fragment), self.taxon_filename
+        )
 
     def get_taxon_dir_for_part(self, fragment):
         return get_inp_taxdir(self.partitioned_filepath, fragment, self.id)
@@ -511,7 +563,7 @@ class ResourceWrapper(FromOTifacts):
 
     @property
     def alias_list(self):
-        x = getattr(self, 'aliases', [])
+        x = getattr(self, "aliases", [])
         return list(x) if x else []
 
 
@@ -526,8 +578,8 @@ class AbstractResourceWrapper(ResourceWrapper):
 
 # noinspection PyAbstractClass
 class TaxonomyWrapper(ResourceWrapper):
-    resource_type = 'external taxonomy'
-    schema = {'headerless ott', "newick", "ott", "ott id csv", "tab-separated ott"}
+    resource_type = "external taxonomy"
+    schema = {"headerless ott", "newick", "ott", "ott id csv", "tab-separated ott"}
 
     def __init__(self, obj, parent=None, refs=None, config=None):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs, config=config)
@@ -535,13 +587,14 @@ class TaxonomyWrapper(ResourceWrapper):
         # print("ET obj = {}".format(obj))
 
     def node_should_be_semanticized(self, node):
-        if 'environmental sample' in node.name:
+        if "environmental sample" in node.name:
             _LOG.warning('Not semanticizing env. sample: "{}"'.format(node.line[:-1]))
             return False
         return True
 
     def semanticize_node_entry(self, sem_graph, node, par_sem_node):
         from .cmds.semanticize import semanticize_node_name, NameParsingError
+
         if not self.node_should_be_semanticized(node):
             return None
         tc = sem_graph.add_taxon_concept(node.id)
@@ -562,18 +615,24 @@ class TaxonomyWrapper(ResourceWrapper):
 
     def semanticize_node_synonyms(self, sem_graph, node, sem_node, syn):
         from .cmds.semanticize import semanticize_node_synonym
+
         semanticize_node_synonym(self, sem_graph, node, sem_node, syn)
 
     def semanticize_node_authority_synonyms(self, sem_graph, node, sem_node, syn):
         from .cmds.semanticize import semanticize_node_auth_synonym
+
         semanticize_node_auth_synonym(self, sem_graph, node, sem_node, syn)
 
-    def semanticize(self, fragment, semantics_dir, tax_part=None, taxon_forest=None) -> SemGraph:
+    def semanticize(
+        self, fragment, semantics_dir, tax_part=None, taxon_forest=None
+    ) -> SemGraph:
         if taxon_forest is None:
             tax_part, taxon_forest = self.get_tax_part_and_forest(fragment)
         from .cmds.semanticize import semanticize_and_serialize_tax_part
-        return semanticize_and_serialize_tax_part(self.config, self, fragment, semantics_dir,
-                                                  tax_part, taxon_forest)
+
+        return semanticize_and_serialize_tax_part(
+            self.config, self, fragment, semantics_dir, tax_part, taxon_forest
+        )
 
     def accumulate_separated_descendants(self, scaffold_dir):
         scaffold_anc = os.path.split(scaffold_dir)[0]
@@ -581,10 +640,10 @@ class TaxonomyWrapper(ResourceWrapper):
         # _LOG.debug('comparing "{}" and "{}"'.format(pd, scaffold_anc))
         if scaffold_anc == pd:
             return
-        pd = '{}/'.format(pd)
+        pd = "{}/".format(pd)
         assert scaffold_anc.startswith(pd)
-        frag = scaffold_dir[len(pd):]
-        _LOG.info('frag = {}'.format(frag))
+        frag = scaffold_dir[len(pd) :]
+        _LOG.info("frag = {}".format(frag))
         tax_part = get_taxon_partition(self, fragment=frag)
         tax_part.read_inputs_for_read_only()
         # root_ids = tax_part.get_root_ids()
@@ -614,17 +673,19 @@ class TaxonomyWrapper(ResourceWrapper):
 
     @property
     def is_abstract_input_resource_type(self):
-        return self.id == self.base_id and self.base_id != 'ott'
+        return self.id == self.base_id and self.base_id != "ott"
 
     @property
     def unversioned_base_name(self):
-        if self.base_id == 'irmng_ot':
-            return 'irmng'  # sorry this is hacky...
+        if self.base_id == "irmng_ot":
+            return "irmng"  # sorry this is hacky...
         return self.base_id
 
     def get_read_only_tax_part(self, current_partition_key):
-        if not current_partition_key.startswith('/'):
-            current_partition_key = self.config.get_fragment_from_part_name(current_partition_key)
+        if not current_partition_key.startswith("/"):
+            current_partition_key = self.config.get_fragment_from_part_name(
+                current_partition_key
+            )
         tax_part = self.part_name_to_tax_part_in_mem.get(current_partition_key)
         if tax_part is None:
             tax_part = get_taxon_partition(self, current_partition_key)
@@ -641,11 +702,13 @@ class TaxonomyWrapper(ResourceWrapper):
             m = 'Skipping {} due to lack of file at "{}"'
             _LOG.warning(m.format(current_partition_key, tax_part.tax_fp))
             return tax_part, {}
-        _LOG.info('converting taxonomy from {} to a tree'.format(tax_part.tax_fp))
+        _LOG.info("converting taxonomy from {} to a tree".format(tax_part.tax_fp))
         tax_forest = tax_part.get_taxa_as_forest()
         for x in tax_forest.trees:
             self._post_process_tree(x)
-        _LOG.info('{} taxon trees read from {}'.format(len(tax_forest.roots), tax_part.tax_fp))
+        _LOG.info(
+            "{} taxon trees read from {}".format(len(tax_forest.roots), tax_part.tax_fp)
+        )
         return tax_part, tax_forest
 
     def get_parsed_synonyms_by_id(self, current_partition_key, ignored_syn_types=None):
@@ -661,7 +724,7 @@ class TaxonomyWrapper(ResourceWrapper):
     def collapse_incertae_sedis_by_name_prefix(self, tree, prefix):
         to_collapse_as_incertae_sedis = []
         for nd in tree.preorder():
-            if ' x ' in nd.name:
+            if " x " in nd.name:
                 # _LOG.info('flagging "{}" as a hybrid'.format(nd.name))
                 nd.flag_as_hybrid()
             if nd.name.lower().startswith(prefix):
@@ -708,14 +771,18 @@ class TaxonomyWrapper(ResourceWrapper):
             for old_id, new_par in new_par_id.items():
                 interim_tax_data.to_children[new_par].append(old_id)
                 interim_tax_data.to_par[old_id] = new_par
-                interim_tax_data.to_flags.setdefault(old_id, []).append('incertae_sedis')
+                interim_tax_data.to_flags.setdefault(old_id, []).append(
+                    "incertae_sedis"
+                )
             interim_tax_data.del_ids(container_id_to_par_id.keys())
         interim_tax_data.names_interpreted_as_changes = True
 
 
 class GenericTaxonomyWrapper(TaxonomyWrapper):
     def __init__(self, res_id, config):
-        super(GenericTaxonomyWrapper, self).__init__({'id': res_id}, None, config=config)
+        super(GenericTaxonomyWrapper, self).__init__(
+            {"id": res_id}, None, config=config
+        )
 
     @property
     def is_abstract(self):

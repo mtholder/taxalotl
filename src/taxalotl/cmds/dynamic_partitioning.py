@@ -7,15 +7,14 @@ from typing import Dict
 import logging
 
 
-from ..cmds.partitions import (get_all_taxdir_and_misc_uncles,
-                                      )
-from ..tax_partition import (TAX_SLICE_CACHE,
-                                    get_taxon_partition,
-                                    PartitionedTaxDirBase)
+from ..cmds.partitions import (
+    get_all_taxdir_and_misc_uncles,
+)
+from ..tax_partition import TAX_SLICE_CACHE, get_taxon_partition, PartitionedTaxDirBase
 from ..util import get_true_false_repsonse, OutDir
 
 _LOG = logging.getLogger(__name__)
-_norm_char_pat = re.compile(r'[-a-zA-Z0-9._]')
+_norm_char_pat = re.compile(r"[-a-zA-Z0-9._]")
 
 
 def _escape_odd_char(s):
@@ -24,32 +23,25 @@ def _escape_odd_char(s):
         if _norm_char_pat.match(i):
             x.append(i)
         else:
-            x.append('_')
-    return ''.join(x)
+            x.append("_")
+    return "".join(x)
 
 
-def perform_dynamic_separation(ott_res,
-                               res,
-                               part_key: str,
-                               separation_by_ott: Dict[int, Dict]):
+def perform_dynamic_separation(
+    ott_res, res, part_key: str, separation_by_ott: Dict[int, Dict]
+):
     """Called where part_key is a PART_NAME element from the OTT 3 separation taxa."""
     fragment = ott_res.config.get_fragment_from_part_name(part_key)
     try:
-        _general_dynamic_separation_from_obj(ott_res,
-                                             res,
-                                             fragment,
-                                             separation_by_ott)
+        _general_dynamic_separation_from_obj(ott_res, res, fragment, separation_by_ott)
     finally:
         TAX_SLICE_CACHE.flush()
 
 
 class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
-    """Represents a taxon for a source, and all of "uncles" back to the root of the taxonomy.
-    """
+    """Represents a taxon for a source, and all of "uncles" back to the root of the taxonomy."""
 
-    def __init__(self,
-                 res,
-                 fragment):
+    def __init__(self, res, fragment):
         _LOG.info("Creating VirtualTaxonomyToRootSlice for {}".format(fragment))
         PartitionedTaxDirBase.__init__(self, res, fragment)
         self._taxon_partition = None
@@ -69,8 +61,7 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
             self.misc_uncle = TAX_SLICE_CACHE.get(uk)
             if self.misc_uncle is None:
                 uf = os.path.split(self.fragment)[0]
-                mu = get_virtual_tax_to_root_slice(res,
-                                                   fragment=uf)
+                mu = get_virtual_tax_to_root_slice(res, fragment=uf)
                 self.misc_uncle = mu
 
     def get_vttrs_for_fragment(self, fragment):
@@ -85,24 +76,28 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
         return self._taxon_partition
 
     # noinspection PyProtectedMember
-    def separate(self,
-                 fragment_to_partition,
-                 list_of_subdirname_and_roots,
-                 dest_tax_part_obj=None):
+    def separate(
+        self,
+        fragment_to_partition,
+        list_of_subdirname_and_roots,
+        dest_tax_part_obj=None,
+    ):
         if self._has_flushed:
-            raise RuntimeError("Calling separate on a flushed partition {}".format(self.fragment))
+            raise RuntimeError(
+                "Calling separate on a flushed partition {}".format(self.fragment)
+            )
         if dest_tax_part_obj is None and (not list_of_subdirname_and_roots):
             m = "No {} mapping to separate {}"
             _LOG.info(m.format(self.src_id, fragment_to_partition))
             return
         if fragment_to_partition == self.fragment:
-            m = 'separate called on own_tax_part for {}'
+            m = "separate called on own_tax_part for {}"
             _LOG.info(m.format(self.fragment))
             assert dest_tax_part_obj is None
             dest_tax_part_obj = self.taxon_partition
             dest_tax_part_obj.do_partition(list_of_subdirname_and_roots)
         else:
-            m = 'separate called on fragment {} while own_tax_part is {}'
+            m = "separate called on fragment {} while own_tax_part is {}"
             _LOG.info(m.format(fragment_to_partition, self.fragment))
             own_tp = self.taxon_partition
             if not own_tp._populated:
@@ -118,9 +113,11 @@ class VirtualTaxonomyToRootSlice(PartitionedTaxDirBase):
             m = 'Delegate the separate command on fragment "{}" for {} to uncle "{}" ? (y/n)'
             m = m.format(fragment_to_partition, self.res.id, self.misc_uncle.fragment)
             if get_true_false_repsonse(m):
-                self.misc_uncle.separate(fragment_to_partition,
-                                         list_of_subdirname_and_roots=None,
-                                         dest_tax_part_obj=dest_tax_part_obj)
+                self.misc_uncle.separate(
+                    fragment_to_partition,
+                    list_of_subdirname_and_roots=None,
+                    dest_tax_part_obj=dest_tax_part_obj,
+                )
 
     def _flush(self):
         if self._has_flushed:
@@ -155,8 +152,7 @@ def do_new_separation_of_src(res,
 """
 
 
-def get_virtual_tax_to_root_slice(res,
-                                  fragment):
+def get_virtual_tax_to_root_slice(res, fragment):
     ck = (VirtualTaxonomyToRootSlice, res.id, fragment)
     c = TAX_SLICE_CACHE.get(ck)
     if c is not None:
@@ -169,7 +165,7 @@ def return_sep_obj_copy_with_ott_fields(sep_obj):
     for sep_id, i in sep_obj.items():
         cobj = copy.deepcopy(i)
         r[sep_id] = cobj
-        cobj['src_dict']["ott"] = [int(sep_id)]
+        cobj["src_dict"]["ott"] = [int(sep_id)]
         s = cobj.get("sub")
         if s:
             cobj["sub"] = return_sep_obj_copy_with_ott_fields(s)
@@ -187,15 +183,10 @@ def _assure_sep_dirs(ott_res, fragment, sep_obj):
     return sep_id_to_fn
 
 
-def _general_dynamic_separation_from_obj(ott_res,
-                                         res,
-                                         fragment,
-                                         separation_by_ott):
-    """Separtes all sources and handles the recursion. Delegates to do_new_separation_of_src
-
-    """
+def _general_dynamic_separation_from_obj(ott_res, res, fragment, separation_by_ott):
+    """Separtes all sources and handles the recursion. Delegates to do_new_separation_of_src"""
     sep_obj = separation_by_ott
-    m = 'breaking for the {} taxonomy for {} using {} separators: {}'
+    m = "breaking for the {} taxonomy for {} using {} separators: {}"
     _LOG.info(m.format(res.id, fragment, len(sep_obj.keys()), sep_obj.keys()))
     sep_id_to_fn = _assure_sep_dirs(ott_res, fragment, separation_by_ott)
     virt_taxon_slice = get_virtual_tax_to_root_slice(res, fragment)
@@ -203,7 +194,7 @@ def _general_dynamic_separation_from_obj(ott_res,
     try:
         sep_dir_ids_list = []
         for sep_id, i in sep_obj.items():
-            root_ids = i['src_dict'].get(src_id, [])
+            root_ids = i["src_dict"].get(src_id, [])
             t = (sep_id_to_fn[sep_id], root_ids)
             sep_dir_ids_list.append(t)
         _LOG.info("frag {} sep_dir_ids_list={}".format(fragment, sep_dir_ids_list))

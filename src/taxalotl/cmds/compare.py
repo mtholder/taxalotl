@@ -4,11 +4,17 @@ import logging
 import sys
 import os
 
-from ..tax_partition import (get_taxon_partition, INP_TAXONOMY_DIRNAME, MISC_DIRNAME, OUTP_TAXONOMY_DIRNAME)
+from ..tax_partition import (
+    get_taxon_partition,
+    INP_TAXONOMY_DIRNAME,
+    MISC_DIRNAME,
+    OUTP_TAXONOMY_DIRNAME,
+)
 from ..util import OutFile, OutDir, get_frag_from_dir
 
 _LOG = logging.getLogger(__name__)
 JUST_COF = True
+
 
 def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
     fragment = get_frag_from_dir(taxalotl_conf, tax_dir)
@@ -24,30 +30,37 @@ def compare_taxonomies_in_dir(taxalotl_conf, tax_dir):
     graph_by_res_id = {}
     with OutDir(out_dir):
         for res_id in tax_id_set:
-            if JUST_COF and not (res_id.startswith('cof') or res_id.startswith('ott')):
+            if JUST_COF and not (res_id.startswith("cof") or res_id.startswith("ott")):
                 continue
             res = taxalotl_conf.get_resource_by_id(res_id)
             tp = get_taxon_partition(res, fragment)
             tp.read_inputs_for_read_only()
             tf = tp.get_taxa_as_forest()
             fn = os.path.split(fragment)[-1]
-            fp = os.path.join(out_dir, '{}-for-{}.txt'.format(res_id, fn))
+            fp = os.path.join(out_dir, "{}-for-{}.txt".format(res_id, fn))
             with OutFile(fp) as outstream:
-                out.write("writing taxonomy for {} according to {} to \"{}\"\n".format(fragment, res_id, fp))
+                out.write(
+                    'writing taxonomy for {} according to {} to "{}"\n'.format(
+                        fragment, res_id, fp
+                    )
+                )
                 tf.write_indented(outstream)
             semantics_dir = os.path.join(out_dir, res_id)
             with OutDir(semantics_dir):
-                graph = res.semanticize(fragment, semantics_dir, tax_part=tp, taxon_forest=tf)
+                graph = res.semanticize(
+                    fragment, semantics_dir, tax_part=tp, taxon_forest=tf
+                )
                 graph_by_res_id[res_id] = (res, graph)
     ott_res = taxalotl_conf.get_terminalized_res_by_id("ott", None)
     ott_graph = graph_by_res_id[ott_res.id][1]
     for res_id, res_graph_pair in graph_by_res_id.items():
         if res_id == ott_res.id:
             continue
-        if JUST_COF and not res_id.startswith('cof'):
+        if JUST_COF and not res_id.startswith("cof"):
             continue
         res, ref_graph = res_graph_pair
         _write_report(out, ott_res.id, ott_graph, res_id, ref_graph)
+
 
 def _init_bipartition_valid_taxa(ott_graph, ref_graph):
     ott_vn2tc = ott_graph.valid_name_to_taxon_concept_map
@@ -67,7 +80,9 @@ def _init_bipartition_valid_taxa(ott_graph, ref_graph):
     just_ott.sort()
     just_ref.sort()
     ott_only_claims_valid, ott_unmatched = _gather_unmatched(just_ott, ref_graph)
-    ref_only_claims_valid, ref_unmatched = _gather_unmatched(just_ref, ott_graph, rev_order=True)
+    ref_only_claims_valid, ref_unmatched = _gather_unmatched(
+        just_ref, ott_graph, rev_order=True
+    )
     ott_matched_set, ref_matched_set = set(), set()
     for el in valid_in_both:
         ott_tc, ref_tc = el[1], el[3]
@@ -93,36 +108,52 @@ def _init_bipartition_valid_taxa(ott_graph, ref_graph):
             one_ref_to_many.append(el)
         else:
             bijection_with_1_invalid.append(el)
-    return {'valid_in_both': valid_in_both, 'bijection_with_1_invalid': bijection_with_1_invalid,
-            'in_first_but_ambig': one_ott_to_many, 'in_second_but_ambig': one_ref_to_many,
-            'found_only_in_first': ott_unmatched, 'valid_only_in_first': ott_only_claims_valid,
-            'found_only_in_second': ref_unmatched, 'valid_only_in_second': ref_only_claims_valid,
-            }
+    return {
+        "valid_in_both": valid_in_both,
+        "bijection_with_1_invalid": bijection_with_1_invalid,
+        "in_first_but_ambig": one_ott_to_many,
+        "in_second_but_ambig": one_ref_to_many,
+        "found_only_in_first": ott_unmatched,
+        "valid_only_in_first": ott_only_claims_valid,
+        "found_only_in_second": ref_unmatched,
+        "valid_only_in_second": ref_only_claims_valid,
+    }
+
 
 def _write_report(out, ott_id, ott_graph, res_id, ref_graph):
     # ott_vstc = ott_graph.valid_specimen_based_taxa
     # ref_vstc = ref_graph.valid_specimen_based_taxa
-    out.write('comparing {} to {}\n'.format(ott_id, res_id))
+    out.write("comparing {} to {}\n".format(ott_id, res_id))
     init_bipar = _init_bipartition_valid_taxa(ott_graph, ref_graph)
     # Report
-    for key, id_to_show in [['found_only_in_first', ott_id], ['found_only_in_second', res_id]]:
+    for key, id_to_show in [
+        ["found_only_in_first", ott_id],
+        ["found_only_in_second", res_id],
+    ]:
         blob = init_bipar[key]
-        out.write('{} only in  {} :\n'.format(len(blob), id_to_show))
+        out.write("{} only in  {} :\n".format(len(blob), id_to_show))
         _write_tc_status(out, blob)
-    for key, id_to_show in [['in_first_but_ambig', ott_id], ['in_second_but_ambig', res_id]]:
+    for key, id_to_show in [
+        ["in_first_but_ambig", ott_id],
+        ["in_second_but_ambig", res_id],
+    ]:
         blob = init_bipar[key]
         oid = ott_id if id_to_show == res_id else res_id
-        out.write('{} in  {} mapping to >1 in {} :\n'.format(len(blob), id_to_show, oid))
+        out.write(
+            "{} in  {} mapping to >1 in {} :\n".format(len(blob), id_to_show, oid)
+        )
         _write_tc_status(out, blob)
-    out.write('Checking type of names of synonyms for {} \n'.format(ott_id))
+    out.write("Checking type of names of synonyms for {} \n".format(ott_id))
     _check_syn_name_types(out, ott_graph)
-    out.write('Checking type of names of synonyms for {} \n'.format(res_id))
+    out.write("Checking type of names of synonyms for {} \n".format(res_id))
     _check_syn_name_types(out, ref_graph)
-    in_both = init_bipar['valid_in_both'] + init_bipar['bijection_with_1_invalid']
+    in_both = init_bipar["valid_in_both"] + init_bipar["bijection_with_1_invalid"]
     _diagnose_higher_taxa(out, in_both, ott_id, ott_graph, res_id, ref_graph)
 
 
-def _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, res_id, ref_graph):
+def _use_uniq_mapping_to_diagnose_higher_taxa(
+    out, uniq_map, ott_id, ott_graph, res_id, ref_graph
+):
     ott2ref, ref2ott = _gen_uniq_tc_maps(uniq_map)
     _add_des_uniq_ids(ott_graph, ott2ref)
     _add_des_uniq_ids(ref_graph, ref2ott)
@@ -136,28 +167,57 @@ def _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, 
         if not tax_con.is_the_valid_name:
             rtc = ref_name_to_tc.get(ott_name)
             if rtc and rtc.is_the_valid_name:
-                out.write('"{}" is valid in {}, but not in {}\n'.format(ott_name, res_id, ott_id))
+                out.write(
+                    '"{}" is valid in {}, but not in {}\n'.format(
+                        ott_name, res_id, ott_id
+                    )
+                )
             continue
         rtc = ref_name_to_tc.get(ott_name)
         if not rtc:
-            out.write('"{}" is valid in {}, but not found in "{}"\n'.format(ott_name, ott_id, res_id))
+            out.write(
+                '"{}" is valid in {}, but not found in "{}"\n'.format(
+                    ott_name, ott_id, res_id
+                )
+            )
             continue
         if not rtc.is_the_valid_name:
-            out.write('"{}" is valid in {}, but not in "{}"\n'.format(ott_name, ott_id, res_id))
+            out.write(
+                '"{}" is valid in {}, but not in "{}"\n'.format(
+                    ott_name, ott_id, res_id
+                )
+            )
             continue
         proj_to_ref = set([ott2ref[i] for i in tax_con.des_uniq_ids])
         if proj_to_ref == rtc.des_uniq_ids:
-            out.write('{} and {} agree on the definition of "{}"\n'.format(ott_id, res_id, ott_name))
+            out.write(
+                '{} and {} agree on the definition of "{}"\n'.format(
+                    ott_id, res_id, ott_name
+                )
+            )
         else:
             in_both = proj_to_ref.intersection(rtc.des_uniq_ids)
             missing_in_ott = rtc.des_uniq_ids - proj_to_ref
             missing_in_ref = proj_to_ref - rtc.des_uniq_ids
-            missing_in_ott_str = '", "'.join([i.valid_name.name for i in missing_in_ott])
-            missing_in_ref_str = '", "'.join([i.valid_name.name for i in missing_in_ref])
-            mirs = ' {} contains ["{}"]'.format(ott_id, missing_in_ref_str) if missing_in_ref_str else ''
-            mios = ' {} contains ["{}"].'.format(res_id, missing_in_ott_str) if missing_in_ott_str else '.'
+            missing_in_ott_str = '", "'.join(
+                [i.valid_name.name for i in missing_in_ott]
+            )
+            missing_in_ref_str = '", "'.join(
+                [i.valid_name.name for i in missing_in_ref]
+            )
+            mirs = (
+                ' {} contains ["{}"]'.format(ott_id, missing_in_ref_str)
+                if missing_in_ref_str
+                else ""
+            )
+            mios = (
+                ' {} contains ["{}"].'.format(res_id, missing_in_ott_str)
+                if missing_in_ott_str
+                else "."
+            )
             m = '"{}" shares {} uniq-mapping descendants. However:{}{}\n'
             out.write(m.format(ott_name, len(in_both), mirs, mios))
+
 
 def _gen_uniq_tc_maps(uniq_map):
     ott2ref = {}
@@ -175,6 +235,7 @@ def _gen_uniq_tc_maps(uniq_map):
         ref2ott[ref_tax_con] = ott_tax_con
         # sys.stdout.write('ott "{}" <-> cof "{}"\n'.format(ott_tax_con.valid_name.name, ref_tax_con.valid_name.name))
     return ott2ref, ref2ott
+
 
 def _add_des_uniq_ids(graph, uniq_id_dict):
     for tax_con in graph.postorder_taxon_concepts():
@@ -247,22 +308,46 @@ def _set_mapped_to_and_partition(matched):
             red_snarl.remove(td)
     return uniq_map, merge, split, red_snarl
 
+
 def _diagnose_higher_taxa(out, matched, ott_id, ott_graph, res_id, ref_graph):
     uniq_map, merge, split, snarl = _set_mapped_to_and_partition(matched)
     # Report partitions
-    out.write('{} names in {} need to be split into multiple names in and {}:\n'.format(len(split), ott_id, res_id))
+    out.write(
+        "{} names in {} need to be split into multiple names in and {}:\n".format(
+            len(split), ott_id, res_id
+        )
+    )
     _write_using_mapped_to(out, split)
-    out.write('{} sets of names in {} need to be merged into names in and {}:\n'.format(len(merge), ott_id, res_id))
+    out.write(
+        "{} sets of names in {} need to be merged into names in and {}:\n".format(
+            len(merge), ott_id, res_id
+        )
+    )
     _write_using_mapped_to(out, merge)
-    out.write('{} sets of names in {} need to be merged into names in a snarl in {}:\n'.format(len(snarl), ott_id, res_id))
+    out.write(
+        "{} sets of names in {} need to be merged into names in a snarl in {}:\n".format(
+            len(snarl), ott_id, res_id
+        )
+    )
     _write_using_mapped_to(out, snarl)
-    out.write('{} names in {} map uniquely to a name in {}:\n'.format(len(uniq_map), ott_id, res_id))
+    out.write(
+        "{} names in {} map uniquely to a name in {}:\n".format(
+            len(uniq_map), ott_id, res_id
+        )
+    )
     _write_using_mapped_to(out, uniq_map)
     # Use uniq_mapped to generate taxon_concept definitions
-    _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, res_id, ref_graph)
-    _LOG.warning("Moving taxa in OTT to rerun _use_uniq_mapping_to_diagnose_higher_taxa")
+    _use_uniq_mapping_to_diagnose_higher_taxa(
+        out, uniq_map, ott_id, ott_graph, res_id, ref_graph
+    )
+    _LOG.warning(
+        "Moving taxa in OTT to rerun _use_uniq_mapping_to_diagnose_higher_taxa"
+    )
     _move_using_mapped_to(uniq_map, ott_graph, ref_graph)
-    _use_uniq_mapping_to_diagnose_higher_taxa(out, uniq_map, ott_id, ott_graph, res_id, ref_graph)
+    _use_uniq_mapping_to_diagnose_higher_taxa(
+        out, uniq_map, ott_id, ott_graph, res_id, ref_graph
+    )
+
 
 def _move_using_mapped_to(mapping_set, ott_graph, ref_graph):
     for n, k in enumerate(mapping_set):
@@ -274,8 +359,14 @@ def _move_using_mapped_to(mapping_set, ott_graph, ref_graph):
         if len(usl) == 1 and osl != usl[0]:
             move_in_first(k, ott_graph, next(iter(k.mapped_to)), ref_graph)
 
+
 def move_in_first(ott_tc, ott_graph, ref_tc, ref_graph):
-    print("move_in_first {} -> {}".format(ott_tc.canonical_name.name, ref_tc.canonical_name.name))
+    print(
+        "move_in_first {} -> {}".format(
+            ott_tc.canonical_name.name, ref_tc.canonical_name.name
+        )
+    )
+
 
 def _write_using_mapped_to(out, mapping_set):
     for n, k in enumerate(mapping_set):
@@ -311,15 +402,16 @@ def _check_syn_name_types(out, graph):
         if not valid_tc.is_the_valid_name:
             continue
         oisb = valid_tc.is_specimen_based
-        vtcs, oths = ('', ' not') if oisb else (' not', '')
+        vtcs, oths = ("", " not") if oisb else (" not", "")
         for syn in valid_tc.synonym_list:
             if syn.is_specimen_based != oisb:
                 vtn, othn = valid_tc.canonical_name.name, syn.canonical_name.name
                 out.write(msg_tmp.format(vtn, vtcs, othn, oths))
         for syn in valid_tc.problematic_synonym_list:
-            vtn, othn = valid_tc.canonical_name.name, syn['name']
-            oths = ' flagged as "{}"'.format(syn['problem'])
+            vtn, othn = valid_tc.canonical_name.name, syn["name"]
+            oths = ' flagged as "{}"'.format(syn["problem"])
             out.write(msg_tmp.format(vtn, vtcs, othn, oths))
+
 
 def _gather_unmatched(just_in, other_graph, rev_order=False):
     n = 1
@@ -334,11 +426,13 @@ def _gather_unmatched(just_in, other_graph, rev_order=False):
             if gn and sn:
                 potential_genera = other_graph.find_valid_genus(gn.name)
                 gen_with_correct_epi = []
-                if found_tc.rank == 'species':
+                if found_tc.rank == "species":
                     for genus in potential_genera:
                         tta = []
                         if found_tc.undescribed:
-                            tta = genus.find_undescribed_species_for_name(gn.name, sn.name)
+                            tta = genus.find_undescribed_species_for_name(
+                                gn.name, sn.name
+                            )
                         else:
                             tta = genus.find_valid_species(gn.name, sn.name)
                         gen_with_correct_epi.extend(tta)
@@ -360,9 +454,9 @@ def _write_tc_status(out, name_tc_list):
     for blob in name_tc_list:
         if len(blob) == 2:
             obj = blob[1]
-            out.write('  {} '.format(n))
+            out.write("  {} ".format(n))
             obj.explain(out)
-            out.write('\n')
+            out.write("\n")
         else:
             matched_tc_list = blob[3]
             vnlist = [i.valid_name for i in matched_tc_list]

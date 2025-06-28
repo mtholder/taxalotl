@@ -8,10 +8,12 @@ import logging
 from peyutil import write_as_json
 
 from ..util import OutFile, OutDir
-from ..taxonomic_ranks import (ABOVE_GENUS_SORTING_NUMBER,
-                                      SPECIES_SORTING_NUMBER,
-                                      GENUS_SORTING_NUMBER,
-                                      MINIMUM_HIGHER_TAXON_NUMBER)
+from ..taxonomic_ranks import (
+    ABOVE_GENUS_SORTING_NUMBER,
+    SPECIES_SORTING_NUMBER,
+    GENUS_SORTING_NUMBER,
+    MINIMUM_HIGHER_TAXON_NUMBER,
+)
 
 from ..parsing.name_parsing import parse_name_using_rank_hints, parse_name_to_dict
 from ..tax_partition import IGNORE_COMMON_NAME_SYN_TYPES
@@ -25,32 +27,38 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
         rsn = node.rank_sorting_number()
     except KeyError:
         rsn = ABOVE_GENUS_SORTING_NUMBER
-    if syn.syn_type == 'type material':
+    if syn.syn_type == "type material":
         if rsn >= MINIMUM_HIGHER_TAXON_NUMBER:
-            _LOG.warning('PROBLEM: "{}" rsn={} node.rank={}'.format(syn.name, rsn, node.rank))
-            sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, "type_material for higher taxon")
+            _LOG.warning(
+                'PROBLEM: "{}" rsn={} node.rank={}'.format(syn.name, rsn, node.rank)
+            )
+            sem_node.claim_problematic_synonym_statement(
+                syn.name, syn.syn_type, "type_material for higher taxon"
+            )
         else:
             sem_node.claim_type_material(syn.name.strip())
         return
     pnd = parse_name_using_rank_hints(syn.name)
     if not pnd:
-        sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, "unparseable")
+        sem_node.claim_problematic_synonym_statement(
+            syn.name, syn.syn_type, "unparseable"
+        )
         return
 
-    arank = pnd.get('apparent_rank', '')
-    if arank == 'clade':
+    arank = pnd.get("apparent_rank", "")
+    if arank == "clade":
         if rsn is not None and rsn <= SPECIES_SORTING_NUMBER:
             e = "higher taxon name synonym for taxon rank = {}".format(node.rank)
             sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, e)
         else:
-            cn = pnd['clade_name']
-            del pnd['clade_name']
+            cn = pnd["clade_name"]
+            del pnd["clade_name"]
             if rsn == GENUS_SORTING_NUMBER:
-                pnd['genus'] = cn
+                pnd["genus"] = cn
             else:
-                pnd['higher_group_name'] = cn
+                pnd["higher_group_name"] = cn
             sem_node.claim_uninomial_synonym(syn.name, syn_type=syn.syn_type, **pnd)
-    elif arank == 'species':
+    elif arank == "species":
         if rsn > SPECIES_SORTING_NUMBER:
             e = "species synonym for taxon rank = {}".format(node.rank)
             sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, e)
@@ -59,19 +67,25 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
             # ['genus'], pnd['sp_epithet'], pnd.get('undescribed', False),
             #                             syn.syn_type, pnd.get('specimen_code'))
         else:
-            sem_node.claim_formerly_full_species(res, syn.name, syn_type=syn.syn_type, **pnd)
-    elif arank == 'infraspecies':
+            sem_node.claim_formerly_full_species(
+                res, syn.name, syn_type=syn.syn_type, **pnd
+            )
+    elif arank == "infraspecies":
         if rsn > SPECIES_SORTING_NUMBER:
             e = "infraspecies synonym for taxon rank = {}".format(node.rank)
             sem_node.claim_problematic_synonym_statement(syn.name, syn.syn_type, e)
         elif rsn == SPECIES_SORTING_NUMBER:
-            sem_node.claim_formerly_subspecies(res, syn.name, syn_type=syn.syn_type, **pnd)
+            sem_node.claim_formerly_subspecies(
+                res, syn.name, syn_type=syn.syn_type, **pnd
+            )
         else:
-            sem_node.claim_trinomial_synonym(res, syn.name, syn_type=syn.syn_type, **pnd)
+            sem_node.claim_trinomial_synonym(
+                res, syn.name, syn_type=syn.syn_type, **pnd
+            )
     else:
-        assert arank == ''
-        assert 'hybrid' in pnd
-    '''
+        assert arank == ""
+        assert "hybrid" in pnd
+    """
 
     
 
@@ -82,11 +96,11 @@ def semanticize_node_synonym(res, sem_graph, node, sem_node, syn):
         else:
             _LOG.debug('         "{}" is a {} for {} ({})'.format(syn.name, syn.syn_type, node.name, node.id))
     st = syn.syn_type
-    '''
+    """
 
 
 def _assure_nonbasionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
-    fn = canonical_name['full']
+    fn = canonical_name["full"]
     vthn = valid_taxon.has_name
     if vthn and vthn.canonical_name and vthn.canonical_name.name == fn:
         return vthn
@@ -104,7 +118,7 @@ def add_authority_to_name(tax_con_sem_node, name_sem, authors, year):
 
 
 def _assure_basionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
-    fn = canonical_name['full']
+    fn = canonical_name["full"]
     vthn = valid_taxon.has_name
     if vthn and vthn.canonical_name and vthn.canonical_name.name == fn:
         return vthn
@@ -113,40 +127,41 @@ def _assure_basionym_exists_as_syn(res, sem_graph, valid_taxon, canonical_name):
 
 def _parse_auth_syn(res, sem_graph, taxon_sem_node, syn):
     gnp = parse_name_to_dict(syn.name)
-    assert gnp['parsed']
-    cn = gnp['canonicalName']
-    details = gnp['details']
+    assert gnp["parsed"]
+    cn = gnp["canonicalName"]
+    details = gnp["details"]
     try:
         if isinstance(details, list):
             assert len(details) == 1
             details = details[0]
-        if 'infraspecificEpithets' in details:
-            target_name = details['infraspecificEpithets'][-1]
-        elif 'specificEpithet' in details:
-            target_name = details['specificEpithet']
+        if "infraspecificEpithets" in details:
+            target_name = details["infraspecificEpithets"][-1]
+        elif "specificEpithet" in details:
+            target_name = details["specificEpithet"]
         else:
-            assert 'uninomial' in details
-            target_name = details['uninomial']
+            assert "uninomial" in details
+            target_name = details["uninomial"]
     except:
         import sys
-        sys.exit('choking on\n{}\n'.format(json.dumps(details, indent=2)))
+
+        sys.exit("choking on\n{}\n".format(json.dumps(details, indent=2)))
     if isinstance(target_name, list):
         assert len(target_name) == 1
         target_name = target_name[0]
     try:
-        authorship = target_name['authorship']
+        authorship = target_name["authorship"]
     except:
         _LOG.warning('Could not parse synonym "{}"'.format(syn.name))
         return
-    parens_preserved = authorship['value'].strip()
-    is_basionym = parens_preserved.startswith('(')
+    parens_preserved = authorship["value"].strip()
+    is_basionym = parens_preserved.startswith("(")
     if is_basionym:
         name_sem = _assure_basionym_exists_as_syn(res, sem_graph, taxon_sem_node, cn)
     else:
         name_sem = _assure_nonbasionym_exists_as_syn(res, sem_graph, taxon_sem_node, cn)
-    ba = authorship.get('basionymAuthorship', {})
+    ba = authorship.get("basionymAuthorship", {})
     assert ba
-    authors, year = ba.get('authors', []), ba.get('year', {}).get('value')
+    authors, year = ba.get("authors", []), ba.get("year", {}).get("value")
     add_authority_to_name(taxon_sem_node, name_sem, authors, year)
 
 
@@ -163,28 +178,30 @@ def semanticize_node_name(res, sem_graph, tc, node):
     name_dict = parse_name_using_rank_hints(node.name, node.rank, rsn)
     semanticize_names(tc, node.name, name_dict, node)
 
+
 class NameParsingError(Exception):
     pass
+
 
 def semanticize_names(tax_con_sem_node, name, name_dict, node=None):
     """Translates content in the parsed `name_dict` in to graph nodes for this taxon_concept_sem_node
     If `node` is not None, it should be a `Taxon` instance (used for flags)
     """
     tcsn = tax_con_sem_node
-    undescribed = name_dict.get('undescribed')
+    undescribed = name_dict.get("undescribed")
     if undescribed:
         tcsn.claim_undescribed()
-    if name_dict.get('hybrid'):
+    if name_dict.get("hybrid"):
         tcsn.claim_hybrid()
-    genus = name_dict.get('genus')
-    subgenus = name_dict.get('subgenus')
-    sp_epithet = name_dict.get('sp_epithet')
-    infra_epithet = name_dict.get('infra_epithet')
-    higher_group_name = name_dict.get('higher_group_name')
-    specimen_code = name_dict.get('specimen_code')
+    genus = name_dict.get("genus")
+    subgenus = name_dict.get("subgenus")
+    sp_epithet = name_dict.get("sp_epithet")
+    infra_epithet = name_dict.get("infra_epithet")
+    higher_group_name = name_dict.get("higher_group_name")
+    specimen_code = name_dict.get("specimen_code")
     if node and node.flags:
         for flag in node.flags:
-            if flag == 'infraspecific':
+            if flag == "infraspecific":
                 if infra_epithet is None:
                     m = 'taxon "{}" flagged as infraspecific, but not parsed as such'
                     raise NameParsingError(m.format(name))
@@ -196,11 +213,11 @@ def semanticize_names(tax_con_sem_node, name, name_dict, node=None):
     valid_tcsn = tcsn if tcsn._is_synonym_of is None else tcsn._is_synonym_of
     valid_nph = valid_tcsn.has_name
     if undescribed:
-        normalized = name_dict.get('normalized')
+        normalized = name_dict.get("normalized")
         if normalized:
             vnsn.add_normalized(normalized)
     else:
-        combination = name_dict.get('combination')
+        combination = name_dict.get("combination")
         if combination:
             vnsn.add_combination(combination)
     if genus:
@@ -222,8 +239,12 @@ def semanticize_names(tax_con_sem_node, name, name_dict, node=None):
     return vnsn
 
 
-def semanticize_and_serialize_tax_part(taxolotl_config, res, fragment, out_dir, tax_part, tax_forest):
-    sem_graph = semanticize_tax_part(taxolotl_config, res, fragment, tax_part, tax_forest)
+def semanticize_and_serialize_tax_part(
+    taxolotl_config, res, fragment, out_dir, tax_part, tax_forest
+):
+    sem_graph = semanticize_tax_part(
+        taxolotl_config, res, fragment, tax_part, tax_forest
+    )
     serialize_sem_graph(taxolotl_config, sem_graph, out_dir)
     return sem_graph
 
@@ -236,13 +257,15 @@ def semanticize_tax_part(taxolotl_config, res, fragment, tax_part, tax_forest):
     for r in tax_forest.roots.values():
         semanticize_subtree(sem_graph, res, r.root, nd_sem_pairs, par_sem_node=None)
     # grab all the synonyms
-    t2syn = tax_part.parsed_synonyms_by_id(ignored_syn_types=IGNORE_COMMON_NAME_SYN_TYPES)
+    t2syn = tax_part.parsed_synonyms_by_id(
+        ignored_syn_types=IGNORE_COMMON_NAME_SYN_TYPES
+    )
     delay_auth_syns = []
     # process the non-"authority" synonyms next
     for node, sem_node in nd_sem_pairs:
         if sem_node is not None:
             for syn in t2syn.get(node.id, []):
-                if syn.syn_type == 'authority':
+                if syn.syn_type == "authority":
                     delay_auth_syns.append((node, sem_node, syn))
                     continue
                 res.semanticize_node_synonyms(sem_graph, node, sem_node, syn)
@@ -262,8 +285,10 @@ def semanticize_subtree(sem_graph, res, node, nd_sem_pairs, par_sem_node=None):
     cr = node.children_refs
     csn = []
     if cr:
-        csn = [semanticize_subtree(sem_graph, res, c,
-                                   nd_sem_pairs, par_sem_node=sem_node) for c in cr]
+        csn = [
+            semanticize_subtree(sem_graph, res, c, nd_sem_pairs, par_sem_node=sem_node)
+            for c in cr
+        ]
     csn = [i for i in csn if i is not None]
     res.semanticize_node_exit(sem_graph, node, sem_node, child_sem_nodes=csn)
     return sem_node

@@ -13,26 +13,27 @@ _LOG = logging.getLogger(__name__)
 
 def read_resource_file(fp):
     try:
-        with io.open(fp, 'r', encoding='utf-8') as inp:
+        with io.open(fp, "r", encoding="utf-8") as inp:
             return json.load(inp)
     except:
-        _LOG.exception("Error reading JSON from \"{}\"".format(fp))
+        _LOG.exception('Error reading JSON from "{}"'.format(fp))
         raise
 
 
 def write_resources_file(obj, fp):
     with OutFile(fp) as outp:
-        json.dump(obj, outp, indent=2, sort_keys=True, separators=(',', ': '))
+        json.dump(obj, outp, indent=2, sort_keys=True, separators=(",", ": "))
 
 
 def get_resource_wrapper(raw, refs, parent=None):
     from .resource_mapper import BASE_ID_TO_RES_TYPE, wrapper_types
+
     base = BASE_ID_TO_RES_TYPE.get(raw["base_id"].lower())
     if base and base is not AbstractResourceWrapper:
         # _LOG.debug('get_resource_wrapper.calling base raw={}'.format(raw))
         return base(raw, parent=parent, refs=refs)
     rt = raw["resource_type"].lower()
-    st = raw.get('schema', '').lower()
+    st = raw.get("schema", "").lower()
     # _LOG.debug('rt={}'.format(rt))
     for wt in wrapper_types:
         if rt == wt.resource_type and (st in wt.schema):
@@ -59,7 +60,7 @@ def wrap_otifact_resources(res, refs=None):
     for k, v in res.items():
         # _LOG.debug('k,v = {}, {}'.format(k, v))
         v["id"] = k
-        par = v.get('inherits_from')
+        par = v.get("inherits_from")
         if par:
             by_par.setdefault(par, []).append((k, v))
         else:
@@ -79,7 +80,10 @@ def wrap_otifact_resources(res, refs=None):
         inter = curr_key_set.intersection(needed)
         if not inter:
             raise RuntimeError(
-                "Could not find the base class resources '{}'".format("', '").join(by_par.keys()))
+                "Could not find the base class resources '{}'".format("', '").join(
+                    by_par.keys()
+                )
+            )
         for k in inter:
             rk_v_list = by_par[k]
             del by_par[k]
@@ -116,7 +120,7 @@ class ResourceManager(object):
         self._generic_handler = None
 
     def generic_handler_can_be_used(self, res_id):
-        return res_id.startswith('cof-')
+        return res_id.startswith("cof-")
 
     def _update_merged(self):
         needs_update = False
@@ -153,4 +157,6 @@ class ResourceManager(object):
         self._filepath_read = mfp
 
     def abstract_input_resource_types(self):
-        return [k for k, v in self.resources.items() if v.is_abstract_input_resource_type]
+        return [
+            k for k, v in self.resources.items() if v.is_abstract_input_resource_type
+        ]

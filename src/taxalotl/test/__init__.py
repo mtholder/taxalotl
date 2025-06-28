@@ -25,10 +25,10 @@ def get_test_file_names():
     path = os.path.dirname(__file__)
     files = os.listdir(path)
     t = []
-    pat = re.compile(r'^test.*\.py$')
+    pat = re.compile(r"^test.*\.py$")
     for f in files:
         if pat.match(f):
-            rp = 'taxalotl.test.' + f[:-3]  # [:-3] to strip ".py"
+            rp = "taxalotl.test." + f[:-3]  # [:-3] to strip ".py"
             t.append(rp)
     return t
 

@@ -10,20 +10,24 @@ from .parsing.irmng import IRMNGWrapper
 from .parsing.ncbi import NCBIWrapper
 from .parsing.ott import OTTaxonomyWrapper, OTTaxonomyIdListWrapper
 from .parsing.plant_list import PlantListWrapper
-from .parsing.silva import SilvaIdListWrapper, SilvaWrapper, SilvaToNCBIMappingListWrapper
+from .parsing.silva import (
+    SilvaIdListWrapper,
+    SilvaWrapper,
+    SilvaToNCBIMappingListWrapper,
+)
 from .resource_wrapper import TaxonomyWrapper
 from .parsing.worms import WormsTaxonomyWrapper
 
 BASE_ID_TO_RES_TYPE = {
-    'col': CoLTaxonomyWrapper,
-    'gbif': GBIFWrapper,
-    'irmng_raw': IRMNGWrapper,
-    'irmng_ot': TaxonomyWrapper,
-    'ncbi': NCBIWrapper,
-    'ott': OTTaxonomyWrapper,
-    'silva': SilvaWrapper,
-    'plantlist': PlantListWrapper,
-    'worms': WormsTaxonomyWrapper,
+    "col": CoLTaxonomyWrapper,
+    "gbif": GBIFWrapper,
+    "irmng_raw": IRMNGWrapper,
+    "irmng_ot": TaxonomyWrapper,
+    "ncbi": NCBIWrapper,
+    "ott": OTTaxonomyWrapper,
+    "silva": SilvaWrapper,
+    "plantlist": PlantListWrapper,
+    "worms": WormsTaxonomyWrapper,
 }
 
 wrapper_types = set()

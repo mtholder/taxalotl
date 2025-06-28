@@ -9,9 +9,7 @@ import io
 import os
 import logging
 
-from peyutil import (assure_dir_exists,
-                     read_as_json,
-                     write_as_json)
+from peyutil import assure_dir_exists, read_as_json, write_as_json
 
 from ..commands import unpack_resources
 from ..ott_schema import InterimTaxonomyData
@@ -24,7 +22,7 @@ _LOG = logging.getLogger(__name__)
 
 def parse_silva_ids(fn):
     preferred = set()
-    with io.open(fn, 'r', encoding='utf-8') as inp:
+    with io.open(fn, "r", encoding="utf-8") as inp:
         for line in inp:
             ls = line.strip()
             if ls:
@@ -39,31 +37,37 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
     taxalotl_config = res_wrapper.config
     expect_id_fp, ncbi_mapping_res = None, None
     for dep_id in depends_on:
-        dep_res = taxalotl_config.get_terminalized_res_by_id(dep_id, 'normalize silva')
+        dep_res = taxalotl_config.get_terminalized_res_by_id(dep_id, "normalize silva")
         if not dep_res.has_been_unpacked():
             unpack_resources(taxalotl_config, [dep_id])
-        if dep_res.schema.lower() == 'id list':
+        if dep_res.schema.lower() == "id list":
             dep_fp = os.path.join(dep_res.unpacked_filepath, dep_res.local_filename)
             expect_id_fp = dep_fp
-        elif dep_res.schema.lower() in {'silva taxmap', "fasta silva taxmap"}:
+        elif dep_res.schema.lower() in {"silva taxmap", "fasta silva taxmap"}:
             dep_fp = dep_res.normalized_filepath
             ncbi_mapping_res = dep_res
         else:
-            raise ValueError('unrecognized dependency schema {}'.format(dep_res.schema))
+            raise ValueError("unrecognized dependency schema {}".format(dep_res.schema))
         if not os.path.isfile(dep_fp):
-            raise ValueError("Silva processing dependency not found at: {}".format(dep_fp))
+            raise ValueError(
+                "Silva processing dependency not found at: {}".format(dep_fp)
+            )
     if expect_id_fp is None:
-        raise ValueError('ID list dependency not found.')
+        raise ValueError("ID list dependency not found.")
     if ncbi_mapping_res is None:
-        raise ValueError('NCBI mapping dependency not found.')
-    expect_tax_fp = os.path.join(res_wrapper.unpacked_filepath, res_wrapper.local_filename)
+        raise ValueError("NCBI mapping dependency not found.")
+    expect_tax_fp = os.path.join(
+        res_wrapper.unpacked_filepath, res_wrapper.local_filename
+    )
     if not os.path.isfile(expect_tax_fp):
         raise ValueError("Silva taxon file not found at: {}".format(expect_tax_fp))
     acc_to_trim = ncbi_mapping_res.parse_acc_to_trim_from_ncbi()
     preferred = parse_silva_ids(expect_id_fp)
     itd = InterimTaxonomyData()
-    part_name_to_silva_id = parse_silva_taxon_file(expect_tax_fp, preferred, acc_to_trim, itd)
-    _LOG.info('{} taxonomy IDs read'.format(len(itd.to_par)))
+    part_name_to_silva_id = parse_silva_taxon_file(
+        expect_tax_fp, preferred, acc_to_trim, itd
+    )
+    _LOG.info("{} taxonomy IDs read".format(len(itd.to_par)))
     res_wrapper.post_process_interim_tax_data(itd)
     itd.write_to_dir(destination)
     mapping_file = os.path.join(destination, GEN_MAPPING_FILENAME)
@@ -73,39 +77,41 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
 
 def gen_all_namepaths(path, name, prim_acc):
     an = []
-    while path.endswith(';'):
+    while path.endswith(";"):
         path = path[:-1]
     if name:
-        if '(' in name:
-            name = name.split('(')[0].strip()
+        if "(" in name:
+            name = name.split("(")[0].strip()
         an.append(((path, name), prim_acc))
-    ps = path.split(';')
-    prev = ''
+    ps = path.split(";")
+    prev = ""
     for n, el in enumerate(ps):
         if not el:
             continue
         one_based = 1 + n
         np = (prev, el)
-        prop_id = '{}/#{}'.format(prim_acc, one_based)
+        prop_id = "{}/#{}".format(prim_acc, one_based)
         an.append((np, prop_id))
         if prev:
-            prev = '{};{}'.format(prev, el)
+            prev = "{};{}".format(prev, el)
         else:
             prev = el
     return an
 
 
 def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
-    fung_pref = 'Eukaryota;Opisthokonta;Nucletmycea;Fungi;'
-    animal_pref = 'Eukaryota;Opisthokonta;Holozoa;Metazoa (Animalia);'
-    pl_pref = 'Eukaryota;Archaeplastida;Chloroplastida;Charophyta;Phragmoplastophyta;Streptophyta;'
-    mito_pref = 'Bacteria;Proteobacteria;Alphaproteobacteria;Rickettsiales;Mitochondria;'
-    chloro_pref = 'Bacteria;Cyanobacteria;Chloroplast;'
+    fung_pref = "Eukaryota;Opisthokonta;Nucletmycea;Fungi;"
+    animal_pref = "Eukaryota;Opisthokonta;Holozoa;Metazoa (Animalia);"
+    pl_pref = "Eukaryota;Archaeplastida;Chloroplastida;Charophyta;Phragmoplastophyta;Streptophyta;"
+    mito_pref = (
+        "Bacteria;Proteobacteria;Alphaproteobacteria;Rickettsiales;Mitochondria;"
+    )
+    chloro_pref = "Bacteria;Cyanobacteria;Chloroplast;"
     trim_pref = (fung_pref, animal_pref, pl_pref, mito_pref, chloro_pref)
 
     namepath_to_id_pair = {}
-    with io.open(expect_tax_fp, 'r', encoding='utf-8') as inp:
-        eh = 'primaryAccession\tstart\tstop\tpath\torganism_name\ttaxid\n'
+    with io.open(expect_tax_fp, "r", encoding="utf-8") as inp:
+        eh = "primaryAccession\tstart\tstop\tpath\torganism_name\ttaxid\n"
         iinp = iter(inp)
         h = next(iinp)
         if h != eh:
@@ -114,7 +120,7 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
             ls = line.strip()
             if not ls:
                 continue
-            prim_acc, start, stop, path, name, tax_id = ls.split('\t')
+            prim_acc, start, stop, path, name, tax_id = ls.split("\t")
             if n % 10000 == 0:
                 _LOG.info("read taxon {} '{}' ...".format(n, name))
             if prim_acc in acc_to_trim:
@@ -124,15 +130,15 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
                         tpath = p
                         break
                 if tpath is None:
-                    _LOG.info('deleting to untrimmable {}'.format(prim_acc))
+                    _LOG.info("deleting to untrimmable {}".format(prim_acc))
                     continue
                 else:
-                    all_names = gen_all_namepaths(path, '', prim_acc)
+                    all_names = gen_all_namepaths(path, "", prim_acc)
             else:
                 all_names = gen_all_namepaths(path, name, prim_acc)
             for np in all_names:
                 # _LOG.info('np = {}'.format(np))
-                assert not np[0][0].endswith(';')
+                assert not np[0][0].endswith(";")
                 name_path, proposed_id = np
                 stored = namepath_to_id_pair.setdefault(name_path, [None, None])
                 if stored[0] is None:
@@ -144,15 +150,15 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
         if pid[0] is None:
             pid[0] = pid[1]
     part_map_to_namepath = {
-        'Archaeplastida': ('Eukaryota', 'Archaeplastida'),
-        'Chloroplastida': ('Eukaryota;Archaeplastida', 'Chloroplastida'),
-        'Glaucophyta': ('Eukaryota;Archaeplastida', 'Glaucophyta'),
-        'Rhodophyta': ('Eukaryota;Archaeplastida', 'Rhodophyceae'),
-        'Haptophyta': ('Eukaryota', 'Haptophyta'),
-        'Eukaryota': ('', 'Eukaryota'),
-        'Archaea': ('', 'Archaea'),
-        'Bacteria': ('', 'Bacteria'),
-        'SAR': ('Eukaryota', 'SAR'),
+        "Archaeplastida": ("Eukaryota", "Archaeplastida"),
+        "Chloroplastida": ("Eukaryota;Archaeplastida", "Chloroplastida"),
+        "Glaucophyta": ("Eukaryota;Archaeplastida", "Glaucophyta"),
+        "Rhodophyta": ("Eukaryota;Archaeplastida", "Rhodophyceae"),
+        "Haptophyta": ("Eukaryota", "Haptophyta"),
+        "Eukaryota": ("", "Eukaryota"),
+        "Archaea": ("", "Archaea"),
+        "Bacteria": ("", "Bacteria"),
+        "SAR": ("Eukaryota", "SAR"),
     }
     part_name_to_silva_id = {}
     for part_name, path_name in part_map_to_namepath.items():
@@ -170,59 +176,67 @@ def parse_silva_taxon_file(expect_tax_fp, preferred_ids, acc_to_trim, itd):
         silva_id = namepath_to_id_pair[name_path][0]
         par_name = name_path[0]
         if par_name:
-            if ';' in par_name:
-                pnpl = par_name.split(';')
+            if ";" in par_name:
+                pnpl = par_name.split(";")
                 pn = pnpl[-1]
-                anc_part = ';'.join(pnpl[:-1])
+                anc_part = ";".join(pnpl[:-1])
                 pnp = (anc_part, pn)
             else:
-                pnp = ('', par_name)
+                pnp = ("", par_name)
             par_silva_id = namepath_to_id_pair[pnp][0]
         else:
             par_silva_id = "0"
         if silva_id in to_par:
-            m = '{} remains mapped to ({}, {}) rather than ({}, {})'
+            m = "{} remains mapped to ({}, {}) rather than ({}, {})"
             _LOG.warning(
-                m.format(silva_id, to_par[silva_id], to_name[silva_id], par_silva_id, name_path[1]))
+                m.format(
+                    silva_id,
+                    to_par[silva_id],
+                    to_name[silva_id],
+                    par_silva_id,
+                    name_path[1],
+                )
+            )
         else:
             to_par[silva_id] = par_silva_id
             to_children.setdefault(par_silva_id, []).append(silva_id)
             to_name[silva_id] = name_path[1]
-    _LOG.info('{} SILVA ids stored'.format(len(to_name)))
+    _LOG.info("{} SILVA ids stored".format(len(to_name)))
     return part_name_to_silva_id
 
 
 # noinspection PyAbstractClass
 class SilvaIdListWrapper(TaxonomyWrapper):
-    resource_type = 'id list'
-    schema = {'id list'}
+    resource_type = "id list"
+    schema = {"id list"}
 
 
 # noinspection PyAbstractClass
 class SilvaToNCBIMappingListWrapper(TaxonomyWrapper):
     resource_type = "id to ncbi mapping"
     schema = {"id to ncbi mapping", "silva taxmap", "fasta silva taxmap"}
-    _norm_filename = 'ncbi_taxmap.tsv'
+    _norm_filename = "ncbi_taxmap.tsv"
 
     def __init__(self, obj, parent=None, refs=None):
         TaxonomyWrapper.__init__(self, obj, parent=parent, refs=refs)
 
     def parse_acc_to_trim_from_ncbi(self):
-        trimmed_pref = {'root;cellular organisms;Eukaryota;Opisthokonta;Fungi;',
-                        'root;cellular organisms;Eukaryota;Opisthokonta;Metazoa;',
-                        'root;cellular organisms;Eukaryota;Viridiplantae;',
-                        'Eukaryota;Archaeplastida;Chloroplastida;',
-                        'Eukaryota;Opisthokonta;Holozoa;Metazoa;',
-                        'Eukaryota;Opisthokonta;Nucletmycea;Fungi;',
-                        }
+        trimmed_pref = {
+            "root;cellular organisms;Eukaryota;Opisthokonta;Fungi;",
+            "root;cellular organisms;Eukaryota;Opisthokonta;Metazoa;",
+            "root;cellular organisms;Eukaryota;Viridiplantae;",
+            "Eukaryota;Archaeplastida;Chloroplastida;",
+            "Eukaryota;Opisthokonta;Holozoa;Metazoa;",
+            "Eukaryota;Opisthokonta;Nucletmycea;Fungi;",
+        }
 
         to_trim = set()
-        with io.open(self.normalized_filepath, 'r', encoding='utf-8') as inp:
+        with io.open(self.normalized_filepath, "r", encoding="utf-8") as inp:
             for n, line in enumerate(inp):
                 ls = line.strip()
                 if not ls:
                     continue
-                prim_acc, start, stop, path, name = ls.split('\t')
+                prim_acc, start, stop, path, name = ls.split("\t")
                 if n % 10000 == 0:
                     _LOG.info("scanned taxon {} '{}' ...".format(n, name))
                 for pref in trimmed_pref:
@@ -233,7 +247,7 @@ class SilvaToNCBIMappingListWrapper(TaxonomyWrapper):
 
 
 class SilvaWrapper(TaxonomyWrapper):
-    resource_type = 'id list'
+    resource_type = "id list"
     schema = {"silva taxmap"}
 
     def __init__(self, obj, parent=None, refs=None):

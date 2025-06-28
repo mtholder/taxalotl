@@ -4,8 +4,14 @@ import logging
 import sys
 import os
 
-from ..tax_partition import (TAXONOMY_FN, SYNONYMS_FN, ROOTS_FILENAME,
-                                    INP_TAXONOMY_DIRNAME, MISC_DIRNAME, OUTP_TAXONOMY_DIRNAME)
+from ..tax_partition import (
+    TAXONOMY_FN,
+    SYNONYMS_FN,
+    ROOTS_FILENAME,
+    INP_TAXONOMY_DIRNAME,
+    MISC_DIRNAME,
+    OUTP_TAXONOMY_DIRNAME,
+)
 from ..util import OutFile, OutDir, get_frag_from_dir
 
 _LOG = logging.getLogger(__name__)
@@ -18,7 +24,7 @@ def deseparate_taxonomies_in_dir(taxalotl_conf, tax_dir):
     misc_dir = os.path.join(tax_dir, MISC_DIRNAME, INP_TAXONOMY_DIRNAME)
     par_dir = os.path.split(tax_dir)[0]
     if os.path.isdir(misc_dir):
-        m = 'The presence of a directory at {} indicates that deseparate is not a safe command.'
+        m = "The presence of a directory at {} indicates that deseparate is not a safe command."
         raise RuntimeError(m.format(misc_dir))
     par_inp = os.path.join(par_dir, INP_TAXONOMY_DIRNAME)
     par_misc = os.path.join(par_dir, MISC_DIRNAME, INP_TAXONOMY_DIRNAME)
@@ -34,7 +40,7 @@ def deseparate_taxonomies_in_dir(taxalotl_conf, tax_dir):
         if not any([os.path.isfile(i) for i in [tax_fp, syn_fp, roots_fp]]):
             continue
         tax_dest, syn_dest = None, None
-        m = 'The absence of a destination for {} in {} made the deseprate command fail for {}'
+        m = "The absence of a destination for {} in {} made the deseprate command fail for {}"
         if os.path.isfile(tax_fp):
             tax_dest = _find_destination_fp(res_id, TAXONOMY_FN, par_inp, par_misc)
             if tax_dest is None:
@@ -51,10 +57,10 @@ def deseparate_taxonomies_in_dir(taxalotl_conf, tax_dir):
             _move_all_but_first_line(syn_fp, syn_dest)
         for i in [tax_fp, syn_fp, roots_fp]:
             if os.path.isfile(i):
-                _LOG.debug('Removing {}'.format(i))
+                _LOG.debug("Removing {}".format(i))
                 os.remove(i)
         try:
-            _LOG.debug('Removing {}'.format(inp_dir))
+            _LOG.debug("Removing {}".format(inp_dir))
             os.rmdir(inp_dir)
         except:
             _LOG.exception('Could not remove dir "{}"'.format(inp_dir))
@@ -67,15 +73,16 @@ def _find_destination_fp(res_id, fn, dir1, dir2):
             return fp
     return None
 
+
 def _move_all_but_first_line(inp_fp, dest_fp):
     _LOG.debug('Copying content from "{}"  to "{}"'.format(inp_fp, dest_fp))
-    seen_lines = open(dest_fp, 'r', encoding='utf-8').readlines()
+    seen_lines = open(dest_fp, "r", encoding="utf-8").readlines()
     seen_lines = set(seen_lines)
-    with open(inp_fp, 'r', encoding='utf-8') as inp:
-        with OutFile(dest_fp, mode='a') as outp:
+    with open(inp_fp, "r", encoding="utf-8") as inp:
+        with OutFile(dest_fp, mode="a") as outp:
             for n, line in enumerate(inp):
                 if n == 0:
-                    assert line.startswith('uid') or line.startswith('name\t|\tuid')
+                    assert line.startswith("uid") or line.startswith("name\t|\tuid")
                 else:
                     if line not in seen_lines:
                         outp.write(line)

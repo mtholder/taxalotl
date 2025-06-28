@@ -5,19 +5,25 @@ from __future__ import print_function
 from typing import Dict, List
 import logging
 from .taxon import Taxon
-from .taxonomic_ranks import (GENUS_SORTING_NUMBER,
-                              MINIMUM_SORTING_NUMBER,
-                              SPECIES_SORTING_NUMBER)
+from .taxonomic_ranks import (
+    GENUS_SORTING_NUMBER,
+    MINIMUM_SORTING_NUMBER,
+    SPECIES_SORTING_NUMBER,
+)
 
 _LOG = logging.getLogger(__name__)
 
 
 def write_indented_subtree(out, node, indent_level):
     fmsd = node.formatted_src_dict()
-    f = 'flags={}'.format(', '.join(node.sorted_flags)) if node.sorted_flags else ''
-    s = 'src={}'.format(fmsd) if fmsd else ''
-    m = '{}{}\t|\tid={}\t|\trank={}\t|\t{}\t|\t{}\n'
-    out.write(m.format('    ' * indent_level, node.name_that_is_unique, node.id, node.rank, s, f))
+    f = "flags={}".format(", ".join(node.sorted_flags)) if node.sorted_flags else ""
+    s = "src={}".format(fmsd) if fmsd else ""
+    m = "{}{}\t|\tid={}\t|\trank={}\t|\t{}\t|\t{}\n"
+    out.write(
+        m.format(
+            "    " * indent_level, node.name_that_is_unique, node.id, node.rank, s, f
+        )
+    )
     if node.children_refs:
         sortable = []
         for c in node.children_refs:
@@ -28,11 +34,13 @@ def write_indented_subtree(out, node, indent_level):
 
 
 class TaxonTree(object):
-    def __init__(self,
-                 root_id: int,
-                 id_to_children_ids: Dict[int, List[int]],
-                 id_to_taxon: Dict[int, Taxon],
-                 taxon_partition=None):
+    def __init__(
+        self,
+        root_id: int,
+        id_to_children_ids: Dict[int, List[int]],
+        id_to_taxon: Dict[int, Taxon],
+        taxon_partition=None,
+    ):
         self.taxon_partition = taxon_partition
         self.root = id_to_taxon[root_id]
         self.root.parent_ref = None
@@ -63,8 +71,8 @@ class TaxonTree(object):
             # if n > 20:
             #    return
             if n == 0:
-                nd.child_indent = ''
-                indent = ''
+                nd.child_indent = ""
+                indent = ""
             else:
                 par = self.get_taxon(nd.par_id)
                 par_pref = par.child_indent
@@ -72,17 +80,17 @@ class TaxonTree(object):
                 is_last_child = nd is par.children_refs[-1]
                 pni = len(par_pref)
                 indent_num = 2 * (lrsl - 1 - rank_sn2indent_n[nd.best_rank_sort_number])
-                indent_num -= (pni + 1)
-                tail = '-' * indent_num
+                indent_num -= pni + 1
+                tail = "-" * indent_num
                 if is_last_child:
-                    my_prompt = '\\' + tail
-                    cs = ' '
+                    my_prompt = "\\" + tail
+                    cs = " "
                 else:
-                    my_prompt = '+' + tail
-                    cs = '|'
-                nd.child_indent = '{}{}{}'.format(par_pref, cs, ' ' * indent_num)
-                indent = '{}{}'.format(par_pref, my_prompt)
-            out_stream.write('{}{}'.format(indent, nd.terse_descrip()))
+                    my_prompt = "+" + tail
+                    cs = "|"
+                nd.child_indent = "{}{}{}".format(par_pref, cs, " " * indent_num)
+                indent = "{}{}".format(par_pref, my_prompt)
+            out_stream.write("{}{}".format(indent, nd.terse_descrip()))
         for nd in self.preorder():
             del nd.child_indent
 
@@ -107,7 +115,7 @@ class TaxonTree(object):
 
     def add_best_guess_rank_sort_number(self):
         for nd in self.postorder():
-            if hasattr(nd, 'best_rank_sort_number'):
+            if hasattr(nd, "best_rank_sort_number"):
                 continue
             nrr = self.node_rank_sorting_number_range(nd)
             nd.best_rank_sort_number = nrr[1]
@@ -115,7 +123,11 @@ class TaxonTree(object):
                 continue
             for c in nd.children_refs:
                 while c.best_rank_sort_number >= nd.best_rank_sort_number:
-                    _LOG.warning('rank conflict {} and child {}, bumping parent up...'.format(nd, c))
+                    _LOG.warning(
+                        "rank conflict {} and child {}, bumping parent up...".format(
+                            nd, c
+                        )
+                    )
                     nd.best_rank_sort_number += 1
 
     def _get_highest_child_rank(self, nd):
@@ -211,7 +223,9 @@ class TaxonTree(object):
             if taxon.children_refs is None:
                 taxon.num_tips_below = 1
             else:
-                taxon.num_tips_below = sum([i.num_tips_below for i in taxon.children_refs])
+                taxon.num_tips_below = sum(
+                    [i.num_tips_below for i in taxon.children_refs]
+                )
 
     def add_update_fields(self):
         for taxon in self.preorder():
@@ -233,7 +247,9 @@ class TaxonTree(object):
                 taxon = self.id_to_taxon[uid]
             except:
                 if warn_missing_target:
-                    _LOG.warning('could not find target taxon for {}'.format(synonym_set))
+                    _LOG.warning(
+                        "could not find target taxon for {}".format(synonym_set)
+                    )
                 continue
             taxon.synonyms = synonym_set
 
@@ -252,10 +268,12 @@ class TaxonForest(object):
             roots.update(id_to_children[rp])
         self.roots = {}
         for r in roots:
-            self.roots[r] = TaxonTree(root_id=r,
-                                      id_to_children_ids=id_to_children,
-                                      id_to_taxon=id_to_taxon,
-                                      taxon_partition=taxon_partition)
+            self.roots[r] = TaxonTree(
+                root_id=r,
+                id_to_children_ids=id_to_children,
+                id_to_taxon=id_to_taxon,
+                taxon_partition=taxon_partition,
+            )
 
     def write_indented(self, out):
         for r in self.roots.values():

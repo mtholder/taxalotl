@@ -3,15 +3,16 @@ from .name import NameSemNode
 
 
 class VerbatimSemNode(NameSemNode):
-    extra_pred = ('combination',
-                  'genus_name',
-                  'higher_group_name',
-                  'infra_epithets',
-                  'normalized',
-                  'sp_epithet',
-                  'specimen_codes',
-                  'subgenus_names',
-                  )
+    extra_pred = (
+        "combination",
+        "genus_name",
+        "higher_group_name",
+        "infra_epithets",
+        "normalized",
+        "sp_epithet",
+        "specimen_codes",
+        "subgenus_names",
+    )
 
     name_sem_nd_pred = tuple(list(NameSemNode.name_sem_nd_pred) + list(extra_pred))
 
@@ -94,7 +95,12 @@ class VerbatimSemNode(NameSemNode):
         ie = self.most_terminal_infra_epithet
         if ie is not None:
             return ie
-        for n in [self.sp_epithet, self.subgenus_names, self.genus_name, self.higher_group_name]:
+        for n in [
+            self.sp_epithet,
+            self.subgenus_names,
+            self.genus_name,
+            self.higher_group_name,
+        ]:
             if n:
                 return n
         return None
@@ -137,7 +143,9 @@ class VerbatimSemNode(NameSemNode):
         return n
 
     def add_sp_epithet(self, name_str, genus_sem_node, avoid_dup=True):
-        n = self.graph._add_sp_epithet(self, name_str, genus_sem_node, avoid_dup=avoid_dup)
+        n = self.graph._add_sp_epithet(
+            self, name_str, genus_sem_node, avoid_dup=avoid_dup
+        )
         self.claim_sp_epithet(n)
         return n
 

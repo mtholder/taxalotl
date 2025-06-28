@@ -32,7 +32,9 @@ def _find_irmng_input_files(source):
             return os.path.join(source, poss_i[1]), os.path.join(source, prof_file)
         if poss_i[1] == prof_file:
             return os.path.join(source, poss_i[1]), os.path.join(source, prof_file)
-    raise RuntimeError("Expecting 2 files to match IRMNG_DWC.*.csv found: {}".format(poss_i))
+    raise RuntimeError(
+        "Expecting 2 files to match IRMNG_DWC.*.csv found: {}".format(poss_i)
+    )
 
 
 def read_irmng_file(irmng_file_name):
@@ -52,11 +54,13 @@ def read_irmng_file(irmng_file_name):
     to_tsta_nstat_keep = itd.extra_blob
     itd.syn_id_to_valid = {}
     syn_id_to_valid = itd.syn_id_to_valid
-    with open(irmng_file_name, 'r', encoding='utf-8') as csvfile:
+    with open(irmng_file_name, "r", encoding="utf-8") as csvfile:
         csvreader = csv.reader(csvfile)
         header = next(csvreader)
-        if header[5] != 'FAMILY':
-            m = 'IRMNG csv failed header check: header[5] == {} != not "FAMILY"'.format(header[5])
+        if header[5] != "FAMILY":
+            m = 'IRMNG csv failed header check: header[5] == {} != not "FAMILY"'.format(
+                header[5]
+            )
             raise RuntimeError(m)
         for raw_row in csvreader:
             # noinspection PyCompatibility
@@ -70,23 +74,23 @@ def read_irmng_file(irmng_file_name):
             try:
                 syn_target_id = int(row[12]) if row[12] else None
             except:
-                _LOG.warning('Dropping unparseable line {}'.format(row))
+                _LOG.warning("Dropping unparseable line {}".format(row))
                 continue
             parent = row[-4]
             diff_target = syn_target_id is not None and syn_target_id != taxon_id
-            synonymp = tstatus == 'synonym' or diff_target
+            synonymp = tstatus == "synonym" or diff_target
             # Calculate taxon name
             genus = row[3]
-            if rank == 'species':
+            if rank == "species":
                 epithet = row[4]
-                name = u'{} {}'.format(genus, epithet)
-            elif rank == 'genus':
+                name = "{} {}".format(genus, epithet)
+            elif rank == "genus":
                 name = genus
-            elif rank == 'family':
+            elif rank == "family":
                 family = row[5]
                 name = family
             elif auth and long_name.endswith(auth):
-                name = long_name[-len(auth) - 1:]
+                name = long_name[-len(auth) - 1 :]
             else:
                 name = long_name
             if synonymp:
@@ -96,19 +100,27 @@ def read_irmng_file(irmng_file_name):
                     assert taxon_id != syn_target_id
                     syn_id_to_valid[taxon_id] = syn_target_id
                 else:
-                    _LOG.info(u"Dropping synonym without target: {} '{}'".format(taxon_id, name))
+                    _LOG.info(
+                        "Dropping synonym without target: {} '{}'".format(
+                            taxon_id, name
+                        )
+                    )
                 continue
             # Kludge to get rid of redundancies e.g. Megastoma
-            if tstatus == '':
+            if tstatus == "":
                 aa_found = False
                 for value in row:
-                    if 'awaiting allocation' in value:
+                    if "awaiting allocation" in value:
                         aa_found = True
                         break
                 if aa_found:
-                    _LOG.info(u"Dropping awaiting allocation taxon: {} '{}'".format(taxon_id, name))
+                    _LOG.info(
+                        "Dropping awaiting allocation taxon: {} '{}'".format(
+                            taxon_id, name
+                        )
+                    )
                     continue
-            if parent == '':
+            if parent == "":
                 itd.root_nodes.add(taxon_id)
                 parent = None
             else:
@@ -135,7 +147,7 @@ def fix_irmng(itd):
     taboo = set()
     while len(to_check) > len(taboo):
         to_remap = {}
-        _LOG.info('syn_check_round = {}'.format(syn_check_round))
+        _LOG.info("syn_check_round = {}".format(syn_check_round))
         syn_check_round += 1
         for syn_id in to_check:
             if syn_id in taboo:
@@ -148,7 +160,11 @@ def fix_irmng(itd):
         for k, v in to_remap.items():
             old_v = syn_id_to_valid[k]
             if v == k:
-                _LOG.info("Synonymy ring: Arbitrarily leaving {} -> {} mapping.".format(v, old_v))
+                _LOG.info(
+                    "Synonymy ring: Arbitrarily leaving {} -> {} mapping.".format(
+                        v, old_v
+                    )
+                )
                 taboo.add(k)
             else:
                 itd.fix_synonym(v, old_v, k)
@@ -183,28 +199,70 @@ def fix_irmng(itd):
     _LOG.info("Parental synonyms: {}".format(len(ril)))
 
     # Decide which taxa to keep
-    nomenclatural_statuses_to_keep = frozenset(['',
-                                                'conservandum',
-                                                'nom. cons.',
-                                                'Nom. cons.',
-                                                'nom. cons. des.',
-                                                'nom. cons. prop.',
-                                                'protectum',
-                                                'Nomen novum',
-                                                'correctum',
-                                                'orth. cons.',
-                                                'legitimate',
-                                                'www.nearctica.com/nomina/beetle/colteneb.htm',
-                                                'Ruhberg et al., 1988',
-                                                'later usage',
-                                                ])
-    grandfathered = frozenset([10180190, 11899420, 11704707, 10527330, 11399158, 10527966, 11444963,
-                               11078615, 10522666, 10692084, 10525002, 10520170, 11444785, 11167068,
-                               10531957, 11024850, 11078603, 11458858, 11081142, 11390044, 10793056,
-                               10525092, 10692824, 10689467, 10543655, 10530648, 102843, 10697026,
-                               10184114, 11256401, 11083597, 11102182, 11103647, 10532033, 1435408,
-                               10532250, 10537012, 1178867, 10532020, 1407317, 10957072])
-    taxon_statuses_to_keep = frozenset(['accepted', 'valid', ''])
+    nomenclatural_statuses_to_keep = frozenset(
+        [
+            "",
+            "conservandum",
+            "nom. cons.",
+            "Nom. cons.",
+            "nom. cons. des.",
+            "nom. cons. prop.",
+            "protectum",
+            "Nomen novum",
+            "correctum",
+            "orth. cons.",
+            "legitimate",
+            "www.nearctica.com/nomina/beetle/colteneb.htm",
+            "Ruhberg et al., 1988",
+            "later usage",
+        ]
+    )
+    grandfathered = frozenset(
+        [
+            10180190,
+            11899420,
+            11704707,
+            10527330,
+            11399158,
+            10527966,
+            11444963,
+            11078615,
+            10522666,
+            10692084,
+            10525002,
+            10520170,
+            11444785,
+            11167068,
+            10531957,
+            11024850,
+            11078603,
+            11458858,
+            11081142,
+            11390044,
+            10793056,
+            10525092,
+            10692824,
+            10689467,
+            10543655,
+            10530648,
+            102843,
+            10697026,
+            10184114,
+            11256401,
+            11083597,
+            11102182,
+            11103647,
+            10532033,
+            1435408,
+            10532250,
+            10537012,
+            1178867,
+            10532020,
+            1407317,
+            10957072,
+        ]
+    )
+    taxon_statuses_to_keep = frozenset(["accepted", "valid", ""])
     # Decide which taxa to keep
     to_tsta_nstat_keep = itd.extra_blob
     keep_count = 0
@@ -215,33 +273,36 @@ def fix_irmng(itd):
         tsta_nst_keep = to_tsta_nstat_keep[taxon_id]
         if tsta_nst_keep[2]:
             continue  # already seen
-        if (taxon_id in grandfathered
-                or (tsta_nst_keep[0] in taxon_statuses_to_keep
-                    and tsta_nst_keep[1] in nomenclatural_statuses_to_keep)):
+        if taxon_id in grandfathered or (
+            tsta_nst_keep[0] in taxon_statuses_to_keep
+            and tsta_nst_keep[1] in nomenclatural_statuses_to_keep
+        ):
             scan_id = taxon_id
             while not tsta_nst_keep[2]:
                 if scan_id in grandfathered:
-                    _LOG.info(u'Grandfathering {}'.format(scan_id))
+                    _LOG.info("Grandfathering {}".format(scan_id))
                     actual_grandfatherd.add(scan_id)
                 tsta_nst_keep[2] = True
                 keep_count += 1
                 if scan_id not in to_par:
                     missing_pars.add(scan_id)
-                    _LOG.info(u"Missing parents for {}".format(scan_id))
+                    _LOG.info("Missing parents for {}".format(scan_id))
                     break
                 psi = scan_id
                 scan_id = to_par[scan_id]
                 if not scan_id:
-                    _LOG.info(u"No parent for {}".format(psi))
+                    _LOG.info("No parent for {}".format(psi))
                     roots.add(psi)
                     break
                 valid_id = scan_id
                 if valid_id in syn_id_to_valid:
-                    m = u'anc in syn_id_to_valid: syn_id_to_valid[{}] = {} anc of {}'
-                    raise ValueError(m.format(valid_id, syn_id_to_valid[valid_id], taxon_id))
+                    m = "anc in syn_id_to_valid: syn_id_to_valid[{}] = {} anc of {}"
+                    raise ValueError(
+                        m.format(valid_id, syn_id_to_valid[valid_id], taxon_id)
+                    )
                 tsta_nst_keep = to_tsta_nstat_keep.get(valid_id)
                 if tsta_nst_keep is None:
-                    m = u'anc ({}) of taxon {} not in to_tsta_nstat_keep'
+                    m = "anc ({}) of taxon {} not in to_tsta_nstat_keep"
                     _LOG.info(m.format(valid_id, taxon_id))
                     roots.add(psi)
                     break
@@ -268,38 +329,40 @@ def fix_irmng(itd):
 
 
 def read_extinct_info(profile_file_name, itd):
-    not_extinct = frozenset(['1531',  # Sarcopterygii
-                             '10565',  # Saurischia
-                             '118547',  # Aviculariidae
-                             '1402700',  # Trophomera
-                             # '11919',    # Didelphimorphia
-                             # '1021564',  # Cruciplacolithus
-                             # '1530',     # Actinopterygii
-
-                             # '1170022',  # Tipuloidea
-                             # '1340611',  # Retaria
-                             # '1124871',  # Labyrinthulomycetes [Labyrinthomorpha??]
-                             # '102024',   # Ophiurinidae - problem is Ophiurina
-                             # '1064058',  # Rhynchonelloidea genus/superfamily
-                             # '1114655',  # Tetrasphaera - different from GBIF
-                             ])
+    not_extinct = frozenset(
+        [
+            "1531",  # Sarcopterygii
+            "10565",  # Saurischia
+            "118547",  # Aviculariidae
+            "1402700",  # Trophomera
+            # '11919',    # Didelphimorphia
+            # '1021564',  # Cruciplacolithus
+            # '1530',     # Actinopterygii
+            # '1170022',  # Tipuloidea
+            # '1340611',  # Retaria
+            # '1124871',  # Labyrinthulomycetes [Labyrinthomorpha??]
+            # '102024',   # Ophiurinidae - problem is Ophiurina
+            # '1064058',  # Rhynchonelloidea genus/superfamily
+            # '1114655',  # Tetrasphaera - different from GBIF
+        ]
+    )
     to_par = itd.to_par
     d = {}
-    with open(profile_file_name, 'r', encoding='utf-8') as csvfile:
+    with open(profile_file_name, "r", encoding="utf-8") as csvfile:
         csvreader = csv.reader(csvfile)
         header = next(csvreader)
-        if header[1] != 'ISEXTINCT':
+        if header[1] != "ISEXTINCT":
             raise ValueError('ISEXTINCT in header row but found "{}"'.format(header[1]))
         for row in csvreader:
             taxonid = int(row[0])
             if taxonid not in to_par:
                 continue
-            is_extinct = (row[1] == 'TRUE')
+            is_extinct = row[1] == "TRUE"
             if taxonid in not_extinct:
                 if not is_extinct:
-                    _LOG.info('protected IRMNG ID {} not extinct:'.format(taxonid))
+                    _LOG.info("protected IRMNG ID {} not extinct:".format(taxonid))
                 else:
-                    _LOG.info('Fixing extinctness of IRMNG ID {}:'.format(taxonid))
+                    _LOG.info("Fixing extinctness of IRMNG ID {}:".format(taxonid))
                     is_extinct = False
             if is_extinct:
                 d[taxonid] = True

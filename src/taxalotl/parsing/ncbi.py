@@ -7,6 +7,7 @@ import logging
 from peyutil import add_or_append_to_dict
 from ..ott_schema import InterimTaxonomyData
 from ..resource_wrapper import TaxonomyWrapper
+
 _LOG = logging.getLogger(__name__)
 
 
@@ -25,6 +26,7 @@ _LOG = logging.getLogger(__name__)
 #  - remove "unclassified"GENUS_RANK_TO_SORTING_NUMBER
 #  - add command line argument for directory in which to put ncbi
 #  - change skipids from list to dictionary for speed
+
 
 ####################################################################################################
 # utility
@@ -47,7 +49,7 @@ def parse_ncbi_names_file(names_fp, itd):
          2 synonyms node_id -> [(name, type of synonym))
     """
     count = 0
-    with io.open(names_fp, "r", encoding='utf-8') as namesf:
+    with io.open(names_fp, "r", encoding="utf-8") as namesf:
         for line in namesf:
             # if you do \t|\t then you don't get the name class right because it is "\t|"
             spls = line.split("\t|")
@@ -77,7 +79,7 @@ def parse_ncbi_names_file(names_fp, itd):
                 itd.register_synonym(valid_id=node_id, syn_name=name, name_type=nm_c)
             count += 1
             if count % 100000 == 0:
-                _LOG.info('{} lines of names'.format(count))
+                _LOG.info("{} lines of names".format(count))
     _LOG.info("number of lines in names file: {}".format(count))
     _LOG.info("number of distinct scientific names: {}".format(len(itd.name_to_ids)))
     _LOG.info("number of IDs with synonyms: {}".format(len(itd.synonyms)))
@@ -85,16 +87,16 @@ def parse_ncbi_names_file(names_fp, itd):
 
 def parse_ncbi_nodes_file(nodes_fp, itd):
     """Takes a filepath to an NCBI nodes.dmp and returns 3 dict mapping an ID to:
-        - parent ID (can be None or an int)
-        - children list (only for internals)
-        - rank string (if available
+    - parent ID (can be None or an int)
+    - children list (only for internals)
+    - rank string (if available
     """
     count = 0
     to_par = itd.to_par  # key is the child id and the value is the parent
     to_children = itd.to_children  # key is the parent and value is the list of children
     to_rank = itd.to_rank  # key is the node id and the value is the rank
     root_nodes = itd.root_nodes
-    with io.open(nodes_fp, "r", encoding='utf-8') as nodesf:
+    with io.open(nodes_fp, "r", encoding="utf-8") as nodesf:
         for line in nodesf:
             spls = line.split("\t|\t")
             ns = spls[0].strip()
@@ -113,18 +115,18 @@ def parse_ncbi_nodes_file(nodes_fp, itd):
             to_children.setdefault(par_id, []).append(node_id)
             count += 1
             if count % 100000 == 0:
-                _LOG.info('{} lines of nodes'.format(count))
+                _LOG.info("{} lines of nodes".format(count))
     _LOG.info("number of lines in nodes file: {}".format(count))
 
 
 def parse_ncbi_merged(fp, itd):
     if os.path.exists(fp):
-        with io.open(fp, 'r', encoding='utf-8') as inp:
+        with io.open(fp, "r", encoding="utf-8") as inp:
             for line in inp:
-                rs = line.split('\t|')
+                rs = line.split("\t|")
                 from_id, to_id = int(rs[0]), int(rs[1])
                 itd.forwards[from_id] = to_id
-    _LOG.info('number of merges: {}'.format(len(itd.forwards)))
+    _LOG.info("number of merges: {}".format(len(itd.forwards)))
 
 
 # noinspection PyBroadException
@@ -158,10 +160,10 @@ def deal_with_adj_taxa_with_same_names(itd):
                 adj_same_named_ids.insert(insert_loc, (par_id, i))
         for par_id, child_id in adj_same_named_ids:
             pr = id_to_rank.get(par_id)
-            if pr and pr.lower() == 'genus':
+            if pr and pr.lower() == "genus":
                 # Change the child's name
-                cr = id_to_rank.get(child_id, '')
-                nn = '{} {} {}'.format(name, cr, name)
+                cr = id_to_rank.get(child_id, "")
+                nn = "{} {} {}".format(name, cr, name)
                 assert nn not in names_to_ids  # could happen, but ugh...
                 names_to_ids[nn] = child_id
                 id_to_name[child_id] = nn
@@ -181,32 +183,33 @@ def deal_with_adj_taxa_with_same_names(itd):
                     id_to_parent[gc] = par_id
                 for syn_el in synonyms.get(child_id, []):
                     synonyms.setdefault(par_id, []).append(syn_el)
-    itd.details_log['ids_suppressed_because_same_name_as_par'] = suppressed_ids
+    itd.details_log["ids_suppressed_because_same_name_as_par"] = suppressed_ids
     ril = list(renamed_ids)
     ril.sort()
-    itd.details_log['names_decorated_because_same_name_as_par'] = ril
+    itd.details_log["names_decorated_because_same_name_as_par"] = ril
 
 
 def deal_with_ncbi_env_samples_names(itd):
     id_to_par = itd.to_par
     id_to_name = itd.to_name
     names_to_ids = itd.name_to_ids
-    ess = 'environmental samples'
+    ess = "environmental samples"
     es_ids = names_to_ids.setdefault(ess, [])
     renamed_ids = set(es_ids)
     for es_id in es_ids:
         par_id = id_to_par[es_id]
-        name = '{} {}'.format(id_to_name[par_id], ess)
+        name = "{} {}".format(id_to_name[par_id], ess)
         id_to_name[es_id] = name
         add_or_append_to_dict(names_to_ids, name, es_id)
     del names_to_ids[ess]
     ril = list(renamed_ids)
     ril.sort()
-    itd.details_log['names_decorated_because_env_samp'] = ril
+    itd.details_log["names_decorated_because_env_samp"] = ril
     return renamed_ids
 
 
 ####################################################################################################
+
 
 def normalize_ncbi(source, destination, res_wrapper):
     url = res_wrapper.url
@@ -214,13 +217,12 @@ def normalize_ncbi(source, destination, res_wrapper):
     nodes_fp = os.path.join(source, "nodes.dmp")
     names_fp = os.path.join(source, "names.dmp")
     merged_fp = os.path.join(source, "merged.dmp")
-    itd.about = {"prefix": "ncbi",
-                 "prefixDefinition": "http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=",
-                 "description": "NCBI Taxonomy",
-                 "source": {"URL": url,
-                            "date": file_mod_time_to_isotime(nodes_fp)
-                            }
-                 }
+    itd.about = {
+        "prefix": "ncbi",
+        "prefixDefinition": "http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=",
+        "description": "NCBI Taxonomy",
+        "source": {"URL": url, "date": file_mod_time_to_isotime(nodes_fp)},
+    }
     parse_ncbi_merged(merged_fp, itd)
     parse_ncbi_nodes_file(nodes_fp, itd)
     # Make sure there is only 1 root, and that its parent is an empty string
@@ -243,6 +245,7 @@ def normalize_ncbi(source, destination, res_wrapper):
 
 ###################################################################################################
 
+
 class NCBIWrapper(TaxonomyWrapper):
     schema = {"ncbi taxonomy"}
 
@@ -253,7 +256,9 @@ class NCBIWrapper(TaxonomyWrapper):
         normalize_ncbi(self.unpacked_filepath, self.normalized_filedir, self)
 
     def _post_process_tree(self, tree):
-        self.collapse_incertae_sedis_by_name_prefix(tree, 'unclassified ')
+        self.collapse_incertae_sedis_by_name_prefix(tree, "unclassified ")
 
     def post_process_interim_tax_data(self, interim_tax_data):
-        self.collapse_as_incertae_sedis_interim_tax_data(interim_tax_data, 'unclassified')
+        self.collapse_as_incertae_sedis_interim_tax_data(
+            interim_tax_data, "unclassified"
+        )

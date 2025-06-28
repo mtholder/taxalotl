@@ -9,45 +9,56 @@ import csv
 import io
 import os
 
-from peyutil import (add_or_append_to_dict, assure_dir_exists,
-                     shorter_fp_form,
-                     write_as_json)
+from peyutil import (
+    add_or_append_to_dict,
+    assure_dir_exists,
+    shorter_fp_form,
+    write_as_json,
+)
 from .taxon import Taxon
 from .util import OutFile
 import logging
 
-_LOG = logging.getLogger('taxalotl')
+_LOG = logging.getLogger("taxalotl")
 
 INP_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n"
-INP_FLAGGED_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\t|\t\n"
-INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\n"
+INP_FLAGGED_OTT_TAXONOMY_HEADER = (
+    "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\t|\t\n"
+)
+INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER = (
+    "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\n"
+)
 INP_OTT_SYNONYMS_HEADER = "uid\t|\tname\t|\ttype\t|\t\n"
-FULL_OTT_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tsourceinfo\t|\tuniqname\t|\tflags\t|\t\n"
+FULL_OTT_HEADER = (
+    "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tsourceinfo\t|\tuniqname\t|\tflags\t|\t\n"
+)
 
 
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     syn_fp = tax_part.input_synonyms_filepath
-    tax_part.syn_header = ''
+    tax_part.syn_header = ""
     if not os.path.exists(syn_fp):
         return
     _LOG.debug('parsing synonyms from "{}" ...'.format(syn_fp))
     try:
-        with io.open(syn_fp, 'rU', encoding='utf-8') as inp:
+        with io.open(syn_fp, "rU", encoding="utf-8") as inp:
             iinp = iter(inp)
             try:
                 tax_part.syn_header = next(iinp)
             except StopIteration:
                 return
-            shs = tax_part.syn_header.split('\t|\t')
-            if shs[0] == 'uid':
+            shs = tax_part.syn_header.split("\t|\t")
+            if shs[0] == "uid":
                 uid_ind = 0
-            elif shs[1] == 'uid':
+            elif shs[1] == "uid":
                 uid_ind = 1
             else:
-                raise ValueError("Expected one of the first 2 columns of an OTT formatted "
-                                 "synonyms file to be 'uid'. Problem reading: {}".format(syn_fp))
+                raise ValueError(
+                    "Expected one of the first 2 columns of an OTT formatted "
+                    "synonyms file to be 'uid'. Problem reading: {}".format(syn_fp)
+                )
             for n, line in enumerate(iinp):
-                ls = line.split('\t|\t')
+                ls = line.split("\t|\t")
                 if n > 0 and n % 5000 == 0:
                     _LOG.debug(' reading synonym {:7} from "{}"'.format(n, syn_fp))
                 try:
@@ -61,24 +72,24 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
                     _LOG.exception("Exception parsing line {}:\n{}".format(1 + n, line))
                     raise
     except:
-        _LOG.exception("Exception parsing \"{}\"".format(syn_fp))
+        _LOG.exception('Exception parsing "{}"'.format(syn_fp))
 
 
 def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
     complete_taxon_fp = tax_part.tax_fp
-    tax_part.taxon_header = ''
+    tax_part.taxon_header = ""
     if not os.path.exists(complete_taxon_fp):
         return
     ptp = shorter_fp_form(complete_taxon_fp)
     _LOG.debug('parsing taxa from "{}" ...'.format(ptp))
-    with io.open(complete_taxon_fp, 'r', encoding='utf-8') as inp:
+    with io.open(complete_taxon_fp, "r", encoding="utf-8") as inp:
         iinp = iter(inp)
         try:
             tax_part.taxon_header = next(iinp)
         except StopIteration:
             return
         for n, line in enumerate(iinp):
-            ls = line.split('\t|\t')
+            ls = line.split("\t|\t")
             if n > 0 and n % 10000 == 0:
                 _LOG.debug(' read taxon {:<7} from "{}" ...'.format(n, ptp))
             try:
@@ -89,7 +100,11 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
                     pass
                 tax_part.read_taxon_line(uid, par_id, line)
             except:
-                _LOG.exception("Exception parsing line {} of {}:\n{}".format(1 + n, complete_taxon_fp, line))
+                _LOG.exception(
+                    "Exception parsing line {} of {}:\n{}".format(
+                        1 + n, complete_taxon_fp, line
+                    )
+                )
                 raise
 
 
@@ -98,18 +113,20 @@ def partition_ott_by_root_id(tax_part):  # type (TaxonPartition) -> None
     _parse_taxa(tax_part)
 
 
-def write_ott_taxonomy_tsv(out_fp,
-                           root_nodes,
-                           id_to_par,
-                           id_to_children,
-                           id_to_rank,
-                           id_to_name,
-                           id_to_flags,
-                           has_syn_dict,
-                           details_log,
-                           extinct_known=None):
+def write_ott_taxonomy_tsv(
+    out_fp,
+    root_nodes,
+    id_to_par,
+    id_to_children,
+    id_to_rank,
+    id_to_name,
+    id_to_flags,
+    has_syn_dict,
+    details_log,
+    extinct_known=None,
+):
     """If has_syn_dict is provided, then a list of the IDs that occur in that dict
-    is returned in the order that the IDs were written to taxonomy file. This 
+    is returned in the order that the IDs were written to taxonomy file. This
     allows for the synonyms.tsv file to be written in a similar order, which makes browsing it
     easier.
     """
@@ -140,42 +157,39 @@ def write_ott_taxonomy_tsv(out_fp,
                 try:
                     par_id = id_to_par.get(curr_id)
                     if par_id is None:
-                        spar_id = ''
+                        spar_id = ""
                     else:
                         spar_id = str(par_id)
-                    rank = id_to_rank.get(curr_id, '')
+                    rank = id_to_rank.get(curr_id, "")
                     children = id_to_children.get(curr_id)
                     if children:
                         num_internals_written += 1
                         stack.extend(children)
                     else:
                         num_tips_written += 1
-                    flags = id_to_flags.get(curr_id, '')
+                    flags = id_to_flags.get(curr_id, "")
                     if flags and not isinstance(flags, str):
-                        flags = ','.join(flags)
+                        flags = ",".join(flags)
                     ev = extinct_known.get(curr_id)
                     if ev:
                         if flags:
-                            flags = '{},extinct'.format(flags)
+                            flags = "{},extinct".format(flags)
                         else:
-                            flags = 'extinct'
-                    fields = [str(curr_id), spar_id, name, rank, flags, '']
+                            flags = "extinct"
+                    fields = [str(curr_id), spar_id, name, rank, flags, ""]
                     try:
-                        out.write(u'{}\n'.format(u'\t|\t'.join(fields)))
+                        out.write("{}\n".format("\t|\t".join(fields)))
                     except:
                         _LOG.exception("error serializing {}".format(repr(fields)))
                 except:
                     _LOG.error("Error writing taxon_id {}".format(curr_id))
                     raise
-    details_log['num_tips_written'] = num_tips_written
-    details_log['num_internals_written'] = num_internals_written
+    details_log["num_tips_written"] = num_tips_written
+    details_log["num_internals_written"] = num_internals_written
     return syn_id_order
 
 
-def write_ott_synonyms_tsv(out_fp,
-                           id_to_name_name_type_list,
-                           id_order,
-                           details_log):
+def write_ott_synonyms_tsv(out_fp, id_to_name_name_type_list, id_order, details_log):
     num_syn_written = 0
     with OutFile(out_fp) as out:
         out.write(INP_OTT_SYNONYMS_HEADER)
@@ -183,15 +197,17 @@ def write_ott_synonyms_tsv(out_fp,
             syn_list = id_to_name_name_type_list[nd_id]
             for name, name_type, syn_id in syn_list:
                 num_syn_written += 1
-                out.write(u'{}\n'.format('\t|\t'.join([str(nd_id), name, name_type, ''])))
-    details_log['num_synonyms_written'] = num_syn_written
-    details_log['num_ids_with_synonyms_written'] = len(id_order)
+                out.write(
+                    "{}\n".format("\t|\t".join([str(nd_id), name, name_type, ""]))
+                )
+    details_log["num_synonyms_written"] = num_syn_written
+    details_log["num_ids_with_synonyms_written"] = len(id_order)
 
 
 def write_ott_forwards(out_fp, forwarded_dict):
     with OutFile(out_fp) as out:
         for key, value in forwarded_dict.items():
-            out.write('{}\t{}\n'.format(key, value))
+            out.write("{}\t{}\n".format(key, value))
 
 
 def write_ncbi_details_json(fp, details_log):
@@ -202,13 +218,13 @@ def write_ncbi_details_json(fp, details_log):
 def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
     ncbi_to_name = {}
     i = 0
-    fp = os.path.join(tax_dir, 'taxonomy.tsv')
+    fp = os.path.join(tax_dir, "taxonomy.tsv")
     try:
-        with io.open(fp, 'r', encoding='utf-8') as inp:
-            reader = csv.reader(inp, delimiter='\t')
+        with io.open(fp, "r", encoding="utf-8") as inp:
+            reader = csv.reader(inp, delimiter="\t")
             header = next(reader)
-            uidx = header.index('uid')
-            namex = header.index('name')
+            uidx = header.index("uid")
+            namex = header.index("name")
             for row in reader:
                 uid = id_coercion(row[uidx])
                 name = row[namex]
@@ -232,8 +248,8 @@ def int_or_str(s):
 
 def full_ott_line_parser(taxon, line):
     try:
-        ls = line.split('\t|\t')
-        assert ls[-1] == '\n'
+        ls = line.split("\t|\t")
+        assert ls[-1] == "\n"
     except:
         _LOG.exception("Error reading line {}:\n{}".format(taxon.line_num, line))
         raise
@@ -251,10 +267,10 @@ def full_ott_line_parser(taxon, line):
         return
     # _LOG.debug('ls[4] = {}'.format(ls[4]))
     if ls[4]:
-        sel = ls[4].split(',')
+        sel = ls[4].split(",")
         d = {}
         for el in sel:
-            src, sid = el.split(':')
+            src, sid = el.split(":")
             try:
                 sid = int_or_str(sid)
             except:
@@ -268,17 +284,17 @@ def full_ott_line_parser(taxon, line):
         taxon.uniqname = ls[5]
     if len(ls) > 7:
         if ls[6]:
-            taxon.flags = set(ls[6].split(','))
+            taxon.flags = set(ls[6].split(","))
 
 
 def flag_after_rank_parser(taxon, line):
     try:
-        ls = line.split('\t|\t')
+        ls = line.split("\t|\t")
         if len(ls) == 5:
-            assert ls[4].endswith('\n')
+            assert ls[4].endswith("\n")
             ls[4] = ls[4].strip()
         else:
-            assert len(ls) > 5 and ls[-1] == '\n'
+            assert len(ls) > 5 and ls[-1] == "\n"
     except:
         _LOG.exception("Error reading line {}:\n{}".format(taxon.line_num, line))
         raise
@@ -291,25 +307,35 @@ def flag_after_rank_parser(taxon, line):
     if ls[3]:
         taxon.rank = ls[3]
     if ls[4]:
-        taxon.flags = set(ls[4].split(','))
+        taxon.flags = set(ls[4].split(","))
 
 
-HEADER_TO_LINE_PARSER = {FULL_OTT_HEADER: full_ott_line_parser,
-                         INP_OTT_TAXONOMY_HEADER: full_ott_line_parser,
-                         INP_FLAGGED_OTT_TAXONOMY_HEADER: flag_after_rank_parser,
-                         INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER: flag_after_rank_parser,
-                         }
+HEADER_TO_LINE_PARSER = {
+    FULL_OTT_HEADER: full_ott_line_parser,
+    INP_OTT_TAXONOMY_HEADER: full_ott_line_parser,
+    INP_FLAGGED_OTT_TAXONOMY_HEADER: flag_after_rank_parser,
+    INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER: flag_after_rank_parser,
+}
 
 
 # noinspection PyTypeChecker
 def read_taxonomy_to_get_id_to_fields(tax_dir):
-    fp = os.path.join(tax_dir, 'taxonomy.tsv')
-    fields = ['uid', 'parent_uid', 'name', 'rank', 'sourceinfo', 'uniqname', 'flags', '\n']
-    expected_header = '\t|\t'.join(fields)
+    fp = os.path.join(tax_dir, "taxonomy.tsv")
+    fields = [
+        "uid",
+        "parent_uid",
+        "name",
+        "rank",
+        "sourceinfo",
+        "uniqname",
+        "flags",
+        "\n",
+    ]
+    expected_header = "\t|\t".join(fields)
     if not os.path.exists(fp):
         return {}
     try:
-        with io.open(fp, 'r', encoding='utf-8') as inp:
+        with io.open(fp, "r", encoding="utf-8") as inp:
             iinp = iter(inp)
             header = next(iinp)
             assert header == expected_header
@@ -327,11 +353,20 @@ def read_taxonomy_to_get_id_to_fields(tax_dir):
 
 def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
     sri = str(root_id)
-    fp = os.path.join(tax_dir, 'taxonomy.tsv')
-    fields = ['uid', 'parent_uid', 'name', 'rank', 'sourceinfo', 'uniqname', 'flags', '\n']
-    expected_header = '\t|\t'.join(fields)
+    fp = os.path.join(tax_dir, "taxonomy.tsv")
+    fields = [
+        "uid",
+        "parent_uid",
+        "name",
+        "rank",
+        "sourceinfo",
+        "uniqname",
+        "flags",
+        "\n",
+    ]
+    expected_header = "\t|\t".join(fields)
     try:
-        with io.open(fp, 'r', encoding='utf-8') as inp:
+        with io.open(fp, "r", encoding="utf-8") as inp:
             iinp = iter(inp)
             header = next(iinp)
             assert header == expected_header
@@ -342,7 +377,7 @@ def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
                 if root_id == obj.id:
                     return obj
     except:
-        _LOG.exception('Error reading {}'.format(fp))
+        _LOG.exception("Error reading {}".format(fp))
         raise
 
 
@@ -366,10 +401,10 @@ class InterimTaxonomyData(object):
         self.names_interpreted_as_changes = False
 
     def finalize(self):
-        self.details_log['num_forwards'] = len(self.forwards)
-        self.details_log['num_nodes'] = len(self.to_par)
-        self.details_log['num_distinct_names'] = len(self.name_to_ids)
-        self.details_log['num_ids_with_synonyms'] = len(self.synonyms)
+        self.details_log["num_forwards"] = len(self.forwards)
+        self.details_log["num_nodes"] = len(self.to_par)
+        self.details_log["num_distinct_names"] = len(self.name_to_ids)
+        self.details_log["num_ids_with_synonyms"] = len(self.synonyms)
 
     def register_id_and_name(self, taxon_id, name):
         self.to_name[taxon_id] = name
@@ -393,40 +428,45 @@ class InterimTaxonomyData(object):
             nl.append(el)
 
     def write_ott_taxonomy_tsv(self, fp):
-        return write_ott_taxonomy_tsv(fp,
-                                      self.root_nodes,
-                                      self.to_par,
-                                      self.to_children,
-                                      self.to_rank,
-                                      self.to_name,
-                                      self.to_flags,
-                                      self.synonyms,
-                                      self.details_log,
-                                      self.extinct_known)
+        return write_ott_taxonomy_tsv(
+            fp,
+            self.root_nodes,
+            self.to_par,
+            self.to_children,
+            self.to_rank,
+            self.to_name,
+            self.to_flags,
+            self.synonyms,
+            self.details_log,
+            self.extinct_known,
+        )
 
     def write_to_dir(self, destination):
         # Write out in OTT form
         d = tempfile.mkdtemp()
-        fn = ['taxonomy.tsv',
-              'synonyms.tsv',
-              'forwards.tsv',
-              'about.json',
-              'details.json']
+        fn = [
+            "taxonomy.tsv",
+            "synonyms.tsv",
+            "forwards.tsv",
+            "about.json",
+            "details.json",
+        ]
         try:
-            syn_order = self.write_ott_taxonomy_tsv(os.path.join(d, 'taxonomy.tsv'))
-            write_ott_synonyms_tsv(os.path.join(d, 'synonyms.tsv'),
-                                   self.synonyms,
-                                   syn_order,
-                                   self.details_log)
+            syn_order = self.write_ott_taxonomy_tsv(os.path.join(d, "taxonomy.tsv"))
+            write_ott_synonyms_tsv(
+                os.path.join(d, "synonyms.tsv"),
+                self.synonyms,
+                syn_order,
+                self.details_log,
+            )
             if self.forwards:
-                write_ott_forwards(os.path.join(d, 'forwards.tsv'), self.forwards)
+                write_ott_forwards(os.path.join(d, "forwards.tsv"), self.forwards)
 
-            about_fp = os.path.join(d, 'about.json')
+            about_fp = os.path.join(d, "about.json")
             with OutFile(about_fp) as about_outs:
                 write_as_json(self.about, about_outs, indent=2)
             self.finalize()
-            write_ncbi_details_json(os.path.join(d, 'details.json'),
-                                    self.details_log)
+            write_ncbi_details_json(os.path.join(d, "details.json"), self.details_log)
         except:
             for f in fn:
                 tf = os.path.join(d, f)

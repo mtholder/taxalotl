@@ -5,12 +5,13 @@ import logging
 
 from .taxon_concept_node import TaxonConceptSemNode
 from .verbatim_name import VerbatimSemNode
-from .names_for_ranks import (GenusGroupSemNode,
-                              HigherGroupSemNode,
-                              SpecimenCodeSemNode,
-                              SpeciesGroupSemNode,
-                              TypeSpecimen
-                              )
+from .names_for_ranks import (
+    GenusGroupSemNode,
+    HigherGroupSemNode,
+    SpecimenCodeSemNode,
+    SpeciesGroupSemNode,
+    TypeSpecimen,
+)
 from .name import CombinationSemNode
 from .graph_node import AuthoritySemNode
 
@@ -18,18 +19,19 @@ _LOG = logging.getLogger(__name__)
 
 
 class SemGraph(object):
-    att_list = ['_authorities',
-                '_combinations',
-                '_genus_group_names',
-                '_higher_group_names',
-                '_references',
-                '_species_group_epithets',
-                '_specimen_codes',
-                '_specimens',
-                '_taxon_concepts',
-                '_type_specimens',
-                '_verbatim_name',
-                ]
+    att_list = [
+        "_authorities",
+        "_combinations",
+        "_genus_group_names",
+        "_higher_group_names",
+        "_references",
+        "_species_group_epithets",
+        "_specimen_codes",
+        "_specimens",
+        "_taxon_concepts",
+        "_type_specimens",
+        "_verbatim_name",
+    ]
     att_set = frozenset(att_list)
 
     def register_obj(self, id_minting_context, obj):
@@ -57,7 +59,7 @@ class SemGraph(object):
                 continue
             if tc.hybrid or tc.undescribed or not tc.rank:
                 continue
-            if tc.rank == 'species':
+            if tc.rank == "species":
                 epithet = tc.most_terminal_name
                 try:
                     if not epithet.type_materials:
@@ -67,7 +69,7 @@ class SemGraph(object):
         for tc in self.taxon_concept_list:
             if tc.hybrid or tc.undescribed or not tc.rank:
                 continue
-            if tc.is_specimen_based and tc.rank != 'species':
+            if tc.is_specimen_based and tc.rank != "species":
                 infra_epithet = tc.most_terminal_name
                 if infra_epithet is tc.has_name.sp_epithet:
                     continue
@@ -80,11 +82,11 @@ class SemGraph(object):
         #   same valid epithet in multiple valid genera
         dup_auth_to_mint = {}
         for tc in self.taxon_concept_list:
-            if tc.rank and tc.rank == 'species':
+            if tc.rank and tc.rank == "species":
                 epithet = tc.most_terminal_name
                 if epithet is None:
                     if not (tc.hybrid or tc.undescribed):
-                        _LOG.warning('NO Epithet for  = {}'.format(tc.__dict__))
+                        _LOG.warning("NO Epithet for  = {}".format(tc.__dict__))
                     continue
                 if isinstance(epithet._authority, list):
                     dup_auth_to_mint.setdefault(epithet, []).append(tc)
@@ -103,8 +105,9 @@ class SemGraph(object):
             for other in same_name_tc:
                 self._split_tc_with_shared_name(tc_list[0], other)
 
-        if self.res.id.startswith('cof'):
+        if self.res.id.startswith("cof"):
             import sys
+
             # sys.exit(1)
 
     def _split_tc_with_shared_sp_epithet(self, fixed, other):
@@ -116,7 +119,9 @@ class SemGraph(object):
         assert fix_sp_epi is oth_sp_epi
         if fix_sp_epi in oth_genus.contained:
             oth_genus.contained.remove(fix_sp_epi)
-        new_epi = self._add_sp_epithet(other, fix_sp_epi._name, oth_genus, avoid_dup=False)
+        new_epi = self._add_sp_epithet(
+            other, fix_sp_epi._name, oth_genus, avoid_dup=False
+        )
         oth_genus.contained.append(new_epi)
         oth_name.sp_epithet = new_epi
         vtc = other
@@ -166,7 +171,6 @@ class SemGraph(object):
                     ntd.append(tc)
             todo = ntd
 
-
     @property
     def taxon_concept_list(self):
         return self._taxon_concepts if self._taxon_concepts else []
@@ -188,7 +192,7 @@ class SemGraph(object):
     def find_valid_genus(self, genus_name):
         r = []
         for tc in self._all_higher_tax_con_dict().values():
-            if tc.rank and tc.rank == 'genus':
+            if tc.rank and tc.rank == "genus":
                 if tc.is_valid_for_name(genus_name):
                     r.append(tc)
         return r
@@ -231,13 +235,25 @@ class SemGraph(object):
     def get_by_id(self, can_id, default=None):
         return self._by_id.get(can_id, default)
 
-    def _add_name(self, container, node_type, parent_sem_node, name, extra_container=None, avoid_dup=True):
-        search_cont = container if extra_container is None else extra_container.contained
+    def _add_name(
+        self,
+        container,
+        node_type,
+        parent_sem_node,
+        name,
+        extra_container=None,
+        avoid_dup=True,
+    ):
+        search_cont = (
+            container if extra_container is None else extra_container.contained
+        )
         x = None if (not avoid_dup) else _find_by_name(search_cont, name)
         if x is None:
-            d = {'parent_id': parent_sem_node.canonical_id}
+            d = {"parent_id": parent_sem_node.canonical_id}
             if extra_container is not None:
-                d['class_tag'] = 'epi'  # need to figure out if this is the best choice for any extra container obj
+                d["class_tag"] = (
+                    "epi"  # need to figure out if this is the best choice for any extra container obj
+                )
             x = node_type(self, d, name)
             search_cont.append(x)
             if search_cont is not container:
@@ -252,7 +268,7 @@ class SemGraph(object):
                 x = a
                 break
         if x is None:
-            d = {'parent_id': name_sem.canonical_id}
+            d = {"parent_id": name_sem.canonical_id}
             x = AuthoritySemNode(self, d, authors, year, tax_con_sem_node)
         else:
             x.taxon_concept_set.add(tax_con_sem_node)
@@ -261,30 +277,52 @@ class SemGraph(object):
         return x
 
     def _add_normalized(self, par_sem_node, name_str):
-        return self._add_name(self.combinations, CombinationSemNode, par_sem_node, name_str)
+        return self._add_name(
+            self.combinations, CombinationSemNode, par_sem_node, name_str
+        )
 
     def _add_combination(self, par_sem_node, name_str):
-        return self._add_name(self.combinations, CombinationSemNode, par_sem_node, name_str)
+        return self._add_name(
+            self.combinations, CombinationSemNode, par_sem_node, name_str
+        )
 
     def _add_verbatim_name(self, tax_con_sem_node, name_str, avoid_dup=True):
-        return self._add_name(self.verbatim_name, VerbatimSemNode, tax_con_sem_node, name_str, avoid_dup=avoid_dup)
+        return self._add_name(
+            self.verbatim_name,
+            VerbatimSemNode,
+            tax_con_sem_node,
+            name_str,
+            avoid_dup=avoid_dup,
+        )
 
     def _add_genus(self, par_sem_node, name_str):
-        return self._add_name(self.genus_group_names, GenusGroupSemNode, par_sem_node, name_str)
+        return self._add_name(
+            self.genus_group_names, GenusGroupSemNode, par_sem_node, name_str
+        )
 
     _add_subgenus = _add_genus
 
     def _add_higher_group_name(self, par_sem_node, name_str):
-        return self._add_name(self.higher_group_names, HigherGroupSemNode, par_sem_node, name_str)
+        return self._add_name(
+            self.higher_group_names, HigherGroupSemNode, par_sem_node, name_str
+        )
 
     def _add_sp_epithet(self, par_sem_node, name_str, prev_word_sn, avoid_dup=True):
-        return self._add_name(self.species_group_epithets, SpeciesGroupSemNode,
-                              par_sem_node, name_str, prev_word_sn, avoid_dup=avoid_dup)
+        return self._add_name(
+            self.species_group_epithets,
+            SpeciesGroupSemNode,
+            par_sem_node,
+            name_str,
+            prev_word_sn,
+            avoid_dup=avoid_dup,
+        )
 
     _add_infra_epithet = _add_sp_epithet
 
     def _add_specimen_code(self, par_sem_node, name_str):
-        return self._add_name(self.specimen_codes, SpecimenCodeSemNode, par_sem_node, name_str)
+        return self._add_name(
+            self.specimen_codes, SpecimenCodeSemNode, par_sem_node, name_str
+        )
 
     def add_taxon_concept(self, foreign_id):
         x = TaxonConceptSemNode(self, foreign_id)
@@ -298,14 +336,14 @@ class SemGraph(object):
             del self._by_id[tc.canonical_id]
 
     def _add_type_specimen(self, spec_code, epithet_syn_name, valid_taxon):
-        d = {'parent_id': epithet_syn_name.canonical_id}
+        d = {"parent_id": epithet_syn_name.canonical_id}
         x = TypeSpecimen(self, d, spec_code, epithet_syn_name, valid_taxon)
         self.type_specimens.append(x)
         epithet_syn_name.claim_type_material(x)
         return x
 
     def __getattr__(self, item):
-        hidden = '_{}'.format(item)
+        hidden = "_{}".format(item)
         if hidden not in SemGraph.att_set:
             return self.__getattribute__(item)
         v = getattr(self, hidden)
@@ -331,14 +369,15 @@ def _find_by_name(container, name):
     return None
 
 
-_NODE_CLASS_NAME_TO_CT = {AuthoritySemNode: 'auth',
-                          SpecimenCodeSemNode: 'spec_code',
-                          HigherGroupSemNode: 'clade',
-                          SpeciesGroupSemNode: 'sp',
-                          GenusGroupSemNode: 'gen',
-                          VerbatimSemNode: 'verbatim',
-                          CombinationSemNode: 'combin',
-                          }
+_NODE_CLASS_NAME_TO_CT = {
+    AuthoritySemNode: "auth",
+    SpecimenCodeSemNode: "spec_code",
+    HigherGroupSemNode: "clade",
+    SpeciesGroupSemNode: "sp",
+    GenusGroupSemNode: "gen",
+    VerbatimSemNode: "verbatim",
+    CombinationSemNode: "combin",
+}
 
 
 def _register_new_node(graph, id_minting_context, obj):
@@ -351,11 +390,11 @@ def _register_new_node(graph, id_minting_context, obj):
         * "class_tag" or func will use the class of `obj` to tag classes
     """
     assert isinstance(id_minting_context, dict)
-    pref_str, context_id = id_minting_context.get('parent_id'), ''
+    pref_str, context_id = id_minting_context.get("parent_id"), ""
     if pref_str is None:
         pref_str = graph.res.base_resource.id
-        context_id = id_minting_context['context_id']
-    ct = id_minting_context.get('class_tag')
+        context_id = id_minting_context["context_id"]
+    ct = id_minting_context.get("class_tag")
     if ct is None:
         ct = _NODE_CLASS_NAME_TO_CT[obj.__class__]
     can_id = _canonicalize(pref_str, ct, context_id)
@@ -368,9 +407,9 @@ def _register_new_node(graph, id_minting_context, obj):
         if wtid == obj:
             return can_id
         n += 1
-        can_id = '{}:v{}'.format(rci, n)
+        can_id = "{}:v{}".format(rci, n)
 
 
 def _canonicalize(res_id, pred_id, entity_id):
     ne = [str(i) for i in (res_id, pred_id, entity_id) if i]
-    return ':'.join(ne)
+    return ":".join(ne)

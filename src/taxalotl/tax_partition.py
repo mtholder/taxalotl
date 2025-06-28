@@ -4,23 +4,25 @@ from contextlib import contextmanager
 from copy import copy
 import logging
 
-from peyutil import (assure_dir_exists, 
-                     read_as_json,
-                     write_as_json, )
+from peyutil import (
+    assure_dir_exists,
+    read_as_json,
+    write_as_json,
+)
 
 from .ott_schema import HEADER_TO_LINE_PARSER
 from .taxon import Taxon
 from .tree import TaxonForest
 from .util import unlink, OutFile
 
-INP_TAXONOMY_DIRNAME = '__inputs__'
-OUTP_TAXONOMY_DIRNAME = '__outputs__'
-MISC_DIRNAME = '__misc__'
-GEN_MAPPING_FILENAME = '__mapping__.json'
-ROOTS_FILENAME = '__roots__.json'
-TAXONOMY_FN = 'taxonomy.tsv'
-SYNONYMS_FN = 'synonyms.tsv'
-ACCUM_DES_FILENAME = '__accum_des__.json'
+INP_TAXONOMY_DIRNAME = "__inputs__"
+OUTP_TAXONOMY_DIRNAME = "__outputs__"
+MISC_DIRNAME = "__misc__"
+GEN_MAPPING_FILENAME = "__mapping__.json"
+ROOTS_FILENAME = "__roots__.json"
+TAXONOMY_FN = "taxonomy.tsv"
+SYNONYMS_FN = "synonyms.tsv"
+ACCUM_DES_FILENAME = "__accum_des__.json"
 
 _LOG = logging.getLogger(__name__)
 
@@ -71,7 +73,7 @@ class TaxonomySliceCache(object):
         assert isinstance(key, tuple) and len(key) == 3
         old_val = self._ck_to_obj.get(key)
         if old_val is not None and old_val is not vttrs:
-            assert False, 'should not be creating a new object for a cached taxdi!'
+            assert False, "should not be creating a new object for a cached taxdi!"
         self._ck_to_obj[key] = vttrs
 
     def __getitem__(self, ck):
@@ -100,7 +102,7 @@ class TaxonomySliceCache(object):
             try:
                 v._flush()
             except Exception as x:
-                _LOG.exception('exception in flushing')
+                _LOG.exception("exception in flushing")
                 _ex = x
         if _ex is not None:
             raise _ex
@@ -152,7 +154,11 @@ class PartitionedTaxDirBase(object):
     def output_synonyms_filepath(self):
         if not self.synonyms_filename:
             return None
-        pd = self.tax_dir_misc if self._subdirname_to_tp_roots else self.tax_dir_unpartitioned
+        pd = (
+            self.tax_dir_misc
+            if self._subdirname_to_tp_roots
+            else self.tax_dir_unpartitioned
+        )
         return os.path.join(pd, self.synonyms_filename)
 
     def scaffold_tax_subdir_names(self):
@@ -171,27 +177,29 @@ class PartitionedTaxDirBase(object):
 class Synonym(object):
     def __init__(self, valid_tax_id, name, syn_type=None, syn_id=None):
         if syn_type is None:
-            syn_type = 'synonym'
+            syn_type = "synonym"
         self.valid_tax_id = valid_tax_id
         self.name = name
         self.syn_type = syn_type
         self.syn_id = syn_id
 
     def to_serializable_dict(self):
-        d = {'valid_tax_id': self.valid_tax_id,
-             'name': self.name
-             }
-        sis = ', syn_id={}'.format(self.syn_id)
+        d = {"valid_tax_id": self.valid_tax_id, "name": self.name}
+        sis = ", syn_id={}".format(self.syn_id)
         if self.syn_id:
-            d['synonym_id'] = self.syn_id
-        if self.syn_type != 'synonym':
-            d['synonym'] = self.syn_type
+            d["synonym_id"] = self.syn_id
+        if self.syn_type != "synonym":
+            d["synonym"] = self.syn_type
         return d
 
     def __repr__(self):
-        sis = ', syn_id={}'.format(self.syn_id) if self.syn_id else ''
-        tis = ', syn_type={}'.format(repr(self.syn_type)) if self.syn_type != 'synonym' else ''
-        m = 'Synonym({}, {}{}{})'
+        sis = ", syn_id={}".format(self.syn_id) if self.syn_id else ""
+        tis = (
+            ", syn_type={}".format(repr(self.syn_type))
+            if self.syn_type != "synonym"
+            else ""
+        )
+        m = "Synonym({}, {}{}{})"
         return m.format(self.valid_tax_id, repr(self.name), tis, sis)
 
     def __str__(self):
@@ -202,52 +210,65 @@ class Synonym(object):
 
     def __eq__(self, other):
         if isinstance(other, Synonym):
-            return self.valid_tax_id == other.valid_tax_id \
-                   and self.name == other.name \
-                   and self.syn_type == other.syn_type \
-                   and self.syn_id == self.syn_id
+            return (
+                self.valid_tax_id == other.valid_tax_id
+                and self.name == other.name
+                and self.syn_type == other.syn_type
+                and self.syn_id == self.syn_id
+            )
 
 
-_VALID_SYN_TYPES = {'acronym', 'ambiguous synonym',
-                    'authority', 'basionym',
-                    'blast name',
-                    'common name',
-                    'equivalent name',
-                    'genbank common name',
-                    'genbank synonym',
-                    'homotypic synonym', 'heterotypic synonym',
-                    'includes', 'misapplied name', 'invalid',
-                    'misnomer',
-                    'misspelling',
-                    'orthographia',
-                    'proparte synonym',
-                    'synonym',
-                    'type material', 'unavailable',
-                    }
-IGNORE_SYN_TYPES = {'acronym',
-                    'authority',
-                    'blast name',
-                    'common name',
-                    'genbank common name',
-                    'genbank synonym',
-                    'type material',
-                    }
-IGNORE_COMMON_NAME_SYN_TYPES = {'common name', 'genbank common name', }
+_VALID_SYN_TYPES = {
+    "acronym",
+    "ambiguous synonym",
+    "authority",
+    "basionym",
+    "blast name",
+    "common name",
+    "equivalent name",
+    "genbank common name",
+    "genbank synonym",
+    "homotypic synonym",
+    "heterotypic synonym",
+    "includes",
+    "misapplied name",
+    "invalid",
+    "misnomer",
+    "misspelling",
+    "orthographia",
+    "proparte synonym",
+    "synonym",
+    "type material",
+    "unavailable",
+}
+IGNORE_SYN_TYPES = {
+    "acronym",
+    "authority",
+    "blast name",
+    "common name",
+    "genbank common name",
+    "genbank synonym",
+    "type material",
+}
+IGNORE_COMMON_NAME_SYN_TYPES = {
+    "common name",
+    "genbank common name",
+}
 
 
 class SynonymInterpreter(object):
     def __init__(self, header):
-        if header.endswith('\n'):
+        if header.endswith("\n"):
             header = header[:-1]
-        self.fields = [i.strip() for i in header.split('\t|\t') if i.strip()]
-        assert 'uid' in self.fields
-        self._uid_ind = self.fields.index('uid')
-        self._name_ind = self.fields.index('name')
-        self._type_ind = self.fields.index('type')
+        self.fields = [i.strip() for i in header.split("\t|\t") if i.strip()]
+        assert "uid" in self.fields
+        self._uid_ind = self.fields.index("uid")
+        self._name_ind = self.fields.index("name")
+        self._type_ind = self.fields.index("type")
 
     def interpret(self, uid, syn_id_line_tuple):
         syn_id, line = syn_id_line_tuple
-        sl = line.split('\t|\t')
+        sl = line.split("\t|\t")
         suid = sl[self._uid_ind]
         name = sl[self._name_ind].strip()
         syn_type = sl[self._type_ind].strip().lower()
@@ -260,14 +281,15 @@ class SynonymInterpreter(object):
 
 # noinspection PyProtectedMember
 class LightTaxonomyHolder(object):
-    _DATT = ['_des_in_other_slices',
-             '_id_order',
-             '_id_to_child_set',
-             '_id_to_el',
-             '_id_to_line',
-             '_syn_by_id',
-             '_roots',
-             ]
+    _DATT = [
+        "_des_in_other_slices",
+        "_id_order",
+        "_id_to_child_set",
+        "_id_to_el",
+        "_id_to_line",
+        "_syn_by_id",
+        "_roots",
+    ]
 
     def __init__(self, fragment):
         self.fragment = fragment
@@ -284,7 +306,9 @@ class LightTaxonomyHolder(object):
         self.treat_syn_as_taxa = False
         self._populated = False
         self._has_unread_tax_inp = False
-        self._has_moved_taxa = False  # true when taxa have been moved to another partition
+        self._has_moved_taxa = (
+            False  # true when taxa have been moved to another partition
+        )
 
     @property
     def synonyms_by_id(self):
@@ -337,30 +361,34 @@ class LightTaxonomyHolder(object):
             line = self._id_to_line[uid]
         return Taxon(line, line_parser=HEADER_TO_LINE_PARSER[self.taxon_header])
 
-    def _transfer_line(self, uid, dest_part,
-                       as_root=False):  # type (int, LightTaxonomyHolder, bool) -> None
+    def _transfer_line(
+        self, uid, dest_part, as_root=False
+    ):  # type (int, LightTaxonomyHolder, bool) -> None
         line = self._id_to_line[uid]
         taxon = self.line_to_taxon(line)
         if as_root:
             dest_part._add_root(uid, taxon)
         d = taxon.to_serializable_dict()
-        d['fragment'] = dest_part.fragment
+        d["fragment"] = dest_part.fragment
         self._des_in_other_slices[uid] = d
         dest_part._id_to_line[uid] = line
         del self._id_to_line[uid]
 
-    def _transfer_subtree(self, par_id, dest_part,
-                          as_root=False):  # type (int, LightTaxonomyHolder) -> None
+    def _transfer_subtree(
+        self, par_id, dest_part, as_root=False
+    ):  # type (int, LightTaxonomyHolder) -> None
         self._has_moved_taxa = True
         taxon = self.line_to_taxon(uid=par_id)
         if as_root:
             dest_part._add_root(par_id, taxon)
         d = taxon.to_serializable_dict()
-        d['fragment'] = dest_part.fragment
+        d["fragment"] = dest_part.fragment
         self._des_in_other_slices[par_id] = d
         self._transfer_subtree_rec(par_id, dest_part)
 
-    def _transfer_subtree_rec(self, par_id, dest_part):  # type (int, LightTaxonomyHolder) -> None
+    def _transfer_subtree_rec(
+        self, par_id, dest_part
+    ):  # type (int, LightTaxonomyHolder) -> None
         assert self is not dest_part
         assert self.fragment != dest_part.fragment
         child_set = self._id_to_child_set[par_id]
@@ -381,7 +409,9 @@ class LightTaxonomyHolder(object):
                     dest_part.add_taxon(child_id, par_id, line)
                     del self._id_to_line[child_id]
 
-    def move_matched_synonyms(self, dest_tax_part):  # type: (PartitioningLightTaxHolder) -> None
+    def move_matched_synonyms(
+        self, dest_tax_part
+    ):  # type: (PartitioningLightTaxHolder) -> None
         sk = set(self._syn_by_id.keys())
         sk.intersection_update(dest_tax_part.contained_ids())
         for s in sk:
@@ -390,14 +420,18 @@ class LightTaxonomyHolder(object):
                 dest_tax_part.add_synonym(s, pair[0], pair[1])
             del self._syn_by_id[s]
 
-    def move_from_self_to_new_part(self, other):  # type: (PartitioningLightTaxHolder) -> None
+    def move_from_self_to_new_part(
+        self, other
+    ):  # type: (PartitioningLightTaxHolder) -> None
         self._has_moved_taxa = True
         if other._has_unread_tax_inp:
             other._read_inputs(False)
         cids = set(self._id_to_child_set.keys())
         lth_frag_to_root_id_set = {}
         for root_id, dest_tax_part in other._root_to_lth.items():
-            lth_frag_to_root_id_set.setdefault(dest_tax_part.fragment, set()).add(root_id)
+            lth_frag_to_root_id_set.setdefault(dest_tax_part.fragment, set()).add(
+                root_id
+            )
 
         for dest_tax_part in other._root_to_lth.values():
             tpids = set(dest_tax_part.contained_ids())
@@ -409,7 +443,9 @@ class LightTaxonomyHolder(object):
                 for com_id in common:
                     if com_id in self._id_to_child_set:
                         m = "Transferring {} from {} to {}"
-                        _LOG.info(m.format(com_id, self.fragment, dest_tax_part.fragment))
+                        _LOG.info(
+                            m.format(com_id, self.fragment, dest_tax_part.fragment)
+                        )
                         self._transfer_subtree(com_id, dest_tax_part)
                 self.move_matched_synonyms(dest_tax_part)
                 dest_tax_part._populated = True
@@ -427,7 +463,7 @@ class LightTaxonomyHolder(object):
 # noinspection PyProtectedMember
 class PartitioningLightTaxHolder(LightTaxonomyHolder):
     def __init__(self, fragment):
-        ls = fragment.split('/')
+        ls = fragment.split("/")
         if len(ls) > 1:
             assert ls[-2] != ls[-1]
         LightTaxonomyHolder.__init__(self, fragment)
@@ -492,7 +528,9 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
             del self._misc_part._syn_by_id[i]
 
     def _read_inputs(self, do_part_if_reading=True):
-        raise NotImplementedError("_read_input pure virtual in PartitioningLightTaxHolder")
+        raise NotImplementedError(
+            "_read_input pure virtual in PartitioningLightTaxHolder"
+        )
 
     def move_from_misc_to_new_part(self, other):
         self._has_moved_taxa = True
@@ -534,7 +572,12 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     def write_taxon_header(self):
         from .ott_schema import INP_FLAGGED_OTT_TAXONOMY_HEADER, FULL_OTT_HEADER
         from .parsing.ott import OTTaxonomyWrapper
-        return FULL_OTT_HEADER if isinstance(self.res, OTTaxonomyWrapper) else INP_FLAGGED_OTT_TAXONOMY_HEADER
+
+        return (
+            FULL_OTT_HEADER
+            if isinstance(self.res, OTTaxonomyWrapper)
+            else INP_FLAGGED_OTT_TAXONOMY_HEADER
+        )
 
     @property
     def external_input_fp(self):
@@ -580,14 +623,16 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
                         some_part_found = True
                         having_inp_to_read.add(subname)
                     else:
-                        _LOG.warning("no previous taxonomic content for {}".format(subfrag))
+                        _LOG.warning(
+                            "no previous taxonomic content for {}".format(subfrag)
+                        )
                         req_fulfilled = False
                 else:
                     _LOG.warning("no previous subdir for {}".format(subname))
                     req_fulfilled = False
             if some_part_found:
                 do_part_if_reading = False
-                quant = 'All' if req_fulfilled else 'Some'
+                quant = "All" if req_fulfilled else "Some"
                 m = "{} subdir partitions found for {}. No more partitioning will be done!"
                 _LOG.warning(m.format(quant, self.fragment))
         for subname, subroot in list_of_subdirname_and_roots:
@@ -605,7 +650,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             self._read_inputs(do_part_if_reading)
 
     def _partition_from_in_mem(self):
-        _LOG.info("_partition_from_in_mem for fragment \"{}\"".format(self.fragment))
+        _LOG.info('_partition_from_in_mem for fragment "{}"'.format(self.fragment))
         if self._misc_part._populated:
             m = "_partition_from_in_mem called for {}, but misc already has {}"
             raise ValueError(m.format(self.fragment, self.contained_ids()))
@@ -628,7 +673,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
 
     def _debug_validity_check(self):
         self.read_inputs_for_read_only()
-        _LOG.debug('{} roots = {}'.format(self.fragment, self._roots))
+        _LOG.debug("{} roots = {}".format(self.fragment, self._roots))
         id_to_par = {}
         errs = []
         warnings = []
@@ -641,37 +686,38 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             par_id = id_to_par.get(uid)
             if not par_id:
                 if uid not in self._roots:
-                    m = 'ID {} does not have a parent in this slice, but is not listed in the roots'
-                    if self.fragment == 'Life':
+                    m = "ID {} does not have a parent in this slice, but is not listed in the roots"
+                    if self.fragment == "Life":
                         warnings.append(m.format(uid))
                     else:
                         errs.append(m.format(uid))
                     roots_set.add(uid)
-        _LOG.debug('{} elements in self._id_to_line'.format(len(self._id_to_line)))
+        _LOG.debug("{} elements in self._id_to_line".format(len(self._id_to_line)))
         for uid in self._syn_by_id.keys():
             if uid not in self._id_to_line:
-                m = 'synonyms ID for {}, in syn_by_id but not in id_to_line'.format(uid)
+                m = "synonyms ID for {}, in syn_by_id but not in id_to_line".format(uid)
                 errs.append(m)
         known_id_set.update(self._roots.keys())
         for k in self._roots.keys():
             if k not in self._id_to_line:
-                m = 'root ID {}, but roots not in id_to_line'.format(k)
+                m = "root ID {}, but roots not in id_to_line".format(k)
                 errs.append(m)
         for k, v in self._des_in_other_slices.items():
             if k in self._id_to_line:
-                m = 'ID {} flagged as being in another slice, but it is still in id_to_line'.format(
-                    k)
+                m = "ID {} flagged as being in another slice, but it is still in id_to_line".format(
+                    k
+                )
                 errs.append(m)
-            if v.get('par_id'):
-                if v.get('par_id') not in self._id_to_line:
-                    m = 'slice does not hold parent {} of id {} which is flagged as being in another slice'
-                    m = m.format(v.get('par_id'), k)
+            if v.get("par_id"):
+                if v.get("par_id") not in self._id_to_line:
+                    m = "slice does not hold parent {} of id {} which is flagged as being in another slice"
+                    m = m.format(v.get("par_id"), k)
                     warnings.append(m)
         if warnings:
-            m = '{} warning(s): {}'.format(len(warnings), '\n'.join(warnings))
+            m = "{} warning(s): {}".format(len(warnings), "\n".join(warnings))
             _LOG.warning(m)
         if errs:
-            m = '{} error(s): {}'.format(len(errs), '\n'.join(errs))
+            m = "{} error(s): {}".format(len(errs), "\n".join(errs))
             raise ValueError(m)
         return roots_set, known_id_set
 
@@ -702,22 +748,22 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             x = list(unrecognized_set)
             x.sort()
             mind = len(x) if len(x) < 100 else 100
-            m = 'IDs not known to {} read from {}: {}'
+            m = "IDs not known to {} read from {}: {}"
             errs.append(m.format(self.fragment, self.tax_fp, x[:mind]))
         if missed_ids:
             x = list(missed_ids)
             x.sort()
             mind = len(x) if len(x) < 100 else 100
-            m = 'IDs expected in subtree according to {} read from {}, but not found: {}'
+            m = "IDs expected in subtree according to {} read from {}, but not found: {}"
             errs.append(m.format(self.fragment, self.tax_fp, x[:mind]))
         if extra_ids:
             x = list(extra_ids)
             x.sort()
             mind = len(x) if len(x) < 100 else 100
-            m = 'IDs included in subtree, but not expected by {} read from {}: {}'
+            m = "IDs included in subtree, but not expected by {} read from {}: {}"
             errs.append(m.format(self.fragment, self.tax_fp, x[:mind]))
         if errs:
-            m = '{} error(s): {}'.format(len(errs), '\n'.join(errs))
+            m = "{} error(s): {}".format(len(errs), "\n".join(errs))
             raise ValueError(m)
 
     def read_inputs_for_read_only(self):
@@ -745,7 +791,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     def active_tax_dir(self):
         if self._populated:
             return os.path.split(self.tax_fp)[0]
-        raise NotImplementedError('active_tax_dir on unpopulated')
+        raise NotImplementedError("active_tax_dir on unpopulated")
 
     def _read_inputs(self, do_part_if_reading=True):
         self._has_unread_tax_inp = False
@@ -789,11 +835,19 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
 
     def _flush(self):
         if self._has_flushed:
-            _LOG.info("duplicate flush of TaxonPartition for {} ignored.".format(self.fragment))
+            _LOG.info(
+                "duplicate flush of TaxonPartition for {} ignored.".format(
+                    self.fragment
+                )
+            )
             return
         if not self._has_moved_taxa:
             if self._read_from_fs:
-                _LOG.info("Flush of unaltered TaxonPartition for {} ignored".format(self.fragment))
+                _LOG.info(
+                    "Flush of unaltered TaxonPartition for {} ignored".format(
+                        self.fragment
+                    )
+                )
                 return
         _LOG.info("flushing TaxonPartition for {}".format(self.fragment))
         self.write_if_needed()
@@ -831,7 +885,9 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             _LOG.debug("write not needed for {} no records".format(self.fragment))
             syn_id_order = []
         else:
-            syn_id_order = _write_d_as_tsv(self.write_taxon_header, dh._id_to_line, dh._id_order, dest)
+            syn_id_order = _write_d_as_tsv(
+                self.write_taxon_header, dh._id_to_line, dh._id_order, dest
+            )
         if not dh._roots:
             _LOG.debug('No root ids need to be written to "{}"'.format(roots_file))
         else:
@@ -841,7 +897,9 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         if syndest is not None:
             _write_syn_d_as_tsv(self.syn_header, dh._syn_by_id, syn_id_order, syndest)
         if dh._des_in_other_slices:
-            write_taxon_json(dh._des_in_other_slices, os.path.join(out_dir, ACCUM_DES_FILENAME))
+            write_taxon_json(
+                dh._des_in_other_slices, os.path.join(out_dir, ACCUM_DES_FILENAME)
+            )
         return True
 
 

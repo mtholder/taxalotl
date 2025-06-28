@@ -12,7 +12,7 @@ INTERACTIVE_MODE = True
 
 
 def _startswith_y(r):
-    return r.lower() == 'y'
+    return r.lower() == "y"
 
 
 def get_true_false_repsonse(p, true_func=_startswith_y, def_value=False):
@@ -43,13 +43,13 @@ class TaxalotlHistory(object):
         if self.hist_content is not None:
             return
         if os.path.isfile(self.hist_filepath):
-            with io.open(self.hist_filepath, 'r', encoding='utf-8') as hout:
+            with io.open(self.hist_filepath, "r", encoding="utf-8") as hout:
                 self.hist_content = json.load(hout)
 
     def _write_hist(self):
         if not self.hist_content:
             return
-        with io.open(self.hist_filepath, mode='w', encoding='utf-8') as outp:
+        with io.open(self.hist_filepath, mode="w", encoding="utf-8") as outp:
             json.dump(self.hist_content, outp, indent=2)
 
     def add_virtual_command(self, name, res_id=None, level=None, wrote_files=None):
@@ -59,22 +59,22 @@ class TaxalotlHistory(object):
             if self.hist_content is None:
                 self._read_hist()
         except:
-            _LOG.exception('Exception reading taxalotl history')
+            _LOG.exception("Exception reading taxalotl history")
             pass
         if not self.hist_content:
             self.hist_content = []
-        record = {'command': name}
+        record = {"command": name}
         if res_id:
-            record['res_id'] = res_id
+            record["res_id"] = res_id
         if level:
-            record['level'] = level
+            record["level"] = level
         if wrote_files:
-            record['wrote_files'] = wrote_files
+            record["wrote_files"] = wrote_files
         self.hist_content.append(record)
         try:
             self._write_hist()
         except:
-            _LOG.exception('Exception writing taxalotl history')
+            _LOG.exception("Exception writing taxalotl history")
             pass
 
 
@@ -104,20 +104,19 @@ class VirtCommand(object):
         fpo = get_filepaths_overwritten()
         if not fpo:
             return
-        self.th.add_virtual_command(self.name,
-                                    res_id=self.res_id,
-                                    level=self.level,
-                                    wrote_files=fpo)
+        self.th.add_virtual_command(
+            self.name, res_id=self.res_id, level=self.level, wrote_files=fpo
+        )
         clear_filepaths_overwritten()
 
 
 class OutDir(object):
-    def __init__(self, filepath, mode='w', encoding='utf-8'):
+    def __init__(self, filepath, mode="w", encoding="utf-8"):
         self.filepath = filepath
 
     def __enter__(self):
         if not os.path.exists(self.filepath):
-            _LOG.info('Creating directory {}'.format(self.filepath))
+            _LOG.info("Creating directory {}".format(self.filepath))
             os.makedirs(self.filepath)
             _FILES_WRITTEN.append(self.filepath)
         return self.filepath
@@ -125,18 +124,21 @@ class OutDir(object):
     def __exit__(self, exc_type, exc_value, traceback):
         pass
 
+
 class OutFile(object):
-    def __init__(self, filepath, mode='w', encoding='utf-8'):
+    def __init__(self, filepath, mode="w", encoding="utf-8"):
         self.filepath = filepath
         self.mode = mode
         self.encoding = encoding
         self.out_stream = None
 
     def __enter__(self):
-        if 'b' in self.mode:
+        if "b" in self.mode:
             self.out_stream = io.open(self.filepath, mode=self.mode)
         else:
-            self.out_stream = io.open(self.filepath, mode=self.mode, encoding=self.encoding)
+            self.out_stream = io.open(
+                self.filepath, mode=self.mode, encoding=self.encoding
+            )
         _FILES_WRITTEN.append(self.filepath)
         return self.out_stream
 
@@ -145,11 +147,12 @@ class OutFile(object):
             self.out_stream.close()
             self.out_stream = None
 
+
 def get_frag_from_dir(taxalotl_conf, tax_dir):
     res = taxalotl_conf.get_terminalized_res_by_id("ott")
     pd = res.partitioned_filepath
     assert tax_dir.startswith(pd)
-    f = tax_dir[len(pd):]
-    while f.startswith('/'):
+    f = tax_dir[len(pd) :]
+    while f.startswith("/"):
         f = f[1:]
     return f
