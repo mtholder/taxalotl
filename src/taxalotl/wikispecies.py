@@ -26,10 +26,6 @@ class WikispeciesPagesMetaCurrentParser(XMLFilterBase):
             self.current_title = None
             self.current_text = None
         self.num_elements += 1
-        if self.num_elements > 200000:
-            import sys
-
-            sys.exit("Early exit\n")
 
     def endElement(self, name):
         if not self.in_page:
@@ -39,14 +35,12 @@ class WikispeciesPagesMetaCurrentParser(XMLFilterBase):
         elif name == "text":
             if self.current_text is None:
                 return
-            if (
-                ("{{Taxonbar" not in self.current_text)
-                and ("Taxonavigation}}" not in self.current_text)
-                and ("#REDIRECT [[" not in self.current_text.upper())
-            ):
-                print(
-                    f"NO TAXONBAR current_text: {self.current_title.strip()}"
-                )  # \n{self.current_text}")
+            # if (
+            #     ("{{Taxonbar" not in self.current_text)
+            #     and ("Taxonavigation}}" not in self.current_text)
+            #     and ("#REDIRECT [[" not in self.current_text.upper())
+            # ):
+            #     _LOG.debug(f"Non-taxon page {self.current_title.strip()}")
 
     def characters(self, content):
         if not self.in_page:
