@@ -119,7 +119,9 @@ If you `source completion.sh` in your `bash` session and you have
     the top-level directory on your `PATH` then you'll have some
     cool tab completion of commands and options.
 
+
 ## Thanks and stuff
+
 Thanks to the US NSF
 <a href="https://www.nsf.gov/"><img src="./doc/nsf1.jpg" alt="NSF logo" /></a>
 
@@ -131,3 +133,9 @@ However, see https://www.youtube.com/watch?v=Ka0Fj6P3T-w on the correct pronunci
   of "Axolotl" (and some other Nahuatl words).
 
 It might become `Taxolotl` instead of `Taxalotl`.
+
+The `scripts/read_wikidata_taxon_json_dump.py` is based on 
+the `basic_json_dump.py example from the qwikidata package see
+https://qwikidata.readthedocs.io/en/stable/readme.html
+It also depends on that package (MTH has run it with version 0.4.2
+    of qwikidata)
