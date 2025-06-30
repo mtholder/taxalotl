@@ -3,6 +3,7 @@
 # Based on example script `basic_json_dump.py
 # from qwikidata
 #     https://qwikidata.readthedocs.io/en/stable/readme.html
+import json
 import sys
 from qwikidata.entity import WikidataItem
 from qwikidata.json_dump import WikidataJsonDump
@@ -11,6 +12,33 @@ P_IS_INSTANCE_OF = "P31"
 Q_TAXON = "Q16521"
 Q_FOSSIL_TAXON = "Q23038290"
 
+P_PARENT = "P171"
+P_TAXON_NAME = "P225"
+P_TAXON_AUTHOR = "P405"
+P_TAXON_YEAR = "P574"
+
+P_OTT = "P9157"
+P_GBIF = "P846"
+P_COL = "P10585"
+P_NCBI = "P685"
+P_IRMNG = "P5055"
+
+P_NOM_STAT = "P1135"
+
+P_FOSSIL_FOUND = "P1137"
+P_TAX_SYN_OF = "P12763"
+P_REPLACED_SYN_OF = "P12764"
+P_PROTONYM_OF = "P12765"
+P_BASIONYM_OF = "P12766"
+P_HOMONYM = "P13177"
+P_NOM_TYPE_OF = "P13478"
+P_TAX_SYN = "P1420"
+P_HYBRID_OF = "P1531"
+P_AUTH_STR = "P2093"
+P_INC_SED = "P678"
+P_REP_SYN_NOM_NOV = "P694"
+P_TYPE_LOC = "P5304"
+  
 def is_taxon(item: WikidataItem, truthy: bool = True) -> bool:
     """Return True if the Wikidata Item is a taxon or fossil taxon instance"""
     if truthy:
@@ -25,6 +53,84 @@ def is_taxon(item: WikidataItem, truthy: bool = True) -> bool:
     ]
     return (Q_TAXON in is_a_qids) or (Q_FOSSIL_TAXON in is_a_qids)
 
+def get_year(qual_prop):
+    qdv = qual_prop.snak.datavalue
+    raw = qdv.value["time"]
+    cm = qdv.value["calendarmodel"]
+    assert(cm == "http://www.wikidata.org/entity/Q1985727")
+    assert(raw[0] == "+")
+    return raw[1:5]
+
+KNOWN_TAX_NAME_QUAL = frozenset([
+    P_TAXON_AUTHOR, 
+    P_TAXON_YEAR,])
+
+SKIPPABLE_TN_QUAL = frozenset([
+    "P3831", # "object of statement has role"
+    "P697",  # "ex taxon author"
+    "P2433", # "gender of sci name"
+    "P1353", # "original spelling"
+    ])
+
+NOM_STAT_MAP = {
+    "Q1093954": "nomen illegitimum",
+    "Q30349290": "nomen invalidum",
+    "Q15149791": "nomen utique rejiciendum",
+    "Q941227": "nomen conservandum",
+    "Q922448": "nomen dubium",
+    }
+
+def _get_tax_aut(qlist):
+    assert(len(qlist) > 0)
+    return [au.snak.datavalue.value["id"] for au in qlist]
+
+def get_nom_status(qlist):
+    assert(len(qlist) ==1)
+    ns_id = qlist[0].snak.datavalue.value["id"]
+    stat = NOM_STAT_MAP[ns_id] 
+    return stat
+
+def get_tn_year(qlist):
+    assert(len(qlist) == 1)
+    return get_year(qlist[0])
+
+def process_taxon(taxon):
+    eid = taxon.entity_id
+    claims = taxon.get_truthy_claim_groups()
+    # sys.exit(f"Claims =\n  {repr(claims)}\n")
+    parent, tax_name, tax_aut, tax_year = "", "", "", ""
+    ott, gbif, col, ncbi, irmng = None, None, None, None, None
+    nom_status = None
+    for pid, wcg in claims.items():
+        for claim in wcg:
+            dv = claim.mainsnak.datavalue
+            # pid = claim.property_id
+            if pid == P_PARENT:
+                parent = dv.value["id"]
+            elif pid == P_TAXON_NAME:
+                tax_name = str(dv)
+                for qid, qlist in claim.qualifiers.items():
+                    if qid in SKIPPABLE_TN_QUAL:
+                        continue
+                    if qid == P_TAXON_AUTHOR:
+                        tax_aut = _get_tax_aut(qlist)
+                    elif qid == P_TAXON_YEAR:
+                        tax_year = get_tn_year(qlist)
+                    elif qid == P_NOM_STAT:
+                        nom_status = get_nom_status(qlist)
+                    else:
+                        m = f"WARN: unkown qual {qid} in tax_name for {eid}\n"
+                        sys.stderr.write(m)
+
+
+def wr_process_taxon(taxon):
+    try:
+        return process_taxon(taxon)
+    except:
+        df = json.dumps(taxon._entity_dict, sort_keys=True, indent=2)
+        sys.stderr.write(f"ERROR on:\n{df}\n")
+        raise
+
 def main(inp_fp):
     # create an instance of WikidataJsonDump
     wjd_dump_path = sys.argv[1]
@@ -32,18 +138,19 @@ def main(inp_fp):
 
     # create an iterable of WikidataItem representing politicians
     taxa = []
-    
     for idx, entity_dict in enumerate(wjd):
         if entity_dict["type"] == "item":
             entity = WikidataItem(entity_dict)
             if not is_taxon(entity):
                 sys.stderr.write(f"Skipping non taxon {entity.entity_id} at idx={idx}...\n")
-                continue
+            else:
+                taxa.append(entity)
         else:
             sys.stderr.write(f"Skipping non taxon {entity.entity_id} ...\n")
-            continue
-        taxa.append(entity)
+        
     sys.stderr.write(f"{len(taxa)} taxa found\n")
+    for taxon in taxa:
+        wr_process_taxon(taxon)
 
 if __name__ == "__main__":
     sys.exit(main(inp_fp=sys.argv[1]))
