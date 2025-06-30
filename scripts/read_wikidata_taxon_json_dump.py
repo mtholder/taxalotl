@@ -105,6 +105,14 @@ NOM_STAT_MAP = {
     "Q15709300": "nomen protectum",
     "Q28549151": "preoccupied name",
     "Q1040689": "synonym",
+    "Q42106": "synonym", # should be corrected to Q1040689
+    "Q3766304": "species inquirenda",
+    "Q17276484": "later homonym",
+    "Q2491016": "orthographical variant",
+    "Q18912752": "disputed",
+    "Q17086880": "valid",
+    "Q14594740": "recombination",
+    "Q67943587": "genus neutrum conservandum",
     }
 
 EXT_ID_TO_PREF = {
@@ -139,6 +147,31 @@ def get_tn_year(qlist):
         return yl[0]
     return yl
 
+
+DIE_ON = frozenset([
+  "P1403", 
+  "P1135", 
+  "P1137",  
+  "P12763", 
+  "P12764", 
+  "P12765", 
+  "P12766", 
+  "P13177", 
+  "P13478", 
+  "P1420", 
+  "P1531", 
+  "P2093", 
+  "P678", 
+  "P694", 
+  "P5304",
+])
+
+TO_STD_ERROR = frozenset([
+  "P2241",  
+  "P427", 
+  "P7452",  ])
+
+
 def process_taxon(taxon):
     eid = taxon.entity_id
     claims = taxon.get_truthy_claim_groups()
@@ -147,6 +180,11 @@ def process_taxon(taxon):
     ext_id = {}
     nom_status = None
     for pid, wcg in claims.items():
+        if pid in DIE_ON:
+            raise RuntimeError(f"prop {pid} in DIE_ON list")
+        if pid in TO_STD_ERROR:
+            raise RuntimeError(f"prop {pid} in TO_STD_ERROR list")
+        
         for claim in wcg:
             dv = claim.mainsnak.datavalue
             # pid = claim.property_id
@@ -174,7 +212,8 @@ def process_taxon(taxon):
                 if pref in ext_id:
                     ext_id[pref].append(str(dv))
                 else:
-                    ext_id[pref] = [str(dv)] 
+                    ext_id[pref] = [str(dv)]
+
 
 
 def wr_process_taxon(taxon):
