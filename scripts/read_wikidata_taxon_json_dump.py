@@ -70,6 +70,7 @@ SKIPPABLE_TN_QUAL = frozenset([
     "P697",  # "ex taxon author"
     "P2433", # "gender of sci name"
     "P1353", # "original spelling"
+    "P138",  # "named after"
     ])
 
 NOM_STAT_MAP = {
@@ -78,7 +79,17 @@ NOM_STAT_MAP = {
     "Q15149791": "nomen utique rejiciendum",
     "Q941227": "nomen conservandum",
     "Q922448": "nomen dubium",
+    "Q29995613": "superfluous name",
+    "Q51165454": "typus conservandus",
     }
+
+EXT_ID_TO_PREF = {
+    P_OTT : "ott",
+    P_GBIF : "gbif",
+    P_COL : "col",
+    P_NCBI : "ncbi",
+    P_IRMNG : "irmng",    
+}
 
 def _get_tax_aut(qlist):
     assert(len(qlist) > 0)
@@ -91,15 +102,16 @@ def get_nom_status(qlist):
     return stat
 
 def get_tn_year(qlist):
-    assert(len(qlist) == 1)
-    return get_year(qlist[0])
+    ys = list(set([get_year(q) for q in qlist]))
+    assert(len(ys) == 1)
+    return ys[0]
 
 def process_taxon(taxon):
     eid = taxon.entity_id
     claims = taxon.get_truthy_claim_groups()
     # sys.exit(f"Claims =\n  {repr(claims)}\n")
     parent, tax_name, tax_aut, tax_year = "", "", "", ""
-    ott, gbif, col, ncbi, irmng = None, None, None, None, None
+    ext_id = {}
     nom_status = None
     for pid, wcg in claims.items():
         for claim in wcg:
@@ -121,6 +133,12 @@ def process_taxon(taxon):
                     else:
                         m = f"WARN: unkown qual {qid} in tax_name for {eid}\n"
                         sys.stderr.write(m)
+            elif pid in EXT_ID_TO_PREF:
+                pref = EXT_ID_TO_PREF[pid]
+                if pref in ext_id:
+                    ext_id[pref].append(str(dv))
+                else:
+                    ext_id[pref] = [str(dv)] 
 
 
 def wr_process_taxon(taxon):
