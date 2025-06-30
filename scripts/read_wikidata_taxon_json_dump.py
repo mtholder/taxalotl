@@ -97,6 +97,14 @@ NOM_STAT_MAP = {
     "Q15708837": "nomen utique rejiciendum propositum",
     "Q901847": "nomen oblitum",
     "Q70573632": "nomen approbatum",
+    "Q2372065": "nomen correctum",
+    "Q123561351": "ineditus",
+    "Q17134993": "validly published name",
+    "Q17487588": "unavailable combination",
+    "Q7882332": "unavailable name",
+    "Q15709300": "nomen protectum",
+    "Q28549151": "preoccupied name",
+    "Q1040689": "synonym",
     }
 
 EXT_ID_TO_PREF = {
