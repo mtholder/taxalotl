@@ -149,27 +149,61 @@ def get_tn_year(qlist):
 
 
 DIE_ON = frozenset([
-  "P1403", 
   "P1135", 
   "P1137",  
-  "P12763", 
-  "P12764", 
-  "P12765", 
-  "P12766", 
-  "P13177", 
-  "P13478", 
-  "P1420", 
-  "P1531", 
-  "P2093", 
   "P678", 
-  "P694", 
-  "P5304",
+])
+
+EMIT_ID_FOR_PROP = frozenset([
+    "P12763", # "taxon synonym of",
+    "P12764", # "replaced synonym of",
+    "P12765", # "protonym of",
+    "P12766", # "basionym of",
+    "P13177", # "homonymous taxon"
+    "P13478", # "nomenclatural type of",
+    "P1531",  # "hybrid of",
+    "P1403",  # "original combination",
+    "P1420",  # "taxon synonym"
+    "P427",   # "taxonomic type"
+    "P5304",  # "type locality (biology)",
+    "P694",   # "replaced synonym (for nom. nov.)",  
+])
+
+EMIT_STR_FOR_PROP = frozenset([
+    "P2093", # "author name string",
 ])
 
 TO_STD_ERROR = frozenset([
   "P2241",  
-  "P427", 
   "P7452",  ])
+
+def extra_log(line):
+    out = sys.stderr
+    out.write(f"{line}\n")
+
+def emit_ids_for_prop(eid, pid, claims_group):
+    for claim in claims_group:
+        dv = claim.mainsnak.datavalue
+        if dv is None:
+            sys.stderr.write(f"WARNING {eid} {pid} has no datavalue")
+            continue
+        try:
+            id_val = dv.value["id"]
+        except:
+            raise RuntimeError(f"error extracting ID for {pid} for entity {eid}")
+        extra_log(f"{eid}\t{pid}\t{id_val}")
+
+def emit_str_for_prop(eid, pid, claims_group):
+    for claim in claims_group:
+        dv = claim.mainsnak.datavalue
+        if dv is None:
+            sys.stderr.write(f"WARNING {eid} {pid} has no str datavalue")
+            continue
+        try:
+            s_val = str(dv.value)
+        except:
+            raise RuntimeError(f"error extracting str for {pid} for entity {eid}")
+        extra_log(f"{eid}\t{pid}\t{s_val}")
 
 
 def process_taxon(taxon):
@@ -180,6 +214,12 @@ def process_taxon(taxon):
     ext_id = {}
     nom_status = None
     for pid, wcg in claims.items():
+        if pid in EMIT_ID_FOR_PROP:
+            emit_ids_for_prop(eid, pid, wcg)
+            continue
+        elif pid in EMIT_STR_FOR_PROP:
+            emit_str_for_prop(eid, pid, wcg)
+            continue
         if pid in DIE_ON:
             raise RuntimeError(f"prop {pid} in DIE_ON list")
         if pid in TO_STD_ERROR:
