@@ -16,6 +16,7 @@ P_PARENT = "P171"
 P_TAXON_NAME = "P225"
 P_TAXON_AUTHOR = "P405"
 P_TAXON_YEAR = "P574"
+P_TAXON_RANK = "P105"
 
 P_OTT = "P9157"
 P_GBIF = "P846"
@@ -150,11 +151,11 @@ def get_tn_year(qlist):
 
 DIE_ON = frozenset([
   "P1135", 
-  "P1137",  
   "P678", 
 ])
 
 EMIT_ID_FOR_PROP = frozenset([
+    "P1137",  # "fossil found in this unit"
     "P12763", # "taxon synonym of",
     "P12764", # "replaced synonym of",
     "P12765", # "protonym of",
@@ -181,11 +182,14 @@ def extra_log(line):
     out = sys.stderr
     out.write(f"{line}\n")
 
+def warn(line):
+    sys.stderr.write(f"WARNING: {line}\n")
+
 def emit_ids_for_prop(eid, pid, claims_group):
     for claim in claims_group:
         dv = claim.mainsnak.datavalue
         if dv is None:
-            sys.stderr.write(f"WARNING {eid} {pid} has no datavalue")
+            warn(f"{eid} {pid} has no datavalue")
             continue
         try:
             id_val = dv.value["id"]
@@ -197,7 +201,7 @@ def emit_str_for_prop(eid, pid, claims_group):
     for claim in claims_group:
         dv = claim.mainsnak.datavalue
         if dv is None:
-            sys.stderr.write(f"WARNING {eid} {pid} has no str datavalue")
+            warn(f"{eid} {pid} has no str datavalue")
             continue
         try:
             s_val = str(dv.value)
@@ -205,12 +209,72 @@ def emit_str_for_prop(eid, pid, claims_group):
             raise RuntimeError(f"error extracting str for {pid} for entity {eid}")
         extra_log(f"{eid}\t{pid}\t{s_val}")
 
+def format_src(ext_id):
+    if not ext_id:
+        return ""
+    full_list = []
+    for k, vlist in ext_id.items():
+        plist = [f"{k}:{v}" for v in vlist]
+        full_list.append(",".join(plist))
+    return ",".join(full_list)
+
+ENT_TO_RANK_NAME = {
+    "Q113015256" : "ichnospecies",
+    "Q1153785" : "subphylum",
+    "Q1306176" : "nothospecies",
+    "Q13198444" : "subseries",
+    "Q14817220" : "supertribe",
+    "Q164280" : "subfamily",
+    "Q19858692" : "superkingdom",
+    "Q2007442" : "infraclass",
+    "Q21061204" : "subterclass",
+    "Q21074316" : "hyporder",
+    "Q2111790" : "superphylum",
+    "Q2136103" : "superfamily",
+    "Q227936" : "tribe",
+    "Q2361851" : "infraphylum",
+    "Q2455704" : "subfamily",
+    "Q2752679" : "subkingdom",
+    "Q279749" : "form",
+    "Q2889003" : "infraorder",
+    "Q2981883" : "cohort",
+    "Q3025161" : "series",
+    "Q3181348" : "section",
+    "Q3238261" : "subgenus",
+    "Q334460" : "division",
+    "Q34740" : "genus",
+    "Q3504061" : "superclass",
+    "Q35409" : "family",
+    "Q36602" : "order",
+    "Q36732" : "kingdom",
+    "Q37517" : "class",
+    "Q3825509" : "forma specialis",
+    "Q38348" : "phylum",
+    "Q3965313" : "subtribe",
+    "Q4150646" : "cultivar group",
+    "Q4886" : "cultivar",
+    "Q5867051" : "subclass",
+    "Q5867959" : "suborder",
+    "Q5868144" : "superorder",
+    "Q5998839" : "subsection",
+    "Q630771" : "subvariety",
+    "Q6311258" : "parvorder",
+    "Q6541077" : "subcohort",
+    "Q68947" : "subspecies",
+    "Q713623" : "clade",
+    "Q7432" : "species",
+    "Q7506274" : "mirorder",
+    "Q767728" : "variety",
+}
+
+def to_rank_name(rank_q):
+    return ENT_TO_RANK_NAME[rank_q]
 
 def process_taxon(taxon):
     eid = taxon.entity_id
     claims = taxon.get_truthy_claim_groups()
     # sys.exit(f"Claims =\n  {repr(claims)}\n")
-    parent, tax_name, tax_aut, tax_year = "", "", "", ""
+    parent, tax_name, tax_aut, tax_year, rank = "", "", "", "", ""
     ext_id = {}
     nom_status = None
     for pid, wcg in claims.items():
@@ -224,7 +288,12 @@ def process_taxon(taxon):
             raise RuntimeError(f"prop {pid} in DIE_ON list")
         if pid in TO_STD_ERROR:
             raise RuntimeError(f"prop {pid} in TO_STD_ERROR list")
-        
+        if pid == P_TAXON_RANK:
+            dv_list = [c.mainsnak.datavalue for c in wcg if c.mainsnak.datavalue is not None]
+            ilist = [to_rank_name(dv.value["id"]) for dv in dv_list]
+            if ilist:
+                rank = ",".join(ilist)
+            continue
         for claim in wcg:
             dv = claim.mainsnak.datavalue
             # pid = claim.property_id
@@ -232,9 +301,12 @@ def process_taxon(taxon):
                 try:
                     parent = dv.value["id"]
                 except AttributeError:
-                    sys.stderr.write(f"NO PARENT TAXON for {eid}!\n")
+                    warn(f"NO PARENT TAXON for {eid} !")
             elif pid == P_TAXON_NAME:
-                tax_name = str(dv)
+                try:
+                    tax_name = str(dv.value)
+                except AttributeError:
+                    warn(f"No tax name for {eid} !")
                 for qid, qlist in claim.qualifiers.items():
                     if qid in SKIPPABLE_TN_QUAL:
                         continue
@@ -245,15 +317,34 @@ def process_taxon(taxon):
                     elif qid == P_NOM_STAT:
                         nom_status = get_nom_status(qlist)
                     else:
-                        m = f"WARN: unkown qual {qid} in tax_name for {eid}\n"
-                        sys.stderr.write(m)
+                        m = f"unknown qual {qid} in tax_name for {eid}"
+                        warn(m)
             elif pid in EXT_ID_TO_PREF:
-                pref = EXT_ID_TO_PREF[pid]
-                if pref in ext_id:
-                    ext_id[pref].append(str(dv))
-                else:
-                    ext_id[pref] = [str(dv)]
+                if dv is not None:
+                    pref = EXT_ID_TO_PREF[pid]
+                    if pref in ext_id:
+                        ext_id[pref].append(str(dv.value))
+                    else:
+                        ext_id[pref] = [str(dv.value)]
 
+    if not nom_status:
+        nom_status = ""
+    elif isinstance(nom_status, list):
+        nom_status = ",".join(nom_status)
+    src_str = format_src(ext_id)
+
+    aut_nf = ",".join(tax_aut) if isinstance(tax_aut, list) else tax_aut
+    aut_yf = ",".join(tax_year) if isinstance(tax_year, list) else tax_year
+    el_list = [eid, 
+               parent,
+               str(tax_name),
+               rank,
+               aut_nf,
+               aut_yf,
+               nom_status,
+               src_str]
+    sep = "\t|\t"
+    print(sep.join(el_list))
 
 
 def wr_process_taxon(taxon):
@@ -261,7 +352,7 @@ def wr_process_taxon(taxon):
         return process_taxon(taxon)
     except:
         df = json.dumps(taxon._entity_dict, sort_keys=True, indent=2)
-        sys.stderr.write(f"ERROR on:\n{df}\n")
+        warn(f"ERROR on:\n{df}")
         raise
 
 def main(inp_fp):
@@ -275,13 +366,13 @@ def main(inp_fp):
         if entity_dict["type"] == "item":
             entity = WikidataItem(entity_dict)
             if not is_taxon(entity):
-                sys.stderr.write(f"Skipping non taxon {entity.entity_id} at idx={idx}...\n")
+                warn(f"Skipping non taxon {entity.entity_id} at idx={idx}...")
             else:
                 taxa.append(entity)
         else:
-            sys.stderr.write(f"Skipping non taxon {entity.entity_id} ...\n")
+            warn(f"Skipping non taxon {entity.entity_id} ...")
         
-    # sys.stderr.write(f"{len(taxa)} taxa found\n")
+    # warn(f"{len(taxa)} taxa found\n")
     for taxon in taxa:
         wr_process_taxon(taxon)
 
