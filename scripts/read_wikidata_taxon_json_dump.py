@@ -55,7 +55,10 @@ def is_taxon(item: WikidataItem, truthy: bool = True) -> bool:
 
 def get_year(qual_prop):
     qdv = qual_prop.snak.datavalue
-    raw = qdv.value["time"]
+    try:
+        raw = qdv.value["time"]
+    except:
+        return None
     cm = qdv.value["calendarmodel"]
     assert(cm == "http://www.wikidata.org/entity/Q1985727")
     assert(raw[0] == "+")
@@ -81,6 +84,19 @@ NOM_STAT_MAP = {
     "Q922448": "nomen dubium",
     "Q29995613": "superfluous name",
     "Q51165454": "typus conservandus",
+    "Q68455470": "protected name",
+    "Q28597224": "needing care",
+    "Q51165361": "orthographia conservanda",
+    "Q23038368": "nomen rejiciendum propositum",
+    "Q17276482": "nomen rejiciendum",
+    "Q749462": "replacement name",
+    "Q15708833": "nomen conservandum propositum",
+    "Q844326": "nomen nudum",
+    "Q122735442": "nomen praeoccupatum",
+    "Q130297303": "not validly published name",
+    "Q15708837": "nomen utique rejiciendum propositum",
+    "Q901847": "nomen oblitum",
+    "Q70573632": "nomen approbatum",
     }
 
 EXT_ID_TO_PREF = {
@@ -93,18 +109,27 @@ EXT_ID_TO_PREF = {
 
 def _get_tax_aut(qlist):
     assert(len(qlist) > 0)
-    return [au.snak.datavalue.value["id"] for au in qlist]
+    ret = []
+    for au in qlist:
+        try:
+            ret.append(au.snak.datavalue.value["id"])
+        except AttributeError:
+            pass
+    return ret
 
 def get_nom_status(qlist):
-    assert(len(qlist) ==1)
-    ns_id = qlist[0].snak.datavalue.value["id"]
-    stat = NOM_STAT_MAP[ns_id] 
-    return stat
+    ilist = [q.snak.datavalue.value["id"] for q in qlist]
+    slist = [NOM_STAT_MAP[i] for i in ilist]
+    if len(slist) == 1:
+        return slist[0]
+    return slist
 
 def get_tn_year(qlist):
-    ys = list(set([get_year(q) for q in qlist]))
-    assert(len(ys) == 1)
-    return ys[0]
+    ys = set([get_year(q) for q in qlist])
+    yl = [i for i in ys if i is not None]
+    if len(yl) == 1:
+        return yl[0]
+    return yl
 
 def process_taxon(taxon):
     eid = taxon.entity_id
@@ -118,7 +143,10 @@ def process_taxon(taxon):
             dv = claim.mainsnak.datavalue
             # pid = claim.property_id
             if pid == P_PARENT:
-                parent = dv.value["id"]
+                try:
+                    parent = dv.value["id"]
+                except AttributeError:
+                    sys.stderr.write(f"NO PARENT TAXON for {eid}!\n")
             elif pid == P_TAXON_NAME:
                 tax_name = str(dv)
                 for qid, qlist in claim.qualifiers.items():
@@ -166,7 +194,7 @@ def main(inp_fp):
         else:
             sys.stderr.write(f"Skipping non taxon {entity.entity_id} ...\n")
         
-    sys.stderr.write(f"{len(taxa)} taxa found\n")
+    # sys.stderr.write(f"{len(taxa)} taxa found\n")
     for taxon in taxa:
         wr_process_taxon(taxon)
 
