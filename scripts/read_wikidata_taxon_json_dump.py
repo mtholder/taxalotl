@@ -307,6 +307,7 @@ ENT_TO_RANK_NAME = {
     "Q10296147": "epifamily",
     "Q26197587": "parvclass",
     "Q22666877": "superdomain",
+    "Q60922428": "megaclass",
 }
 
 def to_rank_name(rank_q):
