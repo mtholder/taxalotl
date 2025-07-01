@@ -34,6 +34,7 @@ from .tax_partition import TAX_SLICE_CACHE
 from .util import unlink, OutFile, OutDir
 from .cmds.semanticize import SemGraph
 from .wikispecies import parse_wikispecies
+from .wikidata import parse_wikidata
 
 _LOG = logging.getLogger(__name__)
 
@@ -171,6 +172,16 @@ def normalize_wikispecies(unpacked_dirp, normalized_dirp, resource_wrapper):
     parse_wikispecies(infp)
 
 
+def normalize_wikidata(unpacked_dirp, normalized_dirp, resource_wrapper):
+    # import sys; sys.exit(f"{unpacked_dirp}\n{normalized_dirp}\n{resource_wrapper.__dict__}\n")
+    fn = "taxonomy.tsv"
+    infp = os.path.join(unpacked_dirp, fn)
+    if not os.path.isfile(infp):
+        raise RuntimeError(f"{infp} does not exist")
+    add_fp = os.path.join(unpacked_dirp, "additional-properties.tsv")
+    parse_wikidata(infp, add_fp)
+
+
 def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):
     inpfp = os.path.join(unpacked_dirp, resource_wrapper.local_filename)
     outfd = resource_wrapper.normalized_filedir
@@ -212,6 +223,7 @@ _schema_to_norm_fn = {
     "fasta silva taxmap": normalize_silva_ncbi,
     "tab-separated ott": normalize_tab_sep_ott,
     "wikispecies": normalize_wikispecies,
+    "taxalotlwikidata": normalize_wikidata,
 }
 
 _known_res_attr = frozenset(
@@ -484,8 +496,8 @@ class ResourceWrapper(FromOTifacts):
         try:
             norm_fn = _schema_to_norm_fn[schema]
         except KeyError:
-            m = 'Normalization from "{}" is not currently supported'
-            raise NotImplementedError(m.format(self.base_id))
+            m = f'Normalization from "{self.base_id}" ({schema}) is not currently supported'
+            raise NotImplementedError(m)
         norm_fn(self.unpacked_filepath, self.normalized_filedir, self)
 
     def write_status(
