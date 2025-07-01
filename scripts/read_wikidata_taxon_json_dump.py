@@ -285,10 +285,37 @@ ENT_TO_RANK_NAME = {
     "Q1972414": "pathovar",
     "Q62075839": "realm",
     "Q7574964": "species group",
+    "Q30093105": "subdivision", # zoology
+    "Q6054237": "magnorder",
+    "Q1993179": "supersection",
+    "Q23759835": "infradivision",
+    "Q3491996": "subdomain",
+    "Q30093070": "division",  # zoology
+    "Q23759960": "nanorder",
+    "Q38829": "breed",
+    "Q3798630": "infratribe",
+    "Q4226087": "infracohort",
+    "Q123575881": "group of subspecies",
+    "Q1297859": "species aggregate",
+    "Q60445775": "megacohort",
+    "Q26857882": "parvkingdom",
+    "Q855769": "strain",
+    "Q6054425": "supercohort",
+    "Q100900625": "supersubtribe",
+    "Q60533422": "subseries", # zoology
+    "Q1972080": "biovar",
+    "Q10296147": "epifamily",
+    "Q26197587": "parvclass",
+    "Q22666877": "superdomain",
 }
 
 def to_rank_name(rank_q):
-    return ENT_TO_RANK_NAME[rank_q]
+    try:
+        return ENT_TO_RANK_NAME[rank_q]
+    except:
+        warn(f"Could not interpret rank {rank_q}")
+        return None
+
 
 def process_taxon(taxon):
     eid = taxon.entity_id
@@ -311,6 +338,7 @@ def process_taxon(taxon):
         if pid == P_TAXON_RANK:
             dv_list = [c.mainsnak.datavalue for c in wcg if c.mainsnak.datavalue is not None]
             ilist = [to_rank_name(dv.value["id"]) for dv in dv_list]
+            ilist = [i for i in ilist if i is not None]
             if ilist:
                 rank = ",".join(ilist)
             continue
