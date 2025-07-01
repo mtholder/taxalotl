@@ -238,7 +238,7 @@ ENT_TO_RANK_NAME = {
     "Q279749" : "form",
     "Q2889003" : "infraorder",
     "Q2981883" : "cohort",
-    "Q3025161" : "series",
+    "Q3025161" : "series", # botany
     "Q3181348" : "section",
     "Q3238261" : "subgenus",
     "Q334460" : "division",
@@ -256,7 +256,7 @@ ENT_TO_RANK_NAME = {
     "Q5867051" : "subclass",
     "Q5867959" : "suborder",
     "Q5868144" : "superorder",
-    "Q5998839" : "subsection",
+    "Q5998839" : "subsection", # botany
     "Q630771" : "subvariety",
     "Q6311258" : "parvorder",
     "Q6541077" : "subcohort",
@@ -265,6 +265,26 @@ ENT_TO_RANK_NAME = {
     "Q7432" : "species",
     "Q7506274" : "mirorder",
     "Q767728" : "variety",
+    "Q10861375": "subsection", # zoology
+    "Q3491997": "subdivision",
+    "Q21061732": "series", # zoology
+    "Q6045742": "nothogenus",
+    "Q6054535": "infralegion",
+    "Q6054637": "sublegion",
+    "Q7504331": "legion",
+    "Q6054795": "superlegion",
+    "Q10861426": "section",
+    "Q3150876": "infrakingdom",
+    "Q23760204": "superdivision",
+    "Q59779184": "nothovariety",
+    "Q146481": "domain",
+    "Q59772023": "nothosubspecies",
+    "Q6462265": "grandorder",
+    "Q5469884": "form",
+    "Q112082101": "ichnogenus",
+    "Q1972414": "pathovar",
+    "Q62075839": "realm",
+    "Q7574964": "species group",
 }
 
 def to_rank_name(rank_q):
