@@ -80,9 +80,9 @@ SKIPPABLE_TN_QUAL = frozenset([
     "P1932", #  "object named as",
     "P2093", # "author name string"
     "P7452", # "reason for preferred rank",
-    "P805",  #"statement is subject of",
+    "P805",  # "statement is subject of",
     "P1343", # "described by source",
-    "P1545", #  "series ordinal",
+    "P1545", # "series ordinal",
     "P18",   # "image",
     "P180",  # "depicts",
     "P2210", # "relative to",
@@ -450,6 +450,7 @@ def main(inp_fp):
             warn(f"Skipping non taxon {entity.entity_id} ...")
         
     # warn(f"{len(taxa)} taxa found\n")
+    extra_log("Entity\tPredicate\tObject")
     print("uid\t|\tparent_uid\t|\tname\t|\trank\t|\taut_id\t|\taut_yr_id\t|\tnom_status\t|\tsrc")
     for taxon in taxa:
         wr_process_taxon(taxon)

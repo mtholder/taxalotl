@@ -179,7 +179,18 @@ def normalize_wikidata(unpacked_dirp, normalized_dirp, resource_wrapper):
     if not os.path.isfile(infp):
         raise RuntimeError(f"{infp} does not exist")
     add_fp = os.path.join(unpacked_dirp, "additional-properties.tsv")
-    parse_wikidata(infp, add_fp)
+    id_2_taxon, synonyms = parse_wikidata(infp, add_fp)
+    for syn_id in synonyms:
+        syn_taxon = id_2_taxon[syn_id]
+        valid_syn = set()
+        for pvi in syn_taxon.synonyms:
+            if pvi not in synonyms:
+                valid_syn.add(pvi)
+        if len(valid_syn) == 0:
+            m = f"Taxon {syn_id} has synonym(s): {syn_taxon.synonyms}, but size of valid set ({valid_syn}) is not 1"
+            _LOG.warning(m)
+        else:
+            syn_taxon.valid_syn = valid_syn
 
 
 def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):

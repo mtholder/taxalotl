@@ -72,6 +72,11 @@ class Taxon(object):
     def synonyms(self, x):
         self._synonyms = x
 
+    def add_synonym_id(self, syn_id):
+        if self._synonyms is None:
+            self._synonyms = set()
+        self._synonyms.add(syn_id)
+
     def flag_as_hybrid(self):
         self._add_flag("hybrid")
 
