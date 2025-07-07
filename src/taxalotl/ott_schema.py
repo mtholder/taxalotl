@@ -247,6 +247,25 @@ def int_or_str(s):
         return str(s)
 
 
+def raw_src_string_to_dict(raw):
+    sel = raw.split(",")
+    d = {}
+    for el in sel:
+        el = el.strip()
+        if not el:
+            continue
+        try:
+            src, sid = el.split(":")
+        except ValueError:
+            raise ValueError(f"Could split {el} in 2 by :")
+        try:
+            sid = int_or_str(sid)
+        except:
+            pass
+        d.setdefault(src, set()).add(sid)
+    return d
+
+
 def full_ott_line_parser(taxon, line):
     try:
         ls = line.split("\t|\t")
@@ -268,15 +287,7 @@ def full_ott_line_parser(taxon, line):
         return
     # _LOG.debug('ls[4] = {}'.format(ls[4]))
     if ls[4]:
-        sel = ls[4].split(",")
-        d = {}
-        for el in sel:
-            src, sid = el.split(":")
-            try:
-                sid = int_or_str(sid)
-            except:
-                pass
-            d.setdefault(src, set()).add(sid)
+        d = raw_src_string_to_dict(ls[4])
         if d:
             taxon.src_dict = d
     if len(ls) == 6:
@@ -306,7 +317,7 @@ def tax_wikidata_parser(taxon, line):
         taxon.par_id = None
     taxon.name = ls[2]
     t = taxon
-    t.rank, t.aut_id, t.aut_yrs, t.nom_status, t.src_list = None, None, None, None, None
+    t.rank, t.aut_id, t.aut_yrs, t.nom_status, t.src_dict = None, None, None, None, None
     if ls[3]:
         taxon.rank = ls[3].strip()
     if ls[4]:
@@ -315,8 +326,9 @@ def tax_wikidata_parser(taxon, line):
         taxon.aut_yrs = set(ls[5].split(","))
     if ls[6]:
         taxon.nom_status = set(ls[6].split(","))
-    if ls[7]:
-        taxon.src_list = list(set(ls[7].split(",")))
+    d = raw_src_string_to_dict(ls[7])
+    if d:
+        taxon.src_dict = d
 
 
 def flag_after_rank_parser(taxon, line):
