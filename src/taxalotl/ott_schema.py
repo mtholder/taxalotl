@@ -32,6 +32,7 @@ INP_OTT_SYNONYMS_HEADER = "uid\t|\tname\t|\ttype\t|\t\n"
 FULL_OTT_HEADER = (
     "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tsourceinfo\t|\tuniqname\t|\tflags\t|\t\n"
 )
+TAXWIKIDATA_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\taut_id\t|\taut_yr_id\t|\tnom_status\t|\tsrc\n"
 
 
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
@@ -287,6 +288,37 @@ def full_ott_line_parser(taxon, line):
             taxon.flags = set(ls[6].split(","))
 
 
+def tax_wikidata_parser(taxon, line):
+    try:
+        ls = line.split("\t|\t")
+        if len(ls) == 8:
+            assert ls[7].endswith("\n")
+            ls[7] = ls[7].strip()
+        else:
+            assert len(ls) > 8 and ls[-1] == "\n"
+    except:
+        _LOG.exception("Error reading line {}:\n{}".format(taxon.line_num, line))
+        raise
+    taxon.id = ls[0]
+    if ls[1]:
+        taxon.par_id = ls[1]
+    else:
+        taxon.par_id = None
+    taxon.name = ls[2]
+    t = taxon
+    t.rank, t.aut_id, t.aut_yrs, t.nom_status, t.src_list = None, None, None, None, None
+    if ls[3]:
+        taxon.rank = ls[3].strip()
+    if ls[4]:
+        taxon.aut_id = set(ls[4].split(","))
+    if ls[5]:
+        taxon.aut_yrs = set(ls[5].split(","))
+    if ls[6]:
+        taxon.nom_status = set(ls[6].split(","))
+    if ls[7]:
+        taxon.src_list = list(set(ls[7].split(",")))
+
+
 def flag_after_rank_parser(taxon, line):
     try:
         ls = line.split("\t|\t")
@@ -315,6 +347,7 @@ HEADER_TO_LINE_PARSER = {
     INP_OTT_TAXONOMY_HEADER: full_ott_line_parser,
     INP_FLAGGED_OTT_TAXONOMY_HEADER: flag_after_rank_parser,
     INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER: flag_after_rank_parser,
+    TAXWIKIDATA_HEADER: tax_wikidata_parser,
 }
 
 

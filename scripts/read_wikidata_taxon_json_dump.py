@@ -88,14 +88,14 @@ SKIPPABLE_TN_QUAL = frozenset([
     "P2210", # "relative to",
     "P2241", # "reason for deprecated rank",
     "P2868", # "subject has role",
-    "P304", # "page(s)",
-    "P31", # "instance of",
-    "P460", # "said to be the same as",
+    "P304",  # "page(s)",
+    "P31",   # "instance of",
+    "P460",  # "said to be the same as",
     "P4970", # "alternative name",
-    "P580", # "start time",
-    "P585", # "point in time",
-    "P642", # "of (DEPRECATED)",
-    "P825", # "dedicated to",
+    "P580",  # "start time",
+    "P585",  # "point in time",
+    "P642",  # "of (DEPRECATED)",
+    "P825",  # "dedicated to",
    ])
 
 NOM_STAT_MAP = {
@@ -176,19 +176,26 @@ DIE_ON = frozenset([
 ])
 
 EMIT_ID_FOR_PROP = frozenset([
-    "P1137",  # "fossil found in this unit"
-    "P12763", # "taxon synonym of",
-    "P12764", # "replaced synonym of",
-    "P12765", # "protonym of",
-    "P12766", # "basionym of",
-    "P13177", # "homonymous taxon"
-    "P13478", # "nomenclatural type of",
-    "P1531",  # "hybrid of",
-    "P1403",  # "original combination",
-    "P1420",  # "taxon synonym"
-    "P427",   # "taxonomic type"
-    "P5304",  # "type locality (biology)",
+# FLAG OBJ as synonym
+    "P1420",  # "taxon synonym" - found in valid name, listing synonyms
+# FLAG ENTITY as synonym
+    "P12763", # "taxon synonym of" - found in jr synonym listing valid name
+    "P12764", # "replaced synonym of", - found in jr synonym listing valid name
+    "P12765", # "protonym of", -  found in jr synonym listing valid name
+    "P12766", # "basionym of", -  found in jr synonym listing valid name
+    "P1403",  # "original combination", - complement of basionym or protonym
     "P694",   # "replaced synonym (for nom. nov.)",  
+# WARN
+    "P13177", # "homonymous taxon" - symmetrical
+# FLAG hybrid
+    "P1531",  # "hybrid of",
+# IGNORE for now
+    "P13478", # "nomenclatural type of",
+    "P427",   # "taxonomic type"
+#IGNORE for now
+    "P5304",  # "type locality (biology)",    
+    "P1137",  # "fossil found in this unit" - erroneous subject should be strat. layer
+    
 ])
 
 EMIT_STR_FOR_PROP = frozenset([
@@ -443,6 +450,7 @@ def main(inp_fp):
             warn(f"Skipping non taxon {entity.entity_id} ...")
         
     # warn(f"{len(taxa)} taxa found\n")
+    print("uid\t|\tparent_uid\t|\tname\t|\trank\t|\taut_id\t|\taut_yr_id\t|\tnom_status\t|\tsrc")
     for taxon in taxa:
         wr_process_taxon(taxon)
 
