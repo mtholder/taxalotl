@@ -20,6 +20,7 @@ from .ott_schema import (
     INP_OTT_SYNONYMS_HEADER,
     INP_OTT_TAXONOMY_HEADER,
     partition_ott_by_root_id,
+    INP_FLAGGED_OTT_TAXONOMY_HEADER,
 )
 from .newick import normalize_newick
 from .cmds.partitions import (
@@ -191,6 +192,35 @@ def normalize_wikidata(unpacked_dirp, normalized_dirp, resource_wrapper):
             _LOG.warning(m)
         else:
             syn_taxon.valid_syn = valid_syn
+    outfd = resource_wrapper.normalized_filedir
+    with OutDir(outfd):
+        pass
+    outfp = resource_wrapper.normalized_filepath
+    with OutFile(outfp) as out:
+        out.write(INP_FLAGGED_OTT_TAXONOMY_HEADER)
+        for taxon in id_2_taxon.values():
+            if hasattr(taxon, "valid_syn"):
+                continue
+            pid = str(int(taxon.par_id[1:])) if taxon.par_id else ""
+            r = taxon.rank if taxon.rank else ""
+            els = [str(int(taxon.id[1:])), pid, taxon.name, r, taxon.get_flag_str()]
+            row = "\t|\t".join(els)
+            out.write(f"{row}\n")
+    syn_fp = os.path.join(outfd, resource_wrapper.synonyms_filename)
+    with OutFile(syn_fp) as out:
+        out.write(INP_OTT_SYNONYMS_HEADER)
+        for syn in synonyms:
+            taxon = id_2_taxon[syn]
+            for referred_id in taxon.synonyms:
+                try:
+                    ref_tax = id_2_taxon[referred_id]
+                except KeyError:
+                    continue
+                if hasattr(ref_tax, "valid_syn"):
+                    continue
+                num_id = int(referred_id[1:])
+                row = "\t|\t".join([str(num_id), taxon.name, ""])
+                out.write(f"{row}\n")
 
 
 def normalize_silva_ncbi(unpacked_dirp, normalized_dirp, resource_wrapper):

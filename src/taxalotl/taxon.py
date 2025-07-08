@@ -42,14 +42,17 @@ class Taxon(object):
     def child_id_dict(self):
         return {c.id: c for c in self.children_refs}
 
+    def get_flag_str(self):
+        sf = self.sorted_flags
+        return ",".join(sf) if sf else ""
+
     def terse_descrip(self):
         m = '"{}" [{}]{}\n'
         suff = ""
         r = self.rank
         if r:
             suff += " {}".format(r)
-        sf = self.sorted_flags
-        f = " flags={}".format(",".join(sf)) if sf else ""
+        f = " flags={}".format(self.get_flag_str())
         if f:
             suff += f
         return m.format(self.name, self.id, suff)
