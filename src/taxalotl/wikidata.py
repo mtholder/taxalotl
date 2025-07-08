@@ -43,13 +43,13 @@ ENT_IS_SYN = frozenset(
     [
         "P12763",  # "taxon synonym of" - found in jr synonym listing valid name
         "P12764",  # "replaced synonym of", - found in jr synonym listing valid name
-        "P12765",  # "protonym of", -  found in jr synonym listing valid name
-        "P12766",  # "basionym of", -  found in jr synonym listing valid name
         "P694",  # "replaced synonym (for nom. nov.)",
     ]
 )
 PRED_IS_IGNORED = frozenset(
     [
+        "P12765",  # "protonym of", -  found in jr synonym listing valid name
+        "P12766",  # "basionym of", -  found in jr synonym listing valid name
         "P13177",  # "homonymous taxon" - symmetrical
         # IGNORE for now
         "P13478",  # "nomenclatural type of",
