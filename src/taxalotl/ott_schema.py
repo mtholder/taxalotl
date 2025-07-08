@@ -42,7 +42,7 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
         return
     _LOG.debug('parsing synonyms from "{}" ...'.format(syn_fp))
     try:
-        with io.open(syn_fp, "rU", encoding="utf-8") as inp:
+        with io.open(syn_fp, "r", encoding="utf-8") as inp:
             iinp = iter(inp)
             try:
                 tax_part.syn_header = next(iinp)
