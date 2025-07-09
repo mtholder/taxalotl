@@ -1,0 +1,5 @@
+97263158	|	2382443	|	Monera	|	kingdom	|	
+21447741	|	2382443	|	Mychota	|	kingdom	|	
+130416784	|	2382443	|	Aribosa	|	superdomain	|	
+3322575	|	2382443	|	Cytota	|	superdomain	|	
+169731	|	2382443	|	Acytota	|		|	
