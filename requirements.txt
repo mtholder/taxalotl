@@ -3,3 +3,4 @@ peyotl
 beautifulsoup4
 requests
 unidecode
+qwikidata

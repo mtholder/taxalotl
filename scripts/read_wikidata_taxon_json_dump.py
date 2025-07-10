@@ -7,6 +7,8 @@ import json
 import sys
 from qwikidata.entity import WikidataItem
 from qwikidata.json_dump import WikidataJsonDump
+from taxalotl.wikidata import wikid_ent_is_taxon
+
 
 P_IS_INSTANCE_OF = "P31"
 Q_TAXON = "Q16521"
@@ -39,7 +41,8 @@ P_AUTH_STR = "P2093"
 P_INC_SED = "P678"
 P_REP_SYN_NOM_NOV = "P694"
 P_TYPE_LOC = "P5304"
-  
+
+
 def is_taxon(item: WikidataItem, truthy: bool = True) -> bool:
     """Return True if the Wikidata Item is a taxon or fossil taxon instance"""
     if truthy:
@@ -54,6 +57,7 @@ def is_taxon(item: WikidataItem, truthy: bool = True) -> bool:
     ]
     return (Q_TAXON in is_a_qids) or (Q_FOSSIL_TAXON in is_a_qids)
 
+
 def get_year(qual_prop):
     qdv = qual_prop.snak.datavalue
     try:
@@ -61,42 +65,48 @@ def get_year(qual_prop):
     except:
         return None
     cm = qdv.value["calendarmodel"]
-    assert(cm == "http://www.wikidata.org/entity/Q1985727")
-    assert(raw[0] == "+")
+    assert cm == "http://www.wikidata.org/entity/Q1985727"
+    assert raw[0] == "+"
     return raw[1:5]
 
-KNOWN_TAX_NAME_QUAL = frozenset([
-    P_TAXON_AUTHOR, 
-    P_TAXON_YEAR,])
 
-SKIPPABLE_TN_QUAL = frozenset([
-    "P3831", # "object of statement has role"
-    "P697",  # "ex taxon author"
-    "P2433", # "gender of sci name"
-    "P1353", # "original spelling"
-    "P138",  # "named after"
-    "P6507", # "taxon author citation"
-    "P1013", # "criterion used",
-    "P1932", #  "object named as",
-    "P2093", # "author name string"
-    "P7452", # "reason for preferred rank",
-    "P805",  # "statement is subject of",
-    "P1343", # "described by source",
-    "P1545", # "series ordinal",
-    "P18",   # "image",
-    "P180",  # "depicts",
-    "P2210", # "relative to",
-    "P2241", # "reason for deprecated rank",
-    "P2868", # "subject has role",
-    "P304",  # "page(s)",
-    "P31",   # "instance of",
-    "P460",  # "said to be the same as",
-    "P4970", # "alternative name",
-    "P580",  # "start time",
-    "P585",  # "point in time",
-    "P642",  # "of (DEPRECATED)",
-    "P825",  # "dedicated to",
-   ])
+KNOWN_TAX_NAME_QUAL = frozenset(
+    [
+        P_TAXON_AUTHOR,
+        P_TAXON_YEAR,
+    ]
+)
+
+SKIPPABLE_TN_QUAL = frozenset(
+    [
+        "P3831",  # "object of statement has role"
+        "P697",  # "ex taxon author"
+        "P2433",  # "gender of sci name"
+        "P1353",  # "original spelling"
+        "P138",  # "named after"
+        "P6507",  # "taxon author citation"
+        "P1013",  # "criterion used",
+        "P1932",  #  "object named as",
+        "P2093",  # "author name string"
+        "P7452",  # "reason for preferred rank",
+        "P805",  # "statement is subject of",
+        "P1343",  # "described by source",
+        "P1545",  # "series ordinal",
+        "P18",  # "image",
+        "P180",  # "depicts",
+        "P2210",  # "relative to",
+        "P2241",  # "reason for deprecated rank",
+        "P2868",  # "subject has role",
+        "P304",  # "page(s)",
+        "P31",  # "instance of",
+        "P460",  # "said to be the same as",
+        "P4970",  # "alternative name",
+        "P580",  # "start time",
+        "P585",  # "point in time",
+        "P642",  # "of (DEPRECATED)",
+        "P825",  # "dedicated to",
+    ]
+)
 
 NOM_STAT_MAP = {
     "Q1093954": "nomen illegitimum",
@@ -127,7 +137,7 @@ NOM_STAT_MAP = {
     "Q15709300": "nomen protectum",
     "Q28549151": "preoccupied name",
     "Q1040689": "synonym",
-    "Q42106": "synonym", # should be corrected to Q1040689
+    "Q42106": "synonym",  # should be corrected to Q1040689
     "Q3766304": "species inquirenda",
     "Q17276484": "later homonym",
     "Q2491016": "orthographical variant",
@@ -135,18 +145,19 @@ NOM_STAT_MAP = {
     "Q17086880": "valid",
     "Q14594740": "recombination",
     "Q67943587": "genus neutrum conservandum",
-    }
-
-EXT_ID_TO_PREF = {
-    P_OTT : "ott",
-    P_GBIF : "gbif",
-    P_COL : "col",
-    P_NCBI : "ncbi",
-    P_IRMNG : "irmng",    
 }
 
+EXT_ID_TO_PREF = {
+    P_OTT: "ott",
+    P_GBIF: "gbif",
+    P_COL: "col",
+    P_NCBI: "ncbi",
+    P_IRMNG: "irmng",
+}
+
+
 def _get_tax_aut(qlist):
-    assert(len(qlist) > 0)
+    assert len(qlist) > 0
     ret = []
     for au in qlist:
         try:
@@ -155,12 +166,14 @@ def _get_tax_aut(qlist):
             pass
     return ret
 
+
 def get_nom_status(qlist):
     ilist = [q.snak.datavalue.value["id"] for q in qlist]
     slist = [NOM_STAT_MAP[i] for i in ilist]
     if len(slist) == 1:
         return slist[0]
     return slist
+
 
 def get_tn_year(qlist):
     ys = set([get_year(q) for q in qlist])
@@ -170,48 +183,59 @@ def get_tn_year(qlist):
     return yl
 
 
-DIE_ON = frozenset([
-  "P1135", 
-  "P678", 
-])
+DIE_ON = frozenset(
+    [
+        "P1135",
+        "P678",
+    ]
+)
 
-EMIT_ID_FOR_PROP = frozenset([
-# FLAG OBJ as synonym
-    "P1420",  # "taxon synonym" - found in valid name, listing synonyms
-# FLAG ENTITY as synonym
-    "P12763", # "taxon synonym of" - found in jr synonym listing valid name
-    "P12764", # "replaced synonym of", - found in jr synonym listing valid name
-    "P12765", # "protonym of", -  found in jr synonym listing valid name
-    "P12766", # "basionym of", -  found in jr synonym listing valid name
-    "P1403",  # "original combination", - complement of basionym or protonym
-    "P694",   # "replaced synonym (for nom. nov.)",  
-# WARN
-    "P13177", # "homonymous taxon" - symmetrical
-# FLAG hybrid
-    "P1531",  # "hybrid of",
-# IGNORE for now
-    "P13478", # "nomenclatural type of",
-    "P427",   # "taxonomic type"
-#IGNORE for now
-    "P5304",  # "type locality (biology)",    
-    "P1137",  # "fossil found in this unit" - erroneous subject should be strat. layer
-    
-])
+EMIT_ID_FOR_PROP = frozenset(
+    [
+        # FLAG OBJ as synonym
+        "P1420",  # "taxon synonym" - found in valid name, listing synonyms
+        # FLAG ENTITY as synonym
+        "P12763",  # "taxon synonym of" - found in jr synonym listing valid name
+        "P12764",  # "replaced synonym of", - found in jr synonym listing valid name
+        "P12765",  # "protonym of", -  found in jr synonym listing valid name
+        "P12766",  # "basionym of", -  found in jr synonym listing valid name
+        "P1403",  # "original combination", - complement of basionym or protonym
+        "P694",  # "replaced synonym (for nom. nov.)",
+        # WARN
+        "P13177",  # "homonymous taxon" - symmetrical
+        # FLAG hybrid
+        "P1531",  # "hybrid of",
+        # IGNORE for now
+        "P13478",  # "nomenclatural type of",
+        "P427",  # "taxonomic type"
+        # IGNORE for now
+        "P5304",  # "type locality (biology)",
+        "P1137",  # "fossil found in this unit" - erroneous subject should be strat. layer
+    ]
+)
 
-EMIT_STR_FOR_PROP = frozenset([
-    "P2093", # "author name string",
-])
+EMIT_STR_FOR_PROP = frozenset(
+    [
+        "P2093",  # "author name string",
+    ]
+)
 
-TO_STD_ERROR = frozenset([
-  "P2241",  
-  "P7452",  ])
+TO_STD_ERROR = frozenset(
+    [
+        "P2241",
+        "P7452",
+    ]
+)
+
 
 def extra_log(line):
     out = sys.stderr
     out.write(f"{line}\n")
 
+
 def warn(line):
     sys.stderr.write(f"WARNING: {line}\n")
+
 
 def emit_ids_for_prop(eid, pid, claims_group):
     for claim in claims_group:
@@ -225,6 +249,7 @@ def emit_ids_for_prop(eid, pid, claims_group):
             raise RuntimeError(f"error extracting ID for {pid} for entity {eid}")
         extra_log(f"{eid}\t{pid}\t{id_val}")
 
+
 def emit_str_for_prop(eid, pid, claims_group):
     for claim in claims_group:
         dv = claim.mainsnak.datavalue
@@ -237,6 +262,7 @@ def emit_str_for_prop(eid, pid, claims_group):
             raise RuntimeError(f"error extracting str for {pid} for entity {eid}")
         extra_log(f"{eid}\t{pid}\t{s_val}")
 
+
 def format_src(ext_id):
     if not ext_id:
         return ""
@@ -246,56 +272,57 @@ def format_src(ext_id):
         full_list.append(",".join(plist))
     return ",".join(full_list)
 
+
 ENT_TO_RANK_NAME = {
-    "Q113015256" : "ichnospecies",
-    "Q1153785" : "subphylum",
-    "Q1306176" : "nothospecies",
-    "Q13198444" : "subseries",
-    "Q14817220" : "supertribe",
-    "Q164280" : "subfamily",
-    "Q19858692" : "superkingdom",
-    "Q2007442" : "infraclass",
-    "Q21061204" : "subterclass",
-    "Q21074316" : "hyporder",
-    "Q2111790" : "superphylum",
-    "Q2136103" : "superfamily",
-    "Q227936" : "tribe",
-    "Q2361851" : "infraphylum",
-    "Q2455704" : "subfamily",
-    "Q2752679" : "subkingdom",
-    "Q279749" : "form",
-    "Q2889003" : "infraorder",
-    "Q2981883" : "cohort",
-    "Q3025161" : "series", # botany
-    "Q3181348" : "section",
-    "Q3238261" : "subgenus",
-    "Q334460" : "division",
-    "Q34740" : "genus",
-    "Q3504061" : "superclass",
-    "Q35409" : "family",
-    "Q36602" : "order",
-    "Q36732" : "kingdom",
-    "Q37517" : "class",
-    "Q3825509" : "forma specialis",
-    "Q38348" : "phylum",
-    "Q3965313" : "subtribe",
-    "Q4150646" : "cultivar group",
-    "Q4886" : "cultivar",
-    "Q5867051" : "subclass",
-    "Q5867959" : "suborder",
-    "Q5868144" : "superorder",
-    "Q5998839" : "subsection", # botany
-    "Q630771" : "subvariety",
-    "Q6311258" : "parvorder",
-    "Q6541077" : "subcohort",
-    "Q68947" : "subspecies",
-    "Q713623" : "clade",
-    "Q7432" : "species",
-    "Q7506274" : "mirorder",
-    "Q767728" : "variety",
-    "Q10861375": "subsection", # zoology
+    "Q113015256": "ichnospecies",
+    "Q1153785": "subphylum",
+    "Q1306176": "nothospecies",
+    "Q13198444": "subseries",
+    "Q14817220": "supertribe",
+    "Q164280": "subfamily",
+    "Q19858692": "superkingdom",
+    "Q2007442": "infraclass",
+    "Q21061204": "subterclass",
+    "Q21074316": "hyporder",
+    "Q2111790": "superphylum",
+    "Q2136103": "superfamily",
+    "Q227936": "tribe",
+    "Q2361851": "infraphylum",
+    "Q2455704": "subfamily",
+    "Q2752679": "subkingdom",
+    "Q279749": "form",
+    "Q2889003": "infraorder",
+    "Q2981883": "cohort",
+    "Q3025161": "series",  # botany
+    "Q3181348": "section",
+    "Q3238261": "subgenus",
+    "Q334460": "division",
+    "Q34740": "genus",
+    "Q3504061": "superclass",
+    "Q35409": "family",
+    "Q36602": "order",
+    "Q36732": "kingdom",
+    "Q37517": "class",
+    "Q3825509": "forma specialis",
+    "Q38348": "phylum",
+    "Q3965313": "subtribe",
+    "Q4150646": "cultivar group",
+    "Q4886": "cultivar",
+    "Q5867051": "subclass",
+    "Q5867959": "suborder",
+    "Q5868144": "superorder",
+    "Q5998839": "subsection",  # botany
+    "Q630771": "subvariety",
+    "Q6311258": "parvorder",
+    "Q6541077": "subcohort",
+    "Q68947": "subspecies",
+    "Q713623": "clade",
+    "Q7432": "species",
+    "Q7506274": "mirorder",
+    "Q767728": "variety",
+    "Q10861375": "subsection",  # zoology
     "Q3491997": "subdivision",
-    "Q21061732": "series", # zoology
+    "Q21061732": "series",  # zoology
     "Q6045742": "nothogenus",
     "Q6054535": "infralegion",
     "Q6054637": "sublegion",
@@ -313,7 +340,7 @@ ENT_TO_RANK_NAME = {
     "Q1972414": "pathovar",
     "Q62075839": "realm",
     "Q7574964": "species group",
-    "Q30093105": "subdivision", # zoology
+    "Q30093105": "subdivision",  # zoology
     "Q6054237": "magnorder",
     "Q1993179": "supersection",
     "Q23759835": "infradivision",
@@ -330,13 +357,14 @@ ENT_TO_RANK_NAME = {
     "Q855769": "strain",
     "Q6054425": "supercohort",
     "Q100900625": "supersubtribe",
-    "Q60533422": "subseries", # zoology
+    "Q60533422": "subseries",  # zoology
     "Q1972080": "biovar",
     "Q10296147": "epifamily",
     "Q26197587": "parvclass",
     "Q22666877": "superdomain",
     "Q60922428": "megaclass",
 }
+
 
 def to_rank_name(rank_q):
     try:
@@ -365,7 +393,9 @@ def process_taxon(taxon):
         if pid in TO_STD_ERROR:
             raise RuntimeError(f"prop {pid} in TO_STD_ERROR list")
         if pid == P_TAXON_RANK:
-            dv_list = [c.mainsnak.datavalue for c in wcg if c.mainsnak.datavalue is not None]
+            dv_list = [
+                c.mainsnak.datavalue for c in wcg if c.mainsnak.datavalue is not None
+            ]
             ilist = [to_rank_name(dv.value["id"]) for dv in dv_list]
             ilist = [i for i in ilist if i is not None]
             if ilist:
@@ -412,14 +442,7 @@ def process_taxon(taxon):
 
     aut_nf = ",".join(tax_aut) if isinstance(tax_aut, list) else tax_aut
     aut_yf = ",".join(tax_year) if isinstance(tax_year, list) else tax_year
-    el_list = [eid, 
-               parent,
-               str(tax_name),
-               rank,
-               aut_nf,
-               aut_yf,
-               nom_status,
-               src_str]
+    el_list = [eid, parent, str(tax_name), rank, aut_nf, aut_yf, nom_status, src_str]
     sep = "\t|\t"
     print(sep.join(el_list))
 
@@ -432,28 +455,30 @@ def wr_process_taxon(taxon):
         warn(f"ERROR on:\n{df}")
         raise
 
+
 def main(inp_fp):
     # create an instance of WikidataJsonDump
-    wjd_dump_path = sys.argv[1]
-    wjd = WikidataJsonDump(wjd_dump_path)
+    wjd = WikidataJsonDump(inp_fp)
 
     # create an iterable of WikidataItem representing politicians
     taxa = []
     for idx, entity_dict in enumerate(wjd):
         if entity_dict["type"] == "item":
             entity = WikidataItem(entity_dict)
-            if not is_taxon(entity):
+            if not wikid_ent_is_taxon(entity):
                 warn(f"Skipping non taxon {entity.entity_id} at idx={idx}...")
             else:
                 taxa.append(entity)
         else:
-            warn(f"Skipping non taxon {entity.entity_id} ...")
-        
+            eid = entity_dict.get("id", "")
+            warn(f"Skipping non taxon id={eid} ...")
+
     # warn(f"{len(taxa)} taxa found\n")
-    extra_log("Entity\tPredicate\tObject")
-    print("uid\t|\tparent_uid\t|\tname\t|\trank\t|\taut_id\t|\taut_yr_id\t|\tnom_status\t|\tsrc")
+    # extra_log("Entity\tPredicate\tObject")
+    # print("uid\t|\tparent_uid\t|\tname\t|\trank\t|\taut_id\t|\taut_yr_id\t|\tnom_status\t|\tsrc")
     for taxon in taxa:
         wr_process_taxon(taxon)
+
 
 if __name__ == "__main__":
     sys.exit(main(inp_fp=sys.argv[1]))
