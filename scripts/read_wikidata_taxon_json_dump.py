@@ -80,31 +80,31 @@ KNOWN_TAX_NAME_QUAL = frozenset(
 SKIPPABLE_TN_QUAL = frozenset(
     [
         "P3831",  # "object of statement has role"
-        "P697",  # "ex taxon author"
+        "P697",   # "ex taxon author"
         "P2433",  # "gender of sci name"
         "P1353",  # "original spelling"
-        "P138",  # "named after"
+        "P138",   # "named after"
         "P6507",  # "taxon author citation"
         "P1013",  # "criterion used",
         "P1932",  #  "object named as",
         "P2093",  # "author name string"
         "P7452",  # "reason for preferred rank",
-        "P805",  # "statement is subject of",
+        "P805",   # "statement is subject of",
         "P1343",  # "described by source",
         "P1545",  # "series ordinal",
-        "P18",  # "image",
-        "P180",  # "depicts",
+        "P18",    # "image",
+        "P180",   # "depicts",
         "P2210",  # "relative to",
         "P2241",  # "reason for deprecated rank",
         "P2868",  # "subject has role",
-        "P304",  # "page(s)",
-        "P31",  # "instance of",
-        "P460",  # "said to be the same as",
+        "P304",   # "page(s)",
+        "P31",    # "instance of",
+        "P460",   # "said to be the same as",
         "P4970",  # "alternative name",
-        "P580",  # "start time",
-        "P585",  # "point in time",
-        "P642",  # "of (DEPRECATED)",
-        "P825",  # "dedicated to",
+        "P580",   # "start time",
+        "P585",   # "point in time",
+        "P642",   # "of (DEPRECATED)",
+        "P825",   # "dedicated to",
     ]
 )
 
