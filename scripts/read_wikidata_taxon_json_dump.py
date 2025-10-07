@@ -193,7 +193,7 @@ DIE_ON = frozenset(
 EMIT_ID_FOR_PROP = frozenset(
     [
         # FLAG OBJ as synonym
-        "P1420",  # "taxon synonym" - found in valid name, listing synonyms
+        P_TAX_SYN,  # "taxon synonym" - found in valid name, listing synonyms
         # FLAG ENTITY as synonym
         "P12763",  # "taxon synonym of" - found in jr synonym listing valid name
         "P12764",  # "replaced synonym of", - found in jr synonym listing valid name
