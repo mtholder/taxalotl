@@ -71,7 +71,12 @@ def _parse_taxonomy_file(taxonomy_fp):
         lit = iter(inp)
         fl = next(lit)
         assert fl == TAXWIKIDATA_HEADER
-        for line in lit:
+        for n, line in enumerate(lit):
+            ls = line.strip()
+            if not ls:
+                continue
+            if n % 10000 == 0 and n > 0:
+                _LOG.debug(' read taxon {:<7} from "{}" ...'.format(n, taxonomy_fp))
             obj = Taxon(line, line_parser=lp)
             if obj.id in id_2_taxon:
                 _LOG.warning(f"Duplicate taxon ID: {obj.id}")

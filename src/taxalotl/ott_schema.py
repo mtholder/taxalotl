@@ -308,7 +308,7 @@ def tax_wikidata_parser(taxon, line):
         else:
             assert len(ls) > 8 and ls[-1] == "\n"
     except:
-        _LOG.exception("Error reading line {}:\n{}".format(taxon.line_num, line))
+        _LOG.exception(f"Error reading line {taxon.line_num}:\n{line}\n{ls}")
         raise
     taxon.id = ls[0]
     if ls[1]:
