@@ -4,6 +4,7 @@ Internal storage
 Default top path (controlled by t) is ~/.opentreeoflife/taxalotl
 
 
+```
 |=== normalized
 |             |=== ${resource}-${version}
 |             |             |=== about.json
@@ -47,7 +48,7 @@ Default top path (controlled by t) is ~/.opentreeoflife/taxalotl
 |             \=== ${resource}.json
 |=== taxalotl.conf
 
-
+```
 
 
 
