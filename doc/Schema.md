@@ -50,5 +50,41 @@ Default top path (controlled by t) is ~/.opentreeoflife/taxalotl
 
 ```
 
+## Partition command
+Partitioning a resource breaks it into some hard-coded groups (see below)
+
+
+### Current hard-coded partition breaks
+```
+Life
+  Archaea
+  Bacteria
+  Eukaryota
+    Haptophyta
+    SAR
+    Fungi
+    Archaeplastida
+      Chloroplastida
+      Glaucophyta
+      Rhodophyta
+    Metazoa
+      Bryozoa
+      Chordata
+      Cnidaria
+      Ctenophora
+      Mollusca
+      Nematoda
+      Platyhelminthes
+      Porifera
+      Annelida
+      Arthropoda
+        Arachnida
+        Insecta
+          Coleoptera
+          Diptera
+          Hymenoptera
+          Lepidoptera
+        Malacostraca
+```
 
 
