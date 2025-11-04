@@ -31,7 +31,7 @@ from .cmds.partitions import (
     get_misc_inp_taxdir,
     get_taxon_partition,
 )
-from .tax_partition import TAX_SLICE_CACHE
+from .tax_partition import TAX_SLICE_CACHE, ROOTS_FILENAME, ACCUM_DES_FILENAME
 from .util import unlink, OutFile, OutDir
 from .cmds.semanticize import SemGraph
 from .wikispecies import parse_wikispecies
@@ -475,10 +475,10 @@ class ResourceWrapper(FromOTifacts):
             return
         f_to_remove = [
             self.taxon_filename,
-            "__roots__.json",
+            ROOTS_FILENAME,
             "about.json",
             "details.json",
-            "__accum_des__.json",
+            ACCUM_DES_FILENAME,
         ]
         if self.synonyms_filename:
             f_to_remove.append(self.synonyms_filename)
@@ -490,9 +490,7 @@ class ResourceWrapper(FromOTifacts):
             os.rmdir(directory)
         except:
             _LOG.warning(
-                'Could not remove "{}" that directory may not be empty'.format(
-                    directory
-                )
+                f'Could not remove "{directory}" that directory may not be empty'
             )
         else:
             _LOG.info('Removed "{}"'.format(directory))

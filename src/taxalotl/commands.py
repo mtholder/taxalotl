@@ -7,15 +7,15 @@ import sys
 
 from peyutil import read_as_json, write_as_json
 from peyotl import (
-    read_all_otifacts,
     filter_otifacts_by_type,
     partition_otifacts_by_root_element,
+    read_all_otifacts,
 )
 from .cmds.compare import compare_taxonomies_in_dir
 from .cmds.deseparte import deseparate_taxonomies_in_dir
 from .cmds.partitions import (
-    GEN_MAPPING_FILENAME,
     do_partition,
+    GEN_MAPPING_FILENAME,
     get_part_dir_from_part_name,
     NAME_TO_PARTS_SUBSETS,
     PART_NAMES,
@@ -23,7 +23,12 @@ from .cmds.partitions import (
     TERMINAL_PART_NAMES,
     write_info_for_res,
 )
-from .tax_partition import use_tax_partitions, get_taxonomies_for_dir
+from .tax_partition import (
+    get_taxonomies_for_dir,
+    INP_TAXONOMY_DIRNAME,
+    MISC_DIRNAME,
+    use_tax_partitions,
+)
 from .cmds.dynamic_partitioning import (
     perform_dynamic_separation,
     return_sep_obj_copy_with_ott_fields,
@@ -39,6 +44,7 @@ out_stream = sys.stdout
 
 SEP_NAMES = "__separator_names__.json"
 SEP_MAPPING = "__separator_names_to_dir__.json"
+NEW_SEP_FILENAME = "__sep__.json"
 
 
 def align(taxalotl_config, id_list, level_list):
@@ -331,9 +337,6 @@ def pull_otifacts(taxalotl_config):
                 write_as_json(res_dict, outs, indent=2)
 
 
-NEW_SEP_FILENAME = "__sep__.json"
-
-
 def diagnose_new_separators(taxalotl_config, level_list, name):
     rw = taxalotl_config.get_terminalized_res_by_id("ott", "diagnose-new-separators")
     if not rw.has_been_partitioned():
@@ -384,9 +387,9 @@ def build_partition_maps(taxalotl_config):
 
 def accumulate_taxon_dir_names(top_dir, name_to_paths):
     for root, dirs, files in os.walk(top_dir):
-        if root.endswith("__misc__"):
+        if root.endswith(MISC_DIRNAME):
             continue
-        if "__inputs__" in dirs or "__misc__" in dirs:
+        if INP_TAXONOMY_DIRNAME in dirs or MISC_DIRNAME in dirs:
             name = os.path.split(root)[-1]
             name_to_paths.setdefault(name, []).append(root)
 
