@@ -102,4 +102,9 @@ Life
           Lepidoptera
 ```
 
-
+## Partition maps
+Some non-OTT sources (e.g. ncbi, gbif) have previously been incorporated into OTT. 
+The ID's of these sources have been previously aligned to OTT, so they can be partitioned into
+ the primary breakpoints by being broken at the IDs that correspond to the OTT partitioned roots.
+The `build-partition-maps` command does this and stores the mapping for each of these resources
+  in the `__mapping__.json` file at the base of the partitioned working directory.
