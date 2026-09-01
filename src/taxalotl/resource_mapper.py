@@ -4,7 +4,7 @@ Imported by resource manager funtions.
 
 Holds mapping of base_id to class of wrapper to instantiate.
 """
-from .parsing.col import CoLTaxonomyWrapper
+from .parsing.col import CoLTaxonomyWrapper, CoLXRTaxonomyWrapper
 from .parsing.darwin_core import GBIFWrapper
 from .parsing.irmng import IRMNGWrapper
 from .parsing.ncbi import NCBIWrapper
@@ -20,6 +20,7 @@ from .parsing.worms import WormsTaxonomyWrapper
 
 BASE_ID_TO_RES_TYPE = {
     "col": CoLTaxonomyWrapper,
+    "colxr": CoLXRTaxonomyWrapper,
     "gbif": GBIFWrapper,
     "irmng_raw": IRMNGWrapper,
     "irmng_ot": TaxonomyWrapper,

@@ -206,6 +206,7 @@ def status_of_resources(
                     ntrw.write_status(out_stream, indent="")
                 written.add(ntrw.id)
                 trw = taxalotl_config.get_terminalized_res_by_id(rid, "")
+                print(type(trw))
                 if trw is not ntrw and trw.id not in written:
                     trw.write_status(out_stream, indent="  ")
                     written.add(trw.id)
