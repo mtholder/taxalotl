@@ -6,7 +6,11 @@ import logging
 from peyutil import shorter_fp_form
 
 from ..resource_wrapper import TaxonomyWrapper
-from ..parsing.darwin_core import normalize_darwin_core_taxonomy, GBIFWrapper
+from ..parsing.darwin_core import (
+    GBIFWrapper,
+    normalize_darwin_core_taxonomy,
+)
+from ..parsing.coldp import normalize_coldp_taxonomy
 
 _LOG = logging.getLogger(__name__)
 
@@ -143,5 +147,9 @@ class CoLTaxonomyWrapper(TaxonomyWrapper):
         )
 
 
-class CoLXRTaxonomyWrapper(GBIFWrapper):
-    pass
+class CoLXRTaxonomyWrapper(TaxonomyWrapper):
+    taxon_filename = "NameUsage.tsv"
+    schema = {"https://github.com/CatalogueOfLife/coldp/releases/tag/v1.2.0"}
+
+    def normalize(self):
+        normalize_coldp_taxonomy(self.unpacked_filepath, self.normalized_filedir, self)
