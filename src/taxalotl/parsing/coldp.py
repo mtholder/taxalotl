@@ -6,6 +6,7 @@ import os
 import re
 
 import csv
+import sys
 import logging
 from enum import IntEnum
 
@@ -203,16 +204,96 @@ class CDPTaxonomy(object):
         col_id = row[CoLDPIdx.ID]
         accepted_id = row[CoLDPIdx.PARENTID]
         name = row[CoLDPIdx.SCIENTIFICNAME]
-        self.synonyms.setdefault(name, set()).add((accepted_id, col_id))
+        sset = self.synonyms.setdefault(name, set())
+        sset.add((accepted_id, col_id))
 
     def handle_accepted(self, row):
-        raise NotImplementedError("handle_accepted")
+        col_id = row[CoLDPIdx.ID]
+        rank = row[CoLDPIdx.RANK]
+        par_id = row[CoLDPIdx.PARENTID]
+        name = row[CoLDPIdx.SCIENTIFICNAME]
+        if par_id:
+            self.to_children.setdefault(par_id, []).append(col_id)
+        else:
+            # _db_row(row)
+            self.parentless.add(col_id)
+        assert col_id not in self.by_id
+        self.by_id[col_id] = (par_id, name, rank)
 
     def handle_misapplied(self, row):
         self.handle_synonym(row)
         col_id = row[CoLDPIdx.ID]
         name = row[CoLDPIdx.SCIENTIFICNAME]
         self.misapplied.add((name, col_id))
+
+    def _write_taxon(self, outp, t_id):
+        flag = ""
+        par_id, name, rank = self.by_id[t_id]
+        row_data = [t_id, par_id, name, rank, flag]
+        row = "\t|\t".join(row_data)
+        outp.write(f"{row}\n")
+
+    def _write_taxon_tree(self, outp, root_id):
+        inc = set()
+        inc.add(root_id)
+        self._write_taxon(outp, root_id)
+        children = self.to_children.get(root_id)
+        if not children:
+            return inc
+        for child_id in children:
+            d = self._write_taxon_tree(outp, child_id)
+            inc.update(d)
+        return inc
+
+    def _write_synonyms_to(self, outp, t_ids):
+        for name, id_set in self.synonyms.items():
+            for id_par in id_set:
+                target_id, syn_id = id_par
+                if target_id not in t_ids:
+                    continue
+                row_data = [target_id, name, ""]
+                row = "\t|\t".join(row_data)
+                outp.write(f"{row}\n")
+
+    def write_to_dir(self, destination):
+        inc_root = "S"
+        assert inc_root in self.parentless
+        vir_root = "92e52ff4-2dc6-4b35-9339-2e92035b8daf"
+        assert vir_root in self.parentless
+
+        avoid_roots = set([inc_root, vir_root])
+
+        to_do = [i for i in self.parentless if i not in avoid_roots]
+        all_roots = [to_do, [vir_root], [inc_root]]
+
+        tax_fn = [
+            "taxonomy.tsv",
+            "vir_taxonomy.tsv",
+            "parentless_taxonomy.tsv",
+        ]
+        syn_fn = [
+            "synonyms.tsv",
+            "vir_synonyms.tsv",
+            "parentless_synonyms.tsv",
+        ]
+        theader = "\t|\t".join(["uid", "parent_uid", "name", "rank", "flags"])
+        sheader = "\t|\t".join(["uid", "name", "type"])
+
+        for g_idx, root_list in enumerate(all_roots):
+            fn = tax_fn[g_idx]
+            tax_fp = os.path.join(destination, fn)
+            t_ids = set()
+            # print(tax_fp)
+            with open(tax_fp, "w", encoding="utf-8") as outp:
+                outp.write(f"{theader}\n")
+                for root in root_list:
+                    n = self._write_taxon_tree(outp, root)
+                    t_ids.update(n)
+            fn = syn_fn[g_idx]
+            syn_fp = os.path.join(destination, fn)
+            with open(syn_fp, "w", encoding="utf-8") as outp:
+                outp.write(f"{sheader}\n")
+                self._write_synonyms_to(outp, t_ids)
 
 
 def _db_row(row):
@@ -226,13 +307,19 @@ def normalize_coldp_taxonomy(source, destination, res_wrapper):
     taxa = CDPTaxonomy()
 
     with open(taxon_fp, "r", encoding="utf-8") as csvfile:
-        csvreader = csv.reader(csvfile, delimiter="\t")
-        header = next(csvreader)
+        csvreader = iter(csvfile)
+        hline = next(csvreader)
+        assert hline[-1] == "\n"
+        header = hline[:-1].split("\t")
         # If this fails, we need to make the indexing dynamic rather
         # than the CoLDPIdx enum
         assert header == _EXPECTED_HEADER
 
-        for row in csvreader:
+        for row_off, line in enumerate(csvreader):
+            assert line[-1] == "\n"
+            row = line[:-1].split("\t")
+            # sys.stderr.write(f"{row_off + 1}\n")
+
             rstatus = row[CoLDPIdx.STATUS]
             if rstatus in _ACC_STATUS:
                 taxa.handle_accepted(row)
@@ -244,53 +331,4 @@ def normalize_coldp_taxonomy(source, destination, res_wrapper):
                 taxa.handle_misapplied(row)
             else:
                 assert rstatus in _VALID_STATUS
-
-    # manifest_root = ET.parse(manifest_fp).getroot()
-    # core_paths = []
-    # field2index = {}
-    # for el in manifest_root.findall("{http://rs.tdwg.org/dwc/text/}core"):
-    #     for sub in el:
-    #         if sub.tag.endswith("}id"):
-    #             field2index["id"] = int(sub.attrib["index"])
-    #         elif sub.tag.endswith("}field"):
-    #             nns = os.path.split(sub.attrib["term"])[-1]
-    #             field2index[nns] = int(sub.attrib["index"])
-    #     for f in el.findall("{http://rs.tdwg.org/dwc/text/}files"):
-    #         for loc in f.findall("{http://rs.tdwg.org/dwc/text/}location"):
-    #             core_paths.append(loc.text.strip())
-    # if len(core_paths) != 1:
-    #     raise ValueError(
-    #         'Did not find a single core path in DwC file ("{}") found: {}'.format(
-    #             manifest_fp, core_paths
-    #         )
-    #     )
-    # taxon_fn = core_paths[0]
-    # proj_out = os.path.join(destination, "projection.tsv")
-    # if not os.path.exists(proj_out):
-    #     proj_in = os.path.join(source, taxon_fn)
-    #     write_gbif_projection_file(proj_in, proj_out, field2index)
-    # homemade = {
-    #     "id": 0,
-    #     "parentNameUsageID": 1,
-    #     "acceptedNameUsageID": 2,
-    #     "canonicalName": 3,
-    #     "taxonRank": 4,
-    #     "taxonomicStatus": 5,
-    #     "nameAccordingTo": 6,
-    # }
-
-    # itd = InterimTaxonomyData()
-    # to_remove, to_ignore, paleos = read_gbif_projection(
-    #     proj_out, itd, homemade, do_gbif_checks=isinstance(res_wrapper, GBIFWrapper)
-    # )
-    # add_fake_root(itd)
-    # remove_if_tips(itd, to_remove)
-    # o_to_ignore = find_orphaned(itd)
-    # to_ignore.update(o_to_ignore)
-    # prune_ignored(itd, to_ignore)
-    # _LOG.info("writing {} paleodb ids".format(len(paleos)))
-    # with OutFile(os.path.join(destination, "paleo.tsv")) as paleofile:
-    #     for taxon_id in paleos:
-    #         paleofile.write("{}\n".format(taxon_id))
-    # res_wrapper.post_process_interim_tax_data(itd)
-    # itd.write_to_dir(destination)
+        taxa.write_to_dir(destination)
