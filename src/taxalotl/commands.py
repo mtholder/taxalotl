@@ -356,15 +356,7 @@ def clean_resources(taxalotl_config, action, id_list, levels=None):
     if not id_list:
         rw = taxalotl_config.get_terminalized_res_by_id("ott", None)
         fp = os.path.join(rw.partitioned_filepath, GEN_MAPPING_FILENAME)
-        if action == "separation":
-            d = rw.partitioned_filepath
-            if levels == [None]:
-                levels = PART_NAMES
-            for part_name in levels:
-                fragment = taxalotl_config.get_fragment_from_part_name(part_name)
-                pd = os.path.join(d, fragment)
-                remove_sep_artifacts_and_empty_dirs(pd)
-        elif action == "build-partition-maps":
+        if action == "build-partition-maps":
             if os.path.exists(fp):
                 unlink(fp)
             else:
