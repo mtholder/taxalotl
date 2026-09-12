@@ -39,7 +39,6 @@ res_indep_cmds = [
 # Commands that take any resource ID
 res_dep_cmds = [
     "analyze-update",
-    "align",
     "check-partition",
     "clean-partition",
     "download",
