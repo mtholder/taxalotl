@@ -354,17 +354,7 @@ def clean_resources(taxalotl_config, action, id_list, levels=None):
     if levels is None:
         levels = [None]
     if not id_list:
-        rw = taxalotl_config.get_terminalized_res_by_id("ott", None)
-        fp = os.path.join(rw.partitioned_filepath, GEN_MAPPING_FILENAME)
-        if action == "build-partition-maps":
-            if os.path.exists(fp):
-                unlink(fp)
-            else:
-                _LOG.info(
-                    'Mapping file "{}" does not exist. Skipping clean step'.format(fp)
-                )
-        else:
-            raise NotImplementedError("clean of {} not yet implemented".format(action))
+        raise NotImplementedError("clean of {} not yet implemented".format(action))
     for rid in id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid, "clean")
         if action == "partition":

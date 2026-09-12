@@ -103,10 +103,4 @@ by the terms of any license.
 So you will usually have to answer a prompt before the download
 starts.
 
-Currently taxalotl has a somewhat quirky mix of information that is hard-coded based on
-OTT version 3.0 (the start point for the taxalotl updating of taxonomy) and
-information that it gleans from the taxonomy.
-Before you parition other resources, you'll need to run:
-
-    taxalotlcli build-partition-maps
 

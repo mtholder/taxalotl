@@ -32,7 +32,6 @@ _LOG = logging.getLogger(__name__)
 
 # Commands that don't take a resource ID
 res_indep_cmds = [
-    "build-partition-maps",
     "compare-taxonomies",
     "pull-otifacts",
 ]
