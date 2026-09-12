@@ -180,12 +180,6 @@ def find_partition_dirs_for_taxonomy(path_pref, res_id):
     return [i for i in iter_existing_tax_dirs(path_pref, res_id)]
 
 
-def get_part_dir_from_part_name(res, parts_key):
-    return os.path.join(
-        res.partitioned_filepath, res.config.get_fragment_from_part_name(parts_key)
-    )
-
-
 def write_info_for_res(outstream, res, part_name_to_split):
     _LOG.debug("part_name_to_split = {}".format(part_name_to_split))
     par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]

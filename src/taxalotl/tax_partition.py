@@ -111,10 +111,6 @@ class TaxonomySliceCache(object):
     def get_taxon_partition(self, res, fragment):
         return get_taxon_partition(res, fragment)
 
-    def clear_without_flush(self, ck):
-        if ck in self._ck_to_obj:
-            del self._ck_to_obj[ck]
-
 
 TAX_SLICE_CACHE = TaxonomySliceCache()
 

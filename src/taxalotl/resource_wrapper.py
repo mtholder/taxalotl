@@ -676,10 +676,6 @@ class TaxonomyWrapper(ResourceWrapper):
         )
         return tax_part, tax_forest
 
-    def get_parsed_synonyms_by_id(self, current_partition_key, ignored_syn_types=None):
-        tax_part = self.get_read_only_tax_part(current_partition_key)
-        return tax_part.parsed_synonyms_by_id(ignored_syn_types=ignored_syn_types)
-
     def _post_process_tree(self, tree):
         pass
 

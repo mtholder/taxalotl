@@ -216,30 +216,6 @@ def write_ncbi_details_json(fp, details_log):
         write_as_json(details_log, outs, indent=2)
 
 
-def read_taxonomy_to_get_id_to_name(tax_dir, id_coercion=int):
-    ncbi_to_name = {}
-    i = 0
-    fp = os.path.join(tax_dir, "taxonomy.tsv")
-    try:
-        with io.open(fp, "r", encoding="utf-8") as inp:
-            reader = csv.reader(inp, delimiter="\t")
-            header = next(reader)
-            uidx = header.index("uid")
-            namex = header.index("name")
-            for row in reader:
-                uid = id_coercion(row[uidx])
-                name = row[namex]
-                if name is not None:
-                    ncbi_to_name[uid] = name
-                    i += 1
-                    if i % 200000 == 0:
-                        _LOG.info("{} {} {}".format(i, uid, name))
-    except:
-        _LOG.exception("error reading {}".format(fp))
-        raise
-    return ncbi_to_name
-
-
 def int_or_str(s):
     try:
         return int(s)
@@ -361,39 +337,6 @@ HEADER_TO_LINE_PARSER = {
     INP_FLAGGED_OTT_TAXONOMY_NO_TRAIL_HEADER: flag_after_rank_parser,
     TAXWIKIDATA_HEADER: tax_wikidata_parser,
 }
-
-
-# noinspection PyTypeChecker
-def read_taxonomy_to_get_id_to_fields(tax_dir):
-    fp = os.path.join(tax_dir, "taxonomy.tsv")
-    fields = [
-        "uid",
-        "parent_uid",
-        "name",
-        "rank",
-        "sourceinfo",
-        "uniqname",
-        "flags",
-        "\n",
-    ]
-    expected_header = "\t|\t".join(fields)
-    if not os.path.exists(fp):
-        return {}
-    try:
-        with io.open(fp, "r", encoding="utf-8") as inp:
-            iinp = iter(inp)
-            header = next(iinp)
-            assert header == expected_header
-            id_to_obj = {}
-            for n, line in enumerate(iinp):
-                obj = Taxon(line, line_num=1 + n)
-                oid = obj.id
-                assert oid not in id_to_obj
-                id_to_obj[oid] = obj
-            return id_to_obj
-    except:
-        _LOG.exception("Error reading {}".format(fp))
-        raise
 
 
 def read_taxonomy_to_get_single_taxon(tax_dir, root_id):

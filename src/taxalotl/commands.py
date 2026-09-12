@@ -14,7 +14,6 @@ from peyotl import (
 from .cmds.partitions import (
     do_partition,
     GEN_MAPPING_FILENAME,
-    get_part_dir_from_part_name,
     NAME_TO_PARTS_SUBSETS,
     PART_NAMES,
     PREORDER_PART_LIST,
@@ -22,7 +21,6 @@ from .cmds.partitions import (
     write_info_for_res,
 )
 from .tax_partition import (
-    get_taxonomies_for_dir,
     INP_TAXONOMY_DIRNAME,
     MISC_DIRNAME,
     use_tax_partitions,
@@ -350,21 +348,6 @@ def cache_separator_names(taxalotl_config):
     with OutFile(outfn) as outs:
         write_as_json(n2p, outs)
     _LOG.info("Separator name to dir mapping written to {}".format(outfn))
-
-
-def _leveled_in_dir_command(taxalotl_config, levels, func, name, lev_dir_fmt=None):
-    assert levels != [None]
-    todir = taxalotl_config.get_separator_dict()
-    for level in levels:
-        with VirtCommand(name=name, level=level):
-            try:
-                tax_dir_list = todir[level]
-            except KeyError:
-                raise ValueError('The level "{}" is not separator name'.format(level))
-            for tax_dir in tax_dir_list:
-                if lev_dir_fmt:
-                    _LOG.info(lev_dir_fmt.format(level, tax_dir))
-                func(taxalotl_config, tax_dir)
 
 
 def clean_resources(taxalotl_config, action, id_list, levels=None):
