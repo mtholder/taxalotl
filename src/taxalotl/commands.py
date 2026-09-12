@@ -324,39 +324,6 @@ def pull_otifacts(taxalotl_config):
                 write_as_json(res_dict, outs, indent=2)
 
 
-def diagnose_new_separators(taxalotl_config, level_list, name):
-    rw = taxalotl_config.get_terminalized_res_by_id("ott", "diagnose-new-separators")
-    if not rw.has_been_partitioned():
-        partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
-    pd = rw.partitioned_filepath
-    if level_list == [None]:
-        level_list = PART_NAMES
-    for part_name in level_list:
-        with VirtCommand("diagnose-new-separators", level=part_name):
-            nsd = rw.diagnose_new_separators(
-                current_partition_key=part_name, sep_name=name
-            )
-            if not nsd:
-                _LOG.info("no new separtors in {}.".format(part_name))
-            else:
-                for k, sd in nsd.items():
-                    _LOG.info(
-                        "{} new separators in {}".format(sd.num_separators(), part_name)
-                    )
-                    fp = os.path.join(pd, k, NEW_SEP_FILENAME)
-                    with OutFile(fp) as outs:
-                        write_as_json(sd.as_dict(), outs, sort_keys=True, indent=2)
-                        _LOG.info("new separators written to {}".format(fp))
-
-
-def enforce_new_separators(taxalotl_config, id_list, level_list):
-    if level_list == [None]:
-        level_list = list(PREORDER_PART_LIST) + list(TERMINAL_PART_NAMES)
-    with use_tax_partitions():
-        for part_name in level_list:
-            perform_separation(taxalotl_config, part_name, id_list, NEW_SEP_FILENAME)
-
-
 def accumulate_taxon_dir_names(top_dir, name_to_paths):
     for root, dirs, files in os.walk(top_dir):
         if root.endswith(MISC_DIRNAME):
@@ -443,50 +410,3 @@ def clean_resources(taxalotl_config, action, id_list, levels=None):
                 )
         else:
             raise NotImplementedError("clean of {} not yet implemented".format(action))
-
-
-def accumulate_separated_descendants(taxalotl_config, id_list):
-    part_to_dir = taxalotl_config.get_separator_dict()
-    # created a post-order list by using the length of the directory...
-    dir_tuple_list = []
-    for d in part_to_dir.values():
-        for ds in d:
-            dir_tuple_list.append((len(ds), ds))
-    dir_tuple_list.sort(reverse=True)
-    postorder = [i[1] for i in dir_tuple_list]
-    for i in id_list:
-        _LOG.info("accumulate_separated_descendants for {}".format(i))
-        with VirtCommand("accumulate-separated-descendants", res_id=i):
-            res = taxalotl_config.get_terminalized_res_by_id(i, "")
-            for d in postorder:
-                _LOG.info("accumulate_separated_descendants for {}".format(d))
-                res.accumulate_separated_descendants(d)
-
-
-def perform_separation(taxalotl_config, part_name, id_list, sep_fn):
-    ott_res = taxalotl_config.get_terminalized_res_by_id(
-        "ott", "enforce-new-separators"
-    )
-    if not ott_res.has_been_partitioned():
-        partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
-    sep_mapping_fp = os.path.join(ott_res.partitioned_filepath, SEP_MAPPING)
-    if not os.path.isfile(sep_mapping_fp):
-        cache_separator_names(taxalotl_config)
-    top_dir = get_part_dir_from_part_name(ott_res, part_name)
-    active_sep_fn = os.path.join(top_dir, sep_fn)
-    try:
-        active_seps = return_sep_obj_copy_with_ott_fields(read_as_json(active_sep_fn))
-        print(active_seps)
-    except:
-        raise ValueError("{} does not exist".format(part_name, active_sep_fn))
-    if id_list:
-        resource_ids = id_list
-    else:
-        resource_ids = get_taxonomies_for_dir(top_dir)
-    for rid in resource_ids:
-        with VirtCommand("enforce-new-separators", res_id=rid, level=part_name):
-            rw = taxalotl_config.get_resource_by_id(rid)
-            print(rid, rw)
-            perform_dynamic_separation(
-                ott_res, res=rw, part_key=part_name, separation_by_ott=active_seps
-            )
