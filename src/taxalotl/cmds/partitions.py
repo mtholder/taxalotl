@@ -186,19 +186,6 @@ def get_part_dir_from_part_name(res, parts_key):
     )
 
 
-def merge_and_write_taxon_partition_list(tp_list):
-    if not tp_list:
-        return
-    fp_set = set()
-    for tp in tp_list:
-        fp = tp.taxon_fp
-        if fp in fp_set:
-            tp.append_write()
-        else:
-            tp.write()
-            fp_set.add(fp)
-
-
 def write_info_for_res(outstream, res, part_name_to_split):
     _LOG.debug("part_name_to_split = {}".format(part_name_to_split))
     par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
@@ -262,59 +249,3 @@ def do_partition(res, part_name_to_split):
             res.partition_source_dir, res.taxon_filename
         )
     tp.do_partition(mapping)
-
-
-def check_partition(res, part_name_to_split):
-    par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
-    part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
-    master_map = res.get_primary_partition_map()
-    fragment = (
-        os.path.join(par_frag, part_name_to_split) if par_frag else part_name_to_split
-    )
-    if not res.has_been_partitioned_for_fragment(fragment):
-        _LOG.info("Partition for fragment {} has not been done.".format(fragment))
-        return True
-    pop_subdirs = [k for k in part_keys if k in master_map]
-    if not pop_subdirs:
-        _LOG.info("No {} mapping for {}".format(res.id, part_name_to_split))
-        return True
-    with use_tax_partitions() as cache:
-        misc = get_taxon_partition(res, fragment)
-        cache.clear_without_flush(misc.cache_key)
-        subs = [
-            get_taxon_partition(res, os.path.join(fragment, k)) for k in pop_subdirs
-        ]
-        unpart = get_taxon_partition(res, _LIFE)
-        unpart.external_input_fp = os.path.join(
-            res.partition_source_dir, res.taxon_filename
-        )
-        check_partition_union(fragment, misc, subs, unpart)
-
-
-def check_partition_union(fragment, misc, subs, unpartitioned):
-    slice_roots, slice_ids = misc._debug_validity_check()
-    for p in subs:
-        p_ids = p._debug_validity_check()[1]
-        slice_ids.update(p_ids)
-        _LOG.warning(
-            "{} IDs from {} bring total in {} up to {}".format(
-                len(p_ids), p.fragment, len(slice_ids), misc.fragment
-            )
-        )
-        for p_root_id, root_obj in p._roots.items():
-            pr = root_obj["par_id"]
-            if pr not in slice_ids:
-                slice_roots.add(p_root_id)
-    unpartitioned._debug_check_subtree_ids(slice_roots, slice_ids)
-
-
-def get_inverse_misc_non_misc_dir_for_tax(inp_dir, tax_id):
-    """If given an unpartitioned dir, return (misc, False) otherwise (canonical, True)"""
-    misc_suffix = "/" + os.path.join(MISC_DIRNAME, INP_TAXONOMY_DIRNAME, tax_id)
-    if inp_dir.endswith(misc_suffix):
-        non_misc = inp_dir[: -len(misc_suffix)]
-        return os.path.join(non_misc, INP_TAXONOMY_DIRNAME, tax_id), False
-    non_misc_suffix = "/" + os.path.join(INP_TAXONOMY_DIRNAME, tax_id)
-    assert inp_dir.endswith(non_misc_suffix)
-    non_misc = inp_dir[: -len(non_misc_suffix)]
-    return os.path.join(non_misc, MISC_DIRNAME, INP_TAXONOMY_DIRNAME, tax_id), True
