@@ -366,21 +366,6 @@ def enforce_new_separators(taxalotl_config, id_list, level_list):
             perform_separation(taxalotl_config, part_name, id_list, NEW_SEP_FILENAME)
 
 
-def build_partition_maps(taxalotl_config):
-    rw = taxalotl_config.get_terminalized_res_by_id("ott", "partition")
-    if not rw.has_been_partitioned():
-        partition_resources(taxalotl_config, ["ott"], PREORDER_PART_LIST)
-    nsd = rw.build_paritition_maps()
-    if not nsd:
-        return
-    pd = rw.partitioned_filepath
-    mfp = os.path.join(pd, GEN_MAPPING_FILENAME)
-    with VirtCommand("build-partition-maps"):
-        with OutFile(mfp) as outs:
-            write_as_json(nsd, outs, indent=2)
-    _LOG.info("Partitions maps written to {}".format(mfp))
-
-
 def accumulate_taxon_dir_names(top_dir, name_to_paths):
     for root, dirs, files in os.walk(top_dir):
         if root.endswith(MISC_DIRNAME):
@@ -422,54 +407,6 @@ def _leveled_in_dir_command(taxalotl_config, levels, func, name, lev_dir_fmt=Non
                 if lev_dir_fmt:
                     _LOG.info(lev_dir_fmt.format(level, tax_dir))
                 func(taxalotl_config, tax_dir)
-
-
-def compare_taxonomies(taxalotl_config, levels):
-    return _leveled_in_dir_command(
-        taxalotl_config,
-        levels,
-        compare_taxonomies_in_dir,
-        name="compare-taxonomies",
-        lev_dir_fmt='Will compare taxonomies for "{}" based on {}',
-    )
-
-
-def deseparate_taxonomies(taxalotl_config, levels):
-    return _leveled_in_dir_command(
-        taxalotl_config,
-        levels,
-        deseparate_taxonomies_in_dir,
-        name="compare-taxonomies",
-        lev_dir_fmt='Will compare taxonomies for "{}" based on {}',
-    )
-
-
-def remove_sep_artifacts_and_empty_dirs(d):
-    dir_to_del = []
-    for tup in os.walk(d):
-        directory, filenames = tup[0], tup[-1]
-        if directory == d:
-            continue
-        if NEW_SEP_FILENAME in filenames:
-            unlink(os.path.join(directory, NEW_SEP_FILENAME))
-        if filenames == [] or filenames == [NEW_SEP_FILENAME]:
-            dir_to_del.append(directory)
-        else:
-            _LOG.info('"{}" not empty and will not be deleted'.format(directory))
-    for directory in reversed(dir_to_del):
-        contents = os.listdir(directory)
-        if contents:
-            _LOG.info(
-                '"{}" contains {} and will not be deleted'.format(contents, directory)
-            )
-        else:
-            try:
-                _LOG.info('Removing empty dir "{}" '.format(directory))
-                os.rmdir(directory)
-            except:
-                _LOG.warning(
-                    'Could not remove "{}" that directory (?!)'.format(directory)
-                )
 
 
 def clean_resources(taxalotl_config, action, id_list, levels=None):

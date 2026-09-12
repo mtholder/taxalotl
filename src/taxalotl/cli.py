@@ -9,9 +9,7 @@ from peyutil import read_as_json
 from . import TaxalotlConfig
 from .commands import (
     # analyze_update,
-    build_partition_maps,
     clean_resources,
-    compare_taxonomies,
     download_resources,
     info_on_resources,
     normalize_resources,
@@ -218,12 +216,10 @@ def main():
             ]
         )
         sel_cmd = None
-        num_cmds = 0
         for c in all_cmds:
             if c in a:
                 if sel_cmd is None:
                     sel_cmd = c
-                num_cmds += 1
         comp_list = []
         if sel_cmd is None:
             comp_list = []

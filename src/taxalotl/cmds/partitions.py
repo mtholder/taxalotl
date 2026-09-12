@@ -80,29 +80,6 @@ def get_misc_inp_taxdir(parts_dir, frag, taxonomy_id):
     )
 
 
-def get_all_taxdir_and_misc_uncles(parts_dir, frag, taxonomy_id):
-    """Returns a list of dirs for this taxonomy_id starting at
-    the `frag` directory, but also including the __misc__ subdirectories
-     of is ancestral directories.
-    This represents the set of directories that should hold the taxa
-        for this fragment allowing for underclassification of taxa, but
-        not misclassification into a non-ancestral group.
-    """
-    d = [get_inp_taxdir(parts_dir, frag, taxonomy_id)]
-    if os.sep in frag:
-        frag = os.path.split(frag)[0]
-        while len(frag) > 1 + len(parts_dir):
-            md = get_inp_taxdir(
-                parts_dir, os.path.join(frag, MISC_DIRNAME), taxonomy_id
-            )
-            d.append(md)
-            if os.sep in frag:
-                frag = os.path.split(frag)[0]
-            else:
-                break
-    return d
-
-
 def get_auto_gen_part_mapper(res):
     fp = os.path.join(res.partitioned_filepath, GEN_MAPPING_FILENAME)
     if not os.path.isfile(fp):
