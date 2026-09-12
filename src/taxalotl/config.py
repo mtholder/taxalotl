@@ -79,15 +79,6 @@ class TaxalotlConfig(object):
         self.crash_with_stacktraces = bool(cws)
         assert self.resources_mgr is not None
 
-    def get_separator_dict(self):
-        from .commands import SEP_MAPPING, cache_separator_names
-        from peyutil import read_as_json
-
-        fn = os.path.join(self.partitioned_dir, SEP_MAPPING)
-        if not os.path.exists(fn):
-            cache_separator_names(self)
-        return read_as_json(fn)
-
     def get_fragment_from_part_name(self, parts_key, recurse=True):
         try:
             from .cmds.partitions import PART_NAME_TO_FRAGMENT

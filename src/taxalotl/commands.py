@@ -11,8 +11,6 @@ from peyotl import (
     partition_otifacts_by_root_element,
     read_all_otifacts,
 )
-from .cmds.compare import compare_taxonomies_in_dir
-from .cmds.deseparte import deseparate_taxonomies_in_dir
 from .cmds.partitions import (
     do_partition,
     GEN_MAPPING_FILENAME,
@@ -29,10 +27,7 @@ from .tax_partition import (
     MISC_DIRNAME,
     use_tax_partitions,
 )
-from .cmds.dynamic_partitioning import (
-    perform_dynamic_separation,
-    return_sep_obj_copy_with_ott_fields,
-)
+
 
 # from .cmds.analyze_update import analyze_update_to_resources
 from .cmds.align import align_resource

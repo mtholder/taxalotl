@@ -8,16 +8,10 @@ from peyutil import read_as_json
 
 from . import TaxalotlConfig
 from .commands import (
-    accumulate_separated_descendants,
-    align,
     # analyze_update,
     build_partition_maps,
-    cache_separator_names,
     clean_resources,
     compare_taxonomies,
-    deseparate_taxonomies,
-    diagnose_new_separators,
-    enforce_new_separators,
     download_resources,
     info_on_resources,
     normalize_resources,
@@ -25,7 +19,6 @@ from .commands import (
     pull_otifacts,
     status_of_resources,
     unpack_resources,
-    SEP_NAMES,
 )
 from .cmds.partitions import (
     PART_NAMES,
@@ -42,22 +35,16 @@ _LOG = logging.getLogger(__name__)
 # Commands that don't take a resource ID
 res_indep_cmds = [
     "build-partition-maps",
-    "cache-separator-names",
-    "clean-separation",
     "compare-taxonomies",
-    "deseparate-taxonomies",
-    "diagnose-new-separators",
     "pull-otifacts",
 ]
 # Commands that take any resource ID
 res_dep_cmds = [
-    "accumulate-separated-descendants",
     "analyze-update",
     "align",
     "check-partition",
     "clean-partition",
     "download",
-    "enforce-new-separators",
     "info",
     "normalize",
     "partition",
@@ -69,33 +56,14 @@ ver_inp_res_dep_cmds = []
 all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 
 
-def _validate_level_arg(taxalotl_config, level):
-    if (level is not None) and (level not in NAME_TO_PARTS_SUBSETS):
-        sep_dict = taxalotl_config.get_separator_dict()
-        if level not in sep_dict:
-            sn = set(NAME_TO_PARTS_SUBSETS.keys()).union(sep_dict.keys())
-            raise RuntimeError('--level should be one of "{}"'.format('", "'.join(sn)))
-    return True
-
-
 def main_post_parse(args):
     taxalotl_config = TaxalotlConfig(filepath=args.config)
     try:
         # if args.which == 'analyze-update':
         #     analyze_update(taxalotl_config, args.resources, [args.level])
         # elif
-        if args.which == "align":
-            align(taxalotl_config, args.resources, [args.level])
-        elif args.which == "clean-partition":
+        if args.which == "clean-partition":
             clean_resources(taxalotl_config, "partition", args.resources)
-        elif args.which == "clean-separation":
-            clean_resources(taxalotl_config, "separation", [], [args.level])
-        elif args.which == "cache-separator-names":
-            cache_separator_names(taxalotl_config)
-        elif args.which == "compare-taxonomies":
-            compare_taxonomies(taxalotl_config, [args.level])
-        elif args.which == "deseparate-taxonomies":
-            deseparate_taxonomies(taxalotl_config, [args.level])
         elif args.which == "download":
             download_resources(taxalotl_config, args.resources)
         elif args.which == "status":
@@ -110,18 +78,8 @@ def main_post_parse(args):
             unpack_resources(taxalotl_config, args.resources)
         elif args.which == "normalize":
             normalize_resources(taxalotl_config, args.resources)
-        elif args.which == "accumulate-separated-descendants":
-            accumulate_separated_descendants(taxalotl_config, args.resources)
         elif args.which == "pull-otifacts":
             pull_otifacts(taxalotl_config)
-        elif args.which == "diagnose-new-separators":
-            _validate_level_arg(taxalotl_config, args.level)
-            diagnose_new_separators(taxalotl_config, [args.level], args.name)
-        elif args.which == "enforce-new-separators":
-            _validate_level_arg(taxalotl_config, args.level)
-            enforce_new_separators(taxalotl_config, args.resources, [args.level])
-        elif args.which == "build-partition-maps":
-            build_partition_maps(taxalotl_config)
         elif args.which == "partition":
             if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
                 raise RuntimeError(
@@ -206,25 +164,6 @@ def main():
         help="Report only on the terminalized resource of each type.",
     )
     status_p.set_defaults(which="status")
-    # deseparate
-    deseparate_p = subp.add_parser(
-        "deseparate-taxonomies", help="reverses the action of one separate action"
-    )
-    _add_level_arg(deseparate_p)
-    deseparate_p.set_defaults(which="deseparate-taxonomies")
-    # CACHE-separator-names
-    compare_tax_p = subp.add_parser(
-        "compare-taxonomies", help="compare taxonomies for a separated dir"
-    )
-    _add_level_arg(compare_tax_p)
-    compare_tax_p.set_defaults(which="compare-taxonomies")
-
-    # CACHE-separator-names
-    cache_p = subp.add_parser(
-        "cache-separator-names",
-        help="Accumulate a list of separator names for tab-completion",
-    )
-    cache_p.set_defaults(which="cache-separator-names")
     # DOWNLOAD
     download_p = subp.add_parser(
         "download", help="download an artifact to your local filesystem"
@@ -261,56 +200,6 @@ def main():
     _add_level_arg(info_p)
     info_p.set_defaults(which="info")
 
-    # DIAGNOSE-NEW-SEPARATORS
-    diag_sep_p = subp.add_parser(
-        "diagnose-new-separators",
-        help="Uses the last OTT build to find taxa IDs that "
-        "feature are common to the relevant inputs",
-    )
-    _add_level_arg(diag_sep_p)
-    diag_sep_p.add_argument(
-        "--name", default=None, required=False, help="Name of the separator"
-    )
-    diag_sep_p.set_defaults(which="diagnose-new-separators")
-    # ENFORCE-NEW-SEPARATORS
-    enf_sep_p = subp.add_parser(
-        "enforce-new-separators",
-        help="Uses the __sep__.json files created by "
-        "diagnose-new-separators to partition by unproblematic "
-        "taxa",
-    )
-    enf_sep_p.add_argument(
-        "resources", nargs="*", help="IDs of the resources to separate"
-    )
-    _add_level_arg(enf_sep_p)
-    enf_sep_p.set_defaults(which="enforce-new-separators")
-    # Align
-    align_p = subp.add_parser(
-        "align",
-        help="Attempts to align a new (parititioned) resource to the latest OTT for a level",
-    )
-    align_p.add_argument(
-        "resources", nargs="*", help="IDs of the resources to separate"
-    )
-    _add_level_arg(align_p)
-    align_p.set_defaults(which="align")
-
-    # ACCUMULATE-SEPARATED-DESCENDANTS
-    accum_sep_des_p = subp.add_parser(
-        "accumulate-separated-descendants",
-        help="Should be run after enforce-separators and before compare-taxonomies",
-    )
-    accum_sep_des_p.add_argument("resources", nargs="*", help="IDs of the resources")
-    accum_sep_des_p.set_defaults(which="accumulate-separated-descendants")
-
-    # BUILD-PARTITION-MAPS
-    build_partition_maps_p = subp.add_parser(
-        "build-partition-maps",
-        help="Uses the last OTT build to find the "
-        "ID mappings needed to "
-        "partition the inputs taxonomies.",
-    )
-    build_partition_maps_p.set_defaults(which="build-partition-maps")
     # CLEAN-PARTITION
     clean_p = subp.add_parser(
         "clean-partition",
@@ -318,13 +207,6 @@ def main():
     )
     clean_p.add_argument("resources", nargs="*", help="IDs of the resources to clean")
     clean_p.set_defaults(which="clean-partition")
-    # CLEAN-PARTITION
-    clean_s_p = subp.add_parser(
-        "clean-separation",
-        help="remove the results the diagnose-new-separator for a resource.",
-    )
-    _add_level_arg(clean_s_p)
-    clean_s_p.set_defaults(which="clean-separation")
 
     # Handle --show-completions differently from the others, because
     #   argparse does not help us out here... at all
@@ -400,17 +282,6 @@ def main():
                         comp_list = list(NONTERMINAL_PART_NAMES)
                     elif "--level" not in a:
                         comp_list.extend(["--level"])
-                elif sel_cmd in ("diagnose-new-separators", "enforce-new-separators"):
-                    # sys.stderr.write(str(a))
-                    if "--level" == a[-1] or (len(a) > 1 and "--level" == a[-2]):
-                        comp_list = list(TERMINAL_PART_NAMES)
-                    elif "--level" not in a:
-                        comp_list.extend(["--level"])
-                elif sel_cmd in ["compare-taxonomies"]:
-                    rw = taxalotl_config.get_terminalized_res_by_id("ott", "")
-                    outfn = os.path.join(rw.partitioned_filepath, SEP_NAMES)
-                    if os.path.exists(outfn):
-                        comp_list.extend(read_as_json(outfn))
 
         sys.stdout.write("{}\n".format(" ".join(comp_list)))
     else:

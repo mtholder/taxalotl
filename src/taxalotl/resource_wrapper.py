@@ -33,7 +33,6 @@ from .cmds.partitions import (
 )
 from .tax_partition import TAX_SLICE_CACHE, ROOTS_FILENAME, ACCUM_DES_FILENAME
 from .util import unlink, OutFile, OutDir
-from .cmds.semanticize import SemGraph
 from .wikispecies import parse_wikispecies
 from .wikidata import parse_wikidata
 
@@ -636,91 +635,6 @@ class TaxonomyWrapper(ResourceWrapper):
         ResourceWrapper.__init__(self, obj, parent=parent, refs=refs, config=config)
         self.part_name_to_tax_part_in_mem = {}
         # print("ET obj = {}".format(obj))
-
-    def node_should_be_semanticized(self, node):
-        if "environmental sample" in node.name:
-            _LOG.warning('Not semanticizing env. sample: "{}"'.format(node.line[:-1]))
-            return False
-        return True
-
-    def semanticize_node_entry(self, sem_graph, node, par_sem_node):
-        from .cmds.semanticize import semanticize_node_name, NameParsingError
-
-        if not self.node_should_be_semanticized(node):
-            return None
-        tc = sem_graph.add_taxon_concept(node.id)
-        tc.claim_rank(node.rank)
-        try:
-            semanticize_node_name(self, sem_graph, tc, node)
-        except NameParsingError as x:
-            _LOG.warning('Failed to parse a name for "{}"'.format(node.line[:-1]))
-            sem_graph.remove_taxon_concept(tc)
-            return None
-        # _LOG.warning('node: {}'.format(node.__dict__))
-        return tc
-
-    def semanticize_node_exit(self, sem_graph, node, sem_node, child_sem_nodes):
-        for csn in child_sem_nodes:
-            csn.claim_is_child_of(sem_node)
-        return sem_node
-
-    def semanticize_node_synonyms(self, sem_graph, node, sem_node, syn):
-        from .cmds.semanticize import semanticize_node_synonym
-
-        semanticize_node_synonym(self, sem_graph, node, sem_node, syn)
-
-    def semanticize_node_authority_synonyms(self, sem_graph, node, sem_node, syn):
-        from .cmds.semanticize import semanticize_node_auth_synonym
-
-        semanticize_node_auth_synonym(self, sem_graph, node, sem_node, syn)
-
-    def semanticize(
-        self, fragment, semantics_dir, tax_part=None, taxon_forest=None
-    ) -> SemGraph:
-        if taxon_forest is None:
-            tax_part, taxon_forest = self.get_tax_part_and_forest(fragment)
-        from .cmds.semanticize import semanticize_and_serialize_tax_part
-
-        return semanticize_and_serialize_tax_part(
-            self.config, self, fragment, semantics_dir, tax_part, taxon_forest
-        )
-
-    def accumulate_separated_descendants(self, scaffold_dir):
-        scaffold_anc = os.path.split(scaffold_dir)[0]
-        pd = self.partitioned_filepath
-        # _LOG.debug('comparing "{}" and "{}"'.format(pd, scaffold_anc))
-        if scaffold_anc == pd:
-            return
-        pd = "{}/".format(pd)
-        assert scaffold_anc.startswith(pd)
-        frag = scaffold_dir[len(pd) :]
-        _LOG.info("frag = {}".format(frag))
-        tax_part = get_taxon_partition(self, fragment=frag)
-        tax_part.read_inputs_for_read_only()
-        # root_ids = tax_part.get_root_ids()
-        forest = tax_part.get_taxa_as_forest()
-        des_accum = tax_part.read_acccumulated_des()
-        if des_accum:
-            for des_id, par_id, line in des_accum:
-                assert forest.get_taxon(par_id) is not None
-        accum_list = []
-        pass_through = tax_part.read_pass_through_des()
-        if pass_through:
-            accum_list.extend(pass_through)
-        crs = set()
-        for tree in forest.trees:
-            root = tree.root
-            crs.add(root.id)
-            accum_list.append((root.id, root.par_id, root.line))
-        # _LOG.info('accum_list: "{}"'.format(accum_list))
-        anc_frag = os.path.split(frag)[0]
-        while not self.has_been_partitioned_for_fragment(anc_frag):
-            if not anc_frag:
-                assert False
-            anc_frag = os.path.split(anc_frag)[0]
-        anc_tax_part = get_taxon_partition(self, anc_frag)
-        anc_tax_part.register_accumulated_des(accum_list)
-        TAX_SLICE_CACHE.try_del(tax_part.cache_key)
 
     @property
     def is_abstract_input_resource_type(self):
