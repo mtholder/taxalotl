@@ -266,13 +266,13 @@ def info_on_resources(taxalotl_config, id_list, level_list):
         write_info_for_res(out_stream, res, part_name_to_split)
 
 
-def partition_resources(taxalotl_config, id_list, level_list):
+def partition_resources(taxalotl_config, hard_coded, id_list, level_list):
     for res, part_name_to_split in _iter_norm_term_res_internal_level_pairs(
         taxalotl_config, id_list, level_list, "partition"
     ):
         with VirtCommand("partition", res_id=res.id, level=part_name_to_split):
             with use_tax_partitions():
-                do_partition(res, part_name_to_split)
+                do_partition(res, hard_coded, part_name_to_split)
 
 
 def exec_or_runtime_error(invocation, working_dir="."):

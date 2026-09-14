@@ -81,7 +81,9 @@ def main_post_parse(args):
                 raise RuntimeError(
                     '--level should be one of "{}"'.format('", "'.join(PART_NAMES))
                 )
-            partition_resources(taxalotl_config, args.resources, [args.level])
+            partition_resources(
+                taxalotl_config, args.hard_coded, args.resources, [args.level]
+            )
         elif args.which == "info":
             if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
                 raise RuntimeError(
@@ -184,6 +186,12 @@ def main():
     normalize_p.set_defaults(which="normalize")
     # PARTITION
     partition_p = subp.add_parser("partition", help="Breaks the resource taxon")
+    partition_p.add_argument(
+        "--hard-coded",
+        action="store_true",
+        default=False,
+        help="Rely on partition breaks hard-coded in taxalotl.",
+    )
     partition_p.add_argument(
         "resources", nargs="+", help="IDs of the resources to partitition"
     )

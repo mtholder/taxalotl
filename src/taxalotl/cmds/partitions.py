@@ -207,7 +207,7 @@ def write_info_for_res(outstream, res, part_name_to_split):
     )
 
 
-def do_partition(res, part_name_to_split):
+def do_partition(res, hard_coded, part_name_to_split):
     """Partition a parent taxon into descendants and garbagebin (__misc__) dir
 
     :param res: a wrapper around the resource. Used for id, part_source_filepath,
