@@ -362,8 +362,3 @@ class GBIFWrapper(TaxonomyWrapper):
         normalize_darwin_core_taxonomy(
             self.unpacked_filepath, self.normalized_filedir, self
         )
-
-    def node_should_be_semanticized(self, node):
-        if _BOLD_NAME.match(node.name):
-            return False
-        return super(GBIFWrapper, self).node_should_be_semanticized(node)

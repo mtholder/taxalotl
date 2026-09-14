@@ -120,7 +120,7 @@ PART_NAMES = list(NAME_TO_PARTS_SUBSETS.keys())
 PART_NAMES.sort()
 PART_NAMES = tuple(PART_NAMES)
 PREORDER_PART_LIST = tuple(NONTERMINAL_PART_NAMES)
-POSTORDER_PART_LIST = tuple(reversed(PREORDER_PART_LIST))
+# POSTORDER_PART_LIST = tuple(reversed(PREORDER_PART_LIST))
 NONTERMINAL_PART_NAMES.sort()
 NONTERMINAL_PART_NAMES = tuple(NONTERMINAL_PART_NAMES)
 TERMINAL_PART_NAMES.sort()
@@ -143,12 +143,6 @@ def _rec_populate(d_to_fill, key_to_filled_set):
                         cu.update(fsv)
                 if cu:
                     key_to_filled_set[key] = cu
-
-
-def fill_empty_anc_of_mapping(mapping):
-    # _LOG.info('mapping = {}'.format(mapping))
-    s = copy.deepcopy(BASE_PARTITIONS_DICT)
-    _rec_populate(s, mapping)
 
 
 # Data above here, to be refactored at some point

@@ -255,9 +255,6 @@ class NCBIWrapper(TaxonomyWrapper):
     def normalize(self):
         normalize_ncbi(self.unpacked_filepath, self.normalized_filedir, self)
 
-    def _post_process_tree(self, tree):
-        self.collapse_incertae_sedis_by_name_prefix(tree, "unclassified ")
-
     def post_process_interim_tax_data(self, interim_tax_data):
         self.collapse_as_incertae_sedis_interim_tax_data(
             interim_tax_data, "unclassified"

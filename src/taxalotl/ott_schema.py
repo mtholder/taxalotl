@@ -339,36 +339,6 @@ HEADER_TO_LINE_PARSER = {
 }
 
 
-def read_taxonomy_to_get_single_taxon(tax_dir, root_id):
-    sri = str(root_id)
-    fp = os.path.join(tax_dir, "taxonomy.tsv")
-    fields = [
-        "uid",
-        "parent_uid",
-        "name",
-        "rank",
-        "sourceinfo",
-        "uniqname",
-        "flags",
-        "\n",
-    ]
-    expected_header = "\t|\t".join(fields)
-    try:
-        with io.open(fp, "r", encoding="utf-8") as inp:
-            iinp = iter(inp)
-            header = next(iinp)
-            assert header == expected_header
-            for n, line in enumerate(iinp):
-                if not line.startswith(sri):
-                    continue
-                obj = Taxon(line, line_num=1 + n)
-                if root_id == obj.id:
-                    return obj
-    except:
-        _LOG.exception("Error reading {}".format(fp))
-        raise
-
-
 class InterimTaxonomyData(object):
     def __init__(self):
         self.about = {}

@@ -36,7 +36,6 @@ out_stream = sys.stdout
 
 SEP_NAMES = "__separator_names__.json"
 SEP_MAPPING = "__separator_names_to_dir__.json"
-NEW_SEP_FILENAME = "__sep__.json"
 
 
 # def analyze_update(taxalotl_config, id_list, level_list):

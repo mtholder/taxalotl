@@ -494,20 +494,6 @@ class ResourceWrapper(FromOTifacts):
         else:
             _LOG.info('Removed "{}"'.format(directory))
 
-    def get_taxdir_for_part(self, part_key):
-        return self.config.get_part_inp_taxdir(part_key, self.id)
-
-    def get_taxdir_for_root_of_part(self, part_key):
-        term_dir = self.get_taxdir_for_part(part_key)
-        taxon_file = os.path.join(term_dir, self.taxon_filename)
-        if os.path.exists(taxon_file):
-            return term_dir
-        par_key, misc_dir = self.config.get_par_and_par_misc_taxdir(part_key, self.id)
-        taxon_file = os.path.join(misc_dir, self.taxon_filename)
-        if os.path.exists(taxon_file):
-            return misc_dir
-        return None
-
     def download(self):
         dfp = self.download_filepath
         if dfp is None:
@@ -646,64 +632,8 @@ class TaxonomyWrapper(ResourceWrapper):
             return "irmng"  # sorry this is hacky...
         return self.base_id
 
-    def get_read_only_tax_part(self, current_partition_key):
-        if not current_partition_key.startswith("/"):
-            current_partition_key = self.config.get_fragment_from_part_name(
-                current_partition_key
-            )
-        tax_part = self.part_name_to_tax_part_in_mem.get(current_partition_key)
-        if tax_part is None:
-            tax_part = get_taxon_partition(self, current_partition_key)
-            tax_part.read_inputs_for_read_only()
-            self.part_name_to_tax_part_in_mem[current_partition_key] = tax_part
-        return tax_part
-
-    def get_taxon_forest_for_partition(self, current_partition_key):
-        return self.get_tax_part_and_forest(current_partition_key)[1]
-
-    def get_tax_part_and_forest(self, current_partition_key):
-        tax_part = self.get_read_only_tax_part(current_partition_key)
-        if not os.path.isfile(tax_part.tax_fp):
-            m = 'Skipping {} due to lack of file at "{}"'
-            _LOG.warning(m.format(current_partition_key, tax_part.tax_fp))
-            return tax_part, {}
-        _LOG.info("converting taxonomy from {} to a tree".format(tax_part.tax_fp))
-        tax_forest = tax_part.get_taxa_as_forest()
-        for x in tax_forest.trees:
-            self._post_process_tree(x)
-        _LOG.info(
-            "{} taxon trees read from {}".format(len(tax_forest.roots), tax_part.tax_fp)
-        )
-        return tax_part, tax_forest
-
-    def _post_process_tree(self, tree):
-        pass
-
     def post_process_interim_tax_data(self, interim_tax_data):
         pass
-
-    def collapse_incertae_sedis_by_name_prefix(self, tree, prefix):
-        to_collapse_as_incertae_sedis = []
-        for nd in tree.preorder():
-            if " x " in nd.name:
-                # _LOG.info('flagging "{}" as a hybrid'.format(nd.name))
-                nd.flag_as_hybrid()
-            if nd.name.lower().startswith(prefix):
-                to_collapse_as_incertae_sedis.append(nd)
-                # _LOG.info('will collapse "{}"'.format(nd.name))
-        self.collapse_as_incertae_sedis(tree, to_collapse_as_incertae_sedis)
-
-    def collapse_as_incertae_sedis(self, tree, to_collapse_as_incertae_sedis):
-        tree.collapsed_incertae_sedis_containers = set(to_collapse_as_incertae_sedis)
-        for nd in to_collapse_as_incertae_sedis:
-            new_par_id = nd.par_id
-            new_par = tree.get_taxon(new_par_id)
-            if new_par:
-                new_par.children_refs.remove(nd)
-                new_par.children_refs.extend(nd.children_refs)
-            for c in nd.children_refs:
-                c.par_id = new_par_id
-                c.flag_as_incertae_sedis()
 
     def collapse_as_incertae_sedis_interim_tax_data(self, interim_tax_data, prefix):
         if interim_tax_data.names_interpreted_as_changes:

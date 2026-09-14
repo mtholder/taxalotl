@@ -252,29 +252,6 @@ IGNORE_COMMON_NAME_SYN_TYPES = {
 }
 
 
-class SynonymInterpreter(object):
-    def __init__(self, header):
-        if header.endswith("\n"):
-            header = header[:-1]
-        self.fields = [i.strip() for i in header.split("\t|\t") if i.strip()]
-        assert "uid" in self.fields
-        self._uid_ind = self.fields.index("uid")
-        self._name_ind = self.fields.index("name")
-        self._type_ind = self.fields.index("type")
-
-    def interpret(self, uid, syn_id_line_tuple):
-        syn_id, line = syn_id_line_tuple
-        sl = line.split("\t|\t")
-        suid = sl[self._uid_ind]
-        name = sl[self._name_ind].strip()
-        syn_type = sl[self._type_ind].strip().lower()
-        if syn_type not in _VALID_SYN_TYPES:
-            m = 'synonym_type "{}" not recognized in for ({}, "{}")'
-            raise ValueError(m.format(syn_type, uid, name))
-        assert uid == int(suid)
-        return Synonym(valid_tax_id=uid, name=name, syn_type=syn_type, syn_id=syn_id)
-
-
 # noinspection PyProtectedMember
 class LightTaxonomyHolder(object):
     _DATT = [
@@ -309,23 +286,6 @@ class LightTaxonomyHolder(object):
     @property
     def synonyms_by_id(self):
         return copy(self._syn_by_id)
-
-    def parsed_synonyms_by_id(self, ignored_syn_types=None):
-        if self._parsed_syn_by_id is None:
-            p = {}
-            if self._syn_by_id:
-                si = SynonymInterpreter(self.syn_header)
-                for uid, line_stub_list in self._syn_by_id.items():
-                    ps = set()
-                    for i in line_stub_list:
-                        syn = si.interpret(uid, i)
-                        st = syn.syn_type
-                        if ignored_syn_types is None or st not in ignored_syn_types:
-                            ps.add(syn)
-                    if ps:
-                        p[uid] = ps
-            self._parsed_syn_by_id = p
-        return copy(self._parsed_syn_by_id)
 
     def _del_data(self):
         for el in LightTaxonomyHolder._DATT:
@@ -416,37 +376,6 @@ class LightTaxonomyHolder(object):
                 dest_tax_part.add_synonym(s, pair[0], pair[1])
             del self._syn_by_id[s]
 
-    def move_from_self_to_new_part(
-        self, other
-    ):  # type: (PartitioningLightTaxHolder) -> None
-        self._has_moved_taxa = True
-        if other._has_unread_tax_inp:
-            other._read_inputs(False)
-        cids = set(self._id_to_child_set.keys())
-        lth_frag_to_root_id_set = {}
-        for root_id, dest_tax_part in other._root_to_lth.items():
-            lth_frag_to_root_id_set.setdefault(dest_tax_part.fragment, set()).add(
-                root_id
-            )
-
-        for dest_tax_part in other._root_to_lth.values():
-            tpids = set(dest_tax_part.contained_ids())
-            tpids.update(lth_frag_to_root_id_set[dest_tax_part.fragment])
-            common = cids.intersection(tpids)
-            if common:
-                if dest_tax_part._has_unread_tax_inp:
-                    dest_tax_part._read_inputs(False)
-                for com_id in common:
-                    if com_id in self._id_to_child_set:
-                        m = "Transferring {} from {} to {}"
-                        _LOG.info(
-                            m.format(com_id, self.fragment, dest_tax_part.fragment)
-                        )
-                        self._transfer_subtree(com_id, dest_tax_part)
-                self.move_matched_synonyms(dest_tax_part)
-                dest_tax_part._populated = True
-                cids = set(self._id_to_child_set.keys())
-
     def add_synonym(self, accept_id, syn_id, line):
         if self.treat_syn_as_taxa:
             # CoL uses the taxonomy file for synonyms.
@@ -527,14 +456,6 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         raise NotImplementedError(
             "_read_input pure virtual in PartitioningLightTaxHolder"
         )
-
-    def move_from_misc_to_new_part(self, other):
-        self._has_moved_taxa = True
-        if not self._populated:
-            self._read_inputs()
-        if not self._misc_part._populated:
-            self._move_data_to_empty_misc()
-        return self._misc_part.move_from_self_to_new_part(other)
 
     def _move_data_to_empty_misc(self):
         assert not self._misc_part._populated
@@ -768,9 +689,6 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             assert not self._populated
             self._read_inputs(do_part_if_reading=False)
 
-    def get_root_ids(self):
-        return set(self._roots.keys())
-
     def get_id_to_ott_taxon(self):
         id_to_obj = {}
         lp = HEADER_TO_LINE_PARSER[self.taxon_header]
@@ -783,11 +701,6 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
 
     def get_taxa_as_forest(self):
         return TaxonForest(id_to_taxon=self.get_id_to_ott_taxon(), taxon_partition=self)
-
-    def active_tax_dir(self):
-        if self._populated:
-            return os.path.split(self.tax_fp)[0]
-        raise NotImplementedError("active_tax_dir on unpopulated")
 
     def _read_inputs(self, do_part_if_reading=True):
         self._has_unread_tax_inp = False

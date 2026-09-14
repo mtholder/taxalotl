@@ -103,24 +103,6 @@ class TaxalotlConfig(object):
             x = x[0]
         return x
 
-    def get_part_inp_taxdir(self, part_key, taxonomy_id):
-        from .cmds.partitions import INP_TAXONOMY_DIRNAME
-
-        df = self.get_fragment_from_part_name(part_key)
-        return os.path.join(self.partitioned_dir, df, INP_TAXONOMY_DIRNAME, taxonomy_id)
-
-    def get_par_and_par_misc_taxdir(self, part_key, taxonomy_id):
-        from .cmds.partitions import INP_TAXONOMY_DIRNAME, MISC_DIRNAME
-
-        df = self.get_fragment_from_part_name(part_key)
-        par_df = os.path.split(df)[0]
-        misc_df = os.path.join(par_df, MISC_DIRNAME)
-        par_part_key = os.path.split(par_df)[0]
-        pmtd = os.path.join(
-            self.partitioned_dir, misc_df, INP_TAXONOMY_DIRNAME, taxonomy_id
-        )
-        return par_part_key, pmtd
-
     @property
     def resources_mgr(self):
         if self._resources_mgr is None:

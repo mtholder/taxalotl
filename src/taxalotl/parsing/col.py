@@ -76,9 +76,6 @@ class CoLTaxonomyWrapper(TaxonomyWrapper):
             self.unpacked_filepath, self.normalized_filedir, self
         )
 
-    def _post_process_tree(self, tree):
-        self.collapse_incertae_sedis_by_name_prefix(tree, "not assigned")
-
     def post_process_interim_tax_data(self, interim_tax_data):
         self.collapse_as_incertae_sedis_interim_tax_data(
             interim_tax_data, "not assigned"
