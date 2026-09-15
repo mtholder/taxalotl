@@ -36,9 +36,9 @@ def write_indented_subtree(out, node, indent_level):
 class TaxonTree(object):
     def __init__(
         self,
-        root_id: int,
-        id_to_children_ids: Dict[int, List[int]],
-        id_to_taxon: Dict[int, Taxon],
+        root_id: str,
+        id_to_children_ids: Dict[str, List[str]],
+        id_to_taxon: Dict[str, Taxon],
         taxon_partition=None,
     ):
         self.taxon_partition = taxon_partition

@@ -44,8 +44,8 @@ def epoch_seconds_to_isotime(sec_since_epoch):
 def parse_ncbi_names_file(names_fp, itd):
     """Takes a filepath to an NCBI names.dmp file.
     Returns tuple
-         0 id_to_name: node_id int -> str
-         1 names_to_ids: str -> int or [int, ...]
+         0 id_to_name: node_id str -> str
+         1 names_to_ids: str -> str or [str, ...]
          2 synonyms node_id -> [(name, type of synonym))
     """
     count = 0
@@ -53,7 +53,7 @@ def parse_ncbi_names_file(names_fp, itd):
         for line in namesf:
             # if you do \t|\t then you don't get the name class right because it is "\t|"
             spls = line.split("\t|")
-            node_id = int(spls[0])
+            node_id = spls[0].strip()
             name = spls[1].strip()
             homonc = spls[2].strip()  # can get if it is a series here
             nm_c = spls[3].strip()  # scientific name, synonym, etc.
@@ -100,11 +100,11 @@ def parse_ncbi_nodes_file(nodes_fp, itd):
         for line in nodesf:
             spls = line.split("\t|\t")
             ns = spls[0].strip()
-            node_id = int(ns)
+            node_id = ns.strip()
             ps = spls[1].strip()
             # oddly enough, the root node is ID 1 and has parent ID 1 in nodes.dmp
             if ps and ps != ns:
-                par_id = int(ps)
+                par_id = ps.strip()
             else:
                 par_id = None
                 root_nodes.add(node_id)
@@ -124,7 +124,7 @@ def parse_ncbi_merged(fp, itd):
         with io.open(fp, "r", encoding="utf-8") as inp:
             for line in inp:
                 rs = line.split("\t|")
-                from_id, to_id = int(rs[0]), int(rs[1])
+                from_id, to_id = rs[0].strip(), rs[1].strip()
                 itd.forwards[from_id] = to_id
     _LOG.info("number of merges: {}".format(len(itd.forwards)))
 

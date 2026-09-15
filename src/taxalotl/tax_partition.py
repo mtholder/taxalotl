@@ -52,10 +52,7 @@ def _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, fn):
         if os.path.exists(rf):
             rd = read_as_json(rf)
             for k, v in rd.items():
-                try:
-                    k = int(k)
-                except:
-                    pass
+                k = k.strip()
                 r[k] = Taxon(d=v)
     return r
 
@@ -319,7 +316,7 @@ class LightTaxonomyHolder(object):
 
     def _transfer_line(
         self, uid, dest_part, as_root=False
-    ):  # type (int, LightTaxonomyHolder, bool) -> None
+    ):  # type (str, LightTaxonomyHolder, bool) -> None
         line = self._id_to_line[uid]
         taxon = self.line_to_taxon(line)
         if as_root:
@@ -332,7 +329,7 @@ class LightTaxonomyHolder(object):
 
     def _transfer_subtree(
         self, par_id, dest_part, as_root=False
-    ):  # type (int, LightTaxonomyHolder) -> None
+    ):  # type (str, LightTaxonomyHolder) -> None
         self._has_moved_taxa = True
         taxon = self.line_to_taxon(uid=par_id)
         if as_root:
@@ -344,7 +341,7 @@ class LightTaxonomyHolder(object):
 
     def _transfer_subtree_rec(
         self, par_id, dest_part
-    ):  # type (int, LightTaxonomyHolder) -> None
+    ):  # type (str, LightTaxonomyHolder) -> None
         assert self is not dest_part
         assert self.fragment != dest_part.fragment
         child_set = self._id_to_child_set[par_id]
@@ -400,10 +397,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
 
     def read_taxon_line(self, uid, par_id, line):
         if par_id:
-            try:
-                par_id = int(par_id)
-            except:
-                pass
+            par_id = par_id.strip()
         self._id_to_child_set.setdefault(par_id, set()).add(uid)
         if uid in self._id_to_line:
             raise ValueError("Repeated uid {} in line {}".format(uid, line))

@@ -155,7 +155,7 @@ def read_gbif_projection(proj_filepath, itd, field_to_index, do_gbif_checks):
             if syn_target_id_string:
                 is_synonym = True
             try:
-                taxon_id = int(fields[col_taxon_id])
+                taxon_id = fields[col_taxon_id]
             except:
                 if line_num == 0:
                     continue
@@ -178,7 +178,7 @@ def read_gbif_projection(proj_filepath, itd, field_to_index, do_gbif_checks):
                 else:
                     to_remove.add(taxon_id)
             elif is_synonym:
-                synon_of = int(syn_target_id_string)
+                synon_of = syn_target_id_string
                 itd.register_synonym(synon_of, name, tstatus)
                 n_syn += 1
                 continue
@@ -208,7 +208,7 @@ def read_gbif_projection(proj_filepath, itd, field_to_index, do_gbif_checks):
             itd.register_id_and_name(taxon_id, name)
             to_rank[taxon_id] = rank
             if parent_id_string:
-                par_id = int(parent_id_string)
+                par_id = parent_id_string
                 to_par[taxon_id] = par_id
                 to_children.setdefault(par_id, []).append(taxon_id)
             else:

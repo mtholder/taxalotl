@@ -200,9 +200,9 @@ def normalize_wikidata(unpacked_dirp, normalized_dirp, resource_wrapper):
         for taxon in id_2_taxon.values():
             if hasattr(taxon, "valid_syn"):
                 continue
-            pid = str(int(taxon.par_id[1:])) if taxon.par_id else ""
+            pid = taxon.par_id[1:].strip() if taxon.par_id else ""
             r = taxon.rank if taxon.rank else ""
-            els = [str(int(taxon.id[1:])), pid, taxon.name, r, taxon.get_flag_str()]
+            els = [taxon.id[1:].strip(), pid, taxon.name, r, taxon.get_flag_str()]
             row = "\t|\t".join(els)
             out.write(f"{row}\n")
     syn_fp = os.path.join(outfd, resource_wrapper.synonyms_filename)
@@ -217,8 +217,8 @@ def normalize_wikidata(unpacked_dirp, normalized_dirp, resource_wrapper):
                     continue
                 if hasattr(ref_tax, "valid_syn"):
                     continue
-                num_id = int(referred_id[1:])
-                row = "\t|\t".join([str(num_id), taxon.name, ""])
+                num_id = referred_id[1:].strip()
+                row = "\t|\t".join([num_id, taxon.name, ""])
                 out.write(f"{row}\n")
 
 

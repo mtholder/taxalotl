@@ -4,6 +4,7 @@ from __future__ import print_function
 import copy
 import os
 import logging
+import json
 
 from peyutil import read_as_json
 
@@ -231,6 +232,7 @@ def do_partition(res, hard_coded, part_name_to_split):
     fragment = (
         os.path.join(par_frag, part_name_to_split) if par_frag else part_name_to_split
     )
+    _LOG.debug(f"fragment = {fragment}")
     if res.has_been_partitioned_for_fragment(fragment):
         _LOG.info("Partition for fragment {} has already been done.".format(fragment))
         return

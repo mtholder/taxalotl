@@ -65,7 +65,7 @@ def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
                 try:
                     accept_id = ls[uid_ind]
                     try:
-                        accept_id = int(accept_id)
+                        accept_id = accept_id.strip()
                     except:
                         pass
                     tax_part.add_synonym(accept_id, syn_id=None, line=line)
@@ -94,11 +94,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
             if n > 0 and n % 10000 == 0:
                 _LOG.debug(' read taxon {:<7} from "{}" ...'.format(n, ptp))
             try:
-                uid, par_id = ls[0], ls[1]
-                try:
-                    uid = int(uid)
-                except:
-                    pass
+                uid, par_id = ls[0].strip(), ls[1].strip()
                 tax_part.read_taxon_line(uid, par_id, line)
             except:
                 _LOG.exception(
@@ -219,13 +215,6 @@ def write_ncbi_details_json(fp, details_log):
         write_as_json(details_log, outs, indent=2)
 
 
-def int_or_str(s):
-    try:
-        return int(s)
-    except:
-        return str(s)
-
-
 def raw_src_string_to_dict(raw):
     sel = raw.split(",")
     d = {}
@@ -238,7 +227,7 @@ def raw_src_string_to_dict(raw):
         except ValueError:
             raise ValueError(f"Could split {el} in 2 by :")
         try:
-            sid = int_or_str(sid)
+            sid = sid.strip()
         except:
             pass
         d.setdefault(src, set()).add(sid)
@@ -252,9 +241,9 @@ def full_ott_line_parser(taxon, line):
     except:
         _LOG.exception("Error reading line {}:\n{}".format(taxon.line_num, line))
         raise
-    taxon.id = int_or_str(ls[0])
+    taxon.id = ls[0].strip()
     if ls[1]:
-        taxon.par_id = int_or_str(ls[1])
+        taxon.par_id = ls[1].strip()
     else:
         taxon.par_id = None
     taxon.name = ls[2]
@@ -321,9 +310,9 @@ def flag_after_rank_parser(taxon, line):
     except:
         _LOG.exception("Error reading line {}:\n{}".format(taxon.line_num, line))
         raise
-    taxon.id = int(ls[0])
+    taxon.id = ls[0].strip()
     if ls[1]:
-        taxon.par_id = int(ls[1])
+        taxon.par_id = ls[1].strip()
     else:
         taxon.par_id = None
     taxon.name = ls[2]

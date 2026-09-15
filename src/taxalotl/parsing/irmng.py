@@ -65,14 +65,14 @@ def read_irmng_file(irmng_file_name):
         for raw_row in csvreader:
             # noinspection PyCompatibility
             row = [i for i in raw_row]
-            taxon_id = int(row[0])
+            taxon_id = row[0].strip()
             long_name = row[1]
             auth = row[2]
             rank = row[6]
             tstatus = row[7]  # TAXONOMICSTATUS
             nstatus = row[8]  # NOMENCLATURALSTATUS
             try:
-                syn_target_id = int(row[12]) if row[12] else None
+                syn_target_id = row[12].strip() if row[12] else None
             except:
                 _LOG.warning("Dropping unparseable line {}".format(row))
                 continue
@@ -124,7 +124,7 @@ def read_irmng_file(irmng_file_name):
                 itd.root_nodes.add(taxon_id)
                 parent = None
             else:
-                parent = int(parent)
+                parent = parent.strip()
             to_par[taxon_id] = parent
             itd.register_id_and_name(taxon_id, name)
             if parent:
@@ -354,7 +354,7 @@ def read_extinct_info(profile_file_name, itd):
         if header[1] != "ISEXTINCT":
             raise ValueError('ISEXTINCT in header row but found "{}"'.format(header[1]))
         for row in csvreader:
-            taxonid = int(row[0])
+            taxonid = row[0].strip()
             if taxonid not in to_par:
                 continue
             is_extinct = row[1] == "TRUE"
