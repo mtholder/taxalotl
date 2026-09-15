@@ -282,8 +282,10 @@ def main():
                     # sys.stderr.write(str(a))
                     if "--level" == a[-1] or (len(a) > 1 and "--level" == a[-2]):
                         comp_list = list(NONTERMINAL_PART_NAMES)
-                    elif "--level" not in a:
-                        comp_list.extend(["--level"])
+                    else:
+                        for x in ["--level", "--hard-coded"]:
+                            if x not in a:
+                                comp_list.extend([x])
 
         sys.stdout.write("{}\n".format(" ".join(comp_list)))
     else:

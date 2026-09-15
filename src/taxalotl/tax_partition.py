@@ -520,33 +520,8 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             if (self._fs_is_partitioned is None) and (not self._external_inp_fp):
                 m = "Taxa files not found for {} and TaxonPartition is empty"
                 _LOG.info(m.format(self.fragment))
-        cur_sub_names = self.scaffold_tax_subdir_names()
-        do_part_if_reading = True
-        having_inp_to_read = set()
-        if cur_sub_names:
-            req_fulfilled = True
-            some_part_found = False
-            for x in list_of_subdirname_and_roots:
-                subname = x[0]
-                if subname in cur_sub_names:
-                    subfrag = os.path.join(self.fragment, subname)
-                    if self.taxa_files_exist_for_a_frag(subfrag):
-                        _LOG.info("previous content for {}".format(subfrag))
-                        some_part_found = True
-                        having_inp_to_read.add(subname)
-                    else:
-                        _LOG.warning(
-                            "no previous taxonomic content for {}".format(subfrag)
-                        )
-                        req_fulfilled = False
-                else:
-                    _LOG.warning("no previous subdir for {}".format(subname))
-                    req_fulfilled = False
-            if some_part_found:
-                do_part_if_reading = False
-                quant = "All" if req_fulfilled else "Some"
-                m = "{} subdir partitions found for {}. No more partitioning will be done!"
-                _LOG.warning(m.format(quant, self.fragment))
+        blob = self._sub_part_helper(list_of_subdirname_and_roots)
+        do_part_if_reading, having_inp_to_read = blob
         for subname, subroot in list_of_subdirname_and_roots:
             subfrag = os.path.join(self.fragment, subname)
             subtp = get_taxon_partition(self.res, subfrag)
@@ -563,9 +538,38 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
 """
         )
         if self._populated:
+            raise RuntimeError("populated")
             self._partition_from_in_mem()
         else:
             self._read_inputs(do_part_if_reading)
+
+    def _sub_part_helper(self, list_of_subdirname_and_roots):
+        cur_sub_names = self.scaffold_tax_subdir_names()
+        do_part_if_reading = True
+        having_inp_to_read = set()
+        if cur_sub_names:
+            req_fulfilled = True
+            some_part_found = False
+            for x in list_of_subdirname_and_roots:
+                subname = x[0]
+                if subname in cur_sub_names:
+                    subfrag = os.path.join(self.fragment, subname)
+                    if self.taxa_files_exist_for_a_frag(subfrag):
+                        _LOG.info(f"previous content for {subfrag}")
+                        some_part_found = True
+                        having_inp_to_read.add(subname)
+                    else:
+                        _LOG.warning(f"no previous taxonomic content for {subfrag}")
+                        req_fulfilled = False
+                else:
+                    _LOG.warning("no previous subdir for {subname}")
+                    req_fulfilled = False
+            if some_part_found:
+                do_part_if_reading = False
+                quant = "All" if req_fulfilled else "Some"
+                m = "{} subdir partitions found for {}. No more partitioning will be done!"
+                _LOG.warning(m.format(quant, self.fragment))
+        return do_part_if_reading, having_inp_to_read
 
     def _partition_from_in_mem(self):
         _LOG.info('_partition_from_in_mem for fragment "{}"'.format(self.fragment))
@@ -707,7 +711,7 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
         self._has_unread_tax_inp = False
 
         if self._external_inp_fp:
-            self._read_from_partitioning_scratch = True
+            self._read_from_partitioning_scratch = False
             self.tax_fp = self._external_inp_fp
         else:
             if os.path.exists(self.tax_fp_misc):
@@ -763,8 +767,10 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
         self.write_if_needed()
         if self._read_from_misc is False and self._read_from_partitioning_scratch:
             tr = [self.tax_fp_unpartitioned]
-            if self.output_synonyms_filepath:
-                tr.append(self.output_synonyms_filepath)
+            tfu_par = os.path.split(self.tax_fp_unpartitioned)[0]
+            unpart_syn_fp = os.path.join(tfu_par, "synonyms.tsv")
+            if unpart_syn_fp:
+                tr.append(unpart_syn_fp)
             tr.append(os.path.join(self.tax_dir_unpartitioned, ACCUM_DES_FILENAME))
             for f in tr:
                 if os.path.exists(f):
@@ -785,11 +791,13 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
             dh = self._misc_part
             dest = self.tax_fp_misc
             out_dir = self.tax_dir_misc
+            assert dest.endswith("taxonomy.tsv")
         else:
             # _LOG.debug("write from self for {}".format(self.fragment))
             dh = self
             dest = self.tax_fp_unpartitioned
             out_dir = self.tax_dir_unpartitioned
+            assert dest.endswith("taxonomy.tsv")
         roots_file = os.path.join(out_dir, ROOTS_FILENAME)
         if not dh._id_to_line:
             _LOG.debug("write not needed for {} no records".format(self.fragment))

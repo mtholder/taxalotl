@@ -29,7 +29,6 @@ from .cmds.partitions import (
     get_auto_gen_part_mapper,
     get_inp_taxdir,
     get_misc_inp_taxdir,
-    get_taxon_partition,
 )
 from .tax_partition import TAX_SLICE_CACHE, ROOTS_FILENAME, ACCUM_DES_FILENAME
 from .util import unlink, OutFile, OutDir
@@ -474,6 +473,7 @@ class ResourceWrapper(FromOTifacts):
             return
         f_to_remove = [
             self.taxon_filename,
+            "taxonomy.tsv",
             ROOTS_FILENAME,
             "about.json",
             "details.json",
@@ -574,12 +574,10 @@ class ResourceWrapper(FromOTifacts):
                 out.write(down_str)
 
     def get_taxon_filepath_for_part(self, fragment):
-        return os.path.join(self.get_taxon_dir_for_part(fragment), self.taxon_filename)
+        return os.path.join(self.get_taxon_dir_for_part(fragment), "taxonomy.tsv")
 
     def get_misc_taxon_filepath_for_part(self, fragment):
-        return os.path.join(
-            self.get_misc_taxon_dir_for_part(fragment), self.taxon_filename
-        )
+        return os.path.join(self.get_misc_taxon_dir_for_part(fragment), "taxonomy.tsv")
 
     def get_taxon_dir_for_part(self, fragment):
         return get_inp_taxdir(self.partitioned_filepath, fragment, self.id)
