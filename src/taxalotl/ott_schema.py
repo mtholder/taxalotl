@@ -80,7 +80,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
     complete_taxon_fp = tax_part.tax_fp
     tax_part.taxon_header = ""
     if not os.path.exists(complete_taxon_fp):
-        return
+        raise RuntimeError(f"No taxonomy found at {complete_taxon_fp}")
     ptp = shorter_fp_form(complete_taxon_fp)
     _LOG.debug('parsing taxa from "{}" ...'.format(ptp))
     with io.open(complete_taxon_fp, "r", encoding="utf-8") as inp:
@@ -110,8 +110,11 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
 
 
 def partition_ott_by_root_id(tax_part):  # type (TaxonPartition) -> None
+    _LOG.debug(f"_parse_synonyms({tax_part})")
     _parse_synonyms(tax_part)
+    _LOG.debug(f"_parse_synonyms({tax_part})")
     _parse_taxa(tax_part)
+    _LOG.debug(f"done with partition_ott_by_root_id({tax_part})")
 
 
 def write_ott_taxonomy_tsv(

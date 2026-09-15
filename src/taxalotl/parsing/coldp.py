@@ -188,37 +188,6 @@ _ACC_STATUS = frozenset(
     ]
 )
 
-COLXR_PARTMAP = {
-    "Annelida": frozenset(["NN"]),
-    "Arachnida": frozenset(["CCQKT"]),
-    "Archaea": frozenset(["CRLT8"]),
-    "Archaeplastida": frozenset(["P"]),
-    "Arthropoda": frozenset(["RT"]),
-    "Bacteria": frozenset(["CRRY6"]),
-    "Bryozoa": frozenset(["622CG"]),
-    # 'Chloroplastida': frozenset([]),
-    "Chordata": frozenset(["CH2"]),
-    "Cnidaria": frozenset(["CN2"]),
-    "Coleoptera": frozenset(["C2L"]),
-    "Ctenophora": frozenset(["B8V3L"]),
-    "Diptera": frozenset(["D2P"]),
-    "Eukaryota": frozenset(["CS5HF"]),
-    "Fungi": frozenset(["F"]),
-    "Glaucophyta": frozenset(["4L"]),
-    "Haptophyta": frozenset(["4P"]),
-    "Hymenoptera": frozenset(["HYM"]),
-    "Insecta": frozenset([":H6"]),
-    "Lepidoptera": frozenset(["B6L67"]),
-    "Malacostraca": frozenset(["MC"]),
-    # 'Metazoa': frozenset([]),
-    "Mollusca": frozenset(["M2L"]),
-    "Nematoda": frozenset(["NM"]),
-    "Platyhelminthes": frozenset(["7NF2H"]),
-    "Porifera": frozenset(["B8TXQ"]),
-    "Rhodophyta": frozenset(["RH2"]),
-    "SAR": frozenset(["D3MRQ"]),
-}
-
 
 class CDPTaxonomy(object):
     def __init__(self):

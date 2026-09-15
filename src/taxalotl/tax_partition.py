@@ -518,6 +518,7 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         return os.path.exists(self.res.get_misc_taxon_dir_for_part(frag))
 
     def do_partition(self, list_of_subdirname_and_roots):
+        _LOG.debug(f"list_of_subdirname_and_roots = {list_of_subdirname_and_roots}")
         if self._subdirname_to_tp_roots:
             raise ValueError("do_partition called twice for {}".format(self.fragment))
         if not self._populated:
@@ -561,6 +562,12 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             for r in subroot:
                 self._root_to_lth[r] = subtp
             self._subdirname_to_tp_roots[subname] = (subtp, subroot)
+        _LOG.debug(
+            f"""self._populated = {self._populated}
+list_of_subdirname_and_roots = {list_of_subdirname_and_roots}
+self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
+"""
+        )
         if self._populated:
             self._partition_from_in_mem()
         else:

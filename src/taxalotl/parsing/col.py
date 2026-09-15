@@ -58,7 +58,6 @@ COL_PARTMAP = {
 class CoLTaxonomyWrapper(TaxonomyWrapper):
     taxon_filename = "taxonomy.tsv"
     # synonyms_filename = None
-    # partition_parsing_fn = staticmethod(partition_col_by_root_id)
     schema = {"http://rs.tdwg.org/dwc/"}
 
     def __init__(self, obj, parent=None, refs=None):
@@ -82,9 +81,44 @@ class CoLTaxonomyWrapper(TaxonomyWrapper):
         )
 
 
+COLXR_PARTMAP = {
+    "Annelida": frozenset(["NN"]),
+    "Arachnida": frozenset(["CCQKT"]),
+    "Archaea": frozenset(["CRLT8"]),
+    "Archaeplastida": frozenset(["P"]),
+    "Arthropoda": frozenset(["RT"]),
+    "Bacteria": frozenset(["CRRY6"]),
+    "Bryozoa": frozenset(["622CG"]),
+    # 'Chloroplastida': frozenset([]),
+    "Chordata": frozenset(["CH2"]),
+    "Cnidaria": frozenset(["CN2"]),
+    "Coleoptera": frozenset(["C2L"]),
+    "Ctenophora": frozenset(["B8V3L"]),
+    "Diptera": frozenset(["D2P"]),
+    "Eukaryota": frozenset(["CS5HF"]),
+    "Fungi": frozenset(["F"]),
+    "Glaucophyta": frozenset(["4L"]),
+    "Haptophyta": frozenset(["4P"]),
+    "Hymenoptera": frozenset(["HYM"]),
+    "Insecta": frozenset([":H6"]),
+    "Lepidoptera": frozenset(["B6L67"]),
+    "Malacostraca": frozenset(["MC"]),
+    # 'Metazoa': frozenset([]),
+    "Mollusca": frozenset(["M2L"]),
+    "Nematoda": frozenset(["NM"]),
+    "Platyhelminthes": frozenset(["7NF2H"]),
+    "Porifera": frozenset(["B8TXQ"]),
+    "Rhodophyta": frozenset(["RH2"]),
+    "SAR": frozenset(["D3MRQ"]),
+}
+
+
 class CoLXRTaxonomyWrapper(TaxonomyWrapper):
     taxon_filename = "NameUsage.tsv"
     schema = {"https://github.com/CatalogueOfLife/coldp/releases/tag/v1.2.0"}
+
+    def get_primary_partition_map(self):
+        return COLXR_PARTMAP
 
     def normalize(self):
         normalize_coldp_taxonomy(self.unpacked_filepath, self.normalized_filedir, self)

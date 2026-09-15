@@ -175,7 +175,7 @@ def find_partition_dirs_for_taxonomy(path_pref, res_id):
 
 
 def write_info_for_res(outstream, res, part_name_to_split):
-    _LOG.debug("part_name_to_split = {}".format(part_name_to_split))
+    _LOG.debug(f"part_name_to_split = {part_name_to_split}")
     par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
     _LOG.debug("par_frag = {}".format(par_frag))
     if par_frag and not res.has_been_partitioned_for_fragment(par_frag):
@@ -213,15 +213,18 @@ def do_partition(res, hard_coded, part_name_to_split):
     :param res: a wrapper around the resource. Used for id, part_source_filepath,
     :param part_name_to_split must be one of the hard-coded keys in NAME_TO_PARENT_FRAGMENT
     """
-    _LOG.debug("part_name_to_split = {}".format(part_name_to_split))
+    _LOG.debug(f"part_name_to_split = {part_name_to_split}")
     par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
-    _LOG.debug("par_frag = {}".format(par_frag))
+    _LOG.debug(f"par_frag = {repr(par_frag)}")
     if par_frag and not res.has_been_partitioned_for_fragment(par_frag):
         par_name = os.path.split(par_frag)[-1]
-        do_partition(res, par_name)
+        do_partition(res, hard_coded, par_name)
     part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
+    _LOG.debug(f"part_keys = {part_keys}")
     master_map = res.get_primary_partition_map()
+    _LOG.debug(f"master_map = {master_map}")
     mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
+    _LOG.debug(f"mapping = {mapping}")
     if not mapping:
         _LOG.info("No {} mapping for {}".format(res.id, part_name_to_split))
         return
@@ -233,7 +236,5 @@ def do_partition(res, hard_coded, part_name_to_split):
         return
     tp = get_taxon_partition(res, fragment)
     if not par_frag:
-        tp.external_input_fp = os.path.join(
-            res.partition_source_dir, res.taxon_filename
-        )
+        tp.external_input_fp = os.path.join(res.partition_source_dir, "taxonomy.tsv")
     tp.do_partition(mapping)
