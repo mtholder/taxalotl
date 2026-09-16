@@ -231,7 +231,7 @@ def do_hard_coded_partition(res, part_name_to_split):
     _LOG.debug(f"par_frag = {repr(par_frag)}")
     if par_frag and not res.has_been_partitioned_for_fragment(par_frag):
         par_name = os.path.split(par_frag)[-1]
-        do_partition(res, hard_coded, par_name)
+        do_partition(res, hard_coded=True, part_name_to_split=par_name)
     part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
     _LOG.debug(f"part_keys = {part_keys}")
     master_map = res.get_primary_partition_map()
