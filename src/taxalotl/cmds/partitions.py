@@ -11,7 +11,6 @@ from peyutil import read_as_json
 from ..tax_partition import (
     INP_TAXONOMY_DIRNAME,
     MISC_DIRNAME,
-    GEN_MAPPING_FILENAME,
     get_taxon_partition,
     use_tax_partitions,
 )
@@ -79,24 +78,6 @@ def get_misc_inp_taxdir(parts_dir, frag, taxonomy_id):
     return os.path.join(
         parts_dir, frag, MISC_DIRNAME, INP_TAXONOMY_DIRNAME, taxonomy_id
     )
-
-
-def get_auto_gen_part_mapper(res):
-    fp = os.path.join(res.partitioned_filepath, GEN_MAPPING_FILENAME)
-    if not os.path.isfile(fp):
-        m = 'Mapping file not found at "{}"\nRun the build-partitions-maps command.'
-        raise RuntimeError(m.format(fp))
-    master_mapping = read_as_json(fp)
-    a_list = list(res.alias_list)
-    base_res = res.base_resource
-    if base_res:
-        a_list.extend(base_res.alias_list)
-    poss_ids = [res.id] + a_list + [res.base_id]
-    for k in poss_ids:
-        if k in master_mapping:
-            return master_mapping[k]
-    m = 'No entry for ids {} found in "{}".'
-    raise RuntimeError(m.format(", ".join(poss_ids), fp))
 
 
 def _fill_parts_indices(d, par_frag):
@@ -208,16 +189,22 @@ def write_info_for_res(outstream, res, part_name_to_split):
     )
 
 
-def do_partition(res, hard_coded, part_name_to_split):
+def do_partition(res, strategy, part_name_to_split):
     """Partition a parent taxon into descendants and garbage (__misc__) dir
 
     :param res: a wrapper around the resource. Used for id, part_source_filepath,
-    :param hard_coded: True to use IDs in code to create splits. False for dynamic
+    :param strategy: "hard-coded", "previous", or dynamic
     :param part_name_to_split must be one of the hard-coded keys in NAME_TO_PARENT_FRAGMENT
     """
-    if hard_coded:
+    if strategy == "hard-coded":
         return do_hard_coded_partition(res, part_name_to_split)
+    if strategy == "previous":
+        return do_partition_from_previous(res, part_name_to_split)
     raise NotImplementedError("dynamic partitioning.")
+
+
+def do_partition_from_previous(res, part_name_to_split):
+    raise NotImplementedError("previous strategy")
 
 
 def do_hard_coded_partition(res, part_name_to_split):

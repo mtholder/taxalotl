@@ -13,7 +13,6 @@ from peyutil import assure_dir_exists, read_as_json, write_as_json
 
 from ..commands import unpack_resources
 from ..ott_schema import InterimTaxonomyData
-from ..cmds.partitions import GEN_MAPPING_FILENAME
 from ..resource_wrapper import TaxonomyWrapper
 from ..util import OutFile
 
@@ -70,9 +69,9 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
     _LOG.info("{} taxonomy IDs read".format(len(itd.to_par)))
     res_wrapper.post_process_interim_tax_data(itd)
     itd.write_to_dir(destination)
-    mapping_file = os.path.join(destination, GEN_MAPPING_FILENAME)
-    with OutFile(mapping_file) as outs:
-        write_as_json(part_name_to_silva_id, outs, indent=2)
+    # mapping_file = os.path.join(destination, GEN_MAPPING_FILENAME)
+    # with OutFile(mapping_file) as outs:
+    #     write_as_json(part_name_to_silva_id, outs, indent=2)
 
 
 def gen_all_namepaths(path, name, prim_acc):
@@ -255,6 +254,3 @@ class SilvaWrapper(TaxonomyWrapper):
 
     def normalize(self):
         normalize_silva_taxonomy(self.unpacked_filepath, self.normalized_filedir, self)
-
-    def get_primary_partition_map(self):
-        return read_as_json(os.path.join(self.normalized_filedir, GEN_MAPPING_FILENAME))

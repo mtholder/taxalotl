@@ -26,7 +26,6 @@ from .newick import normalize_newick
 from .cmds.partitions import (
     find_partition_dirs_for_taxonomy,
     has_any_partition_dirs,
-    get_auto_gen_part_mapper,
     get_inp_taxdir,
     get_misc_inp_taxdir,
 )
@@ -586,7 +585,9 @@ class ResourceWrapper(FromOTifacts):
         return get_misc_inp_taxdir(self.partitioned_filepath, fragment, self.id)
 
     def get_primary_partition_map(self):
-        return get_auto_gen_part_mapper(self)
+        raise RuntimeError(
+            f"Resource {self.id} does not contain a hard-coded primary partition map"
+        )
 
     def has_been_partitioned_for_fragment(self, fragment):
         return os.path.exists(self.get_misc_taxon_filepath_for_part(fragment))

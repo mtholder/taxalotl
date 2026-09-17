@@ -52,44 +52,43 @@ ver_inp_res_dep_cmds = []
 all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 
 
+def _verify_level_arg(lev_arg):
+    if lev_arg is not None and lev_arg not in NAME_TO_PARTS_SUBSETS:
+        opts = '", "'.join(PART_NAMES)
+        raise RuntimeError(f'--level should be one of "{opts}"')
+    return [lev_arg]
+
+
 def main_post_parse(args):
-    taxalotl_config = TaxalotlConfig(filepath=args.config)
+    cfg = TaxalotlConfig(filepath=args.config)
     try:
         # if args.which == 'analyze-update':
-        #     analyze_update(taxalotl_config, args.resources, [args.level])
+        #     analyze_update(cfg, args.resources, [args.level])
         # elif
         if args.which == "clean-partition":
-            clean_resources(taxalotl_config, "partition", args.resources)
+            clean_resources(cfg, "partition", args.resources)
         elif args.which == "download":
-            download_resources(taxalotl_config, args.resources)
+            download_resources(cfg, args.resources)
         elif args.which == "status":
             status_of_resources(
-                taxalotl_config,
+                cfg,
                 args.resources,
                 ids_only=args.ids_only,
                 by_status=args.by_status,
                 terminal_only=args.terminal,
             )
         elif args.which == "unpack":
-            unpack_resources(taxalotl_config, args.resources)
+            unpack_resources(cfg, args.resources)
         elif args.which == "normalize":
-            normalize_resources(taxalotl_config, args.resources)
+            normalize_resources(cfg, args.resources)
         elif args.which == "pull-otifacts":
-            pull_otifacts(taxalotl_config)
+            pull_otifacts(cfg)
         elif args.which == "partition":
-            if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
-                raise RuntimeError(
-                    '--level should be one of "{}"'.format('", "'.join(PART_NAMES))
-                )
-            partition_resources(
-                taxalotl_config, args.hard_coded, args.resources, [args.level]
-            )
+            lev = _verify_level_arg(args.level)
+            partition_resources(cfg, args.strategy, args.resources, lev)
         elif args.which == "info":
-            if args.level is not None and args.level not in NAME_TO_PARTS_SUBSETS:
-                raise RuntimeError(
-                    '--level should be one of "{}"'.format('", "'.join(PART_NAMES))
-                )
-            info_on_resources(taxalotl_config, args.resources, [args.level])
+            lev = _verify_level_arg(args.level)
+            info_on_resources(cfg, args.resources, lev)
         elif args.which == "all":
             m = "Currently you must enter a command to run. Use the --help option or see the Tutorial.md\n"
             sys.stdout.write(m)
@@ -99,7 +98,7 @@ def main_post_parse(args):
                 '"{}" action not implemented yet'.format(args.which)
             )
     except Exception as x:
-        if taxalotl_config.crash_with_stacktraces:
+        if cfg.crash_with_stacktraces:
             raise
         sys.exit("taxalotl-cli: Exiting with exception:\n{}".format(x))
     return 0
@@ -187,10 +186,14 @@ def main():
     # PARTITION
     partition_p = subp.add_parser("partition", help="Breaks the resource taxon")
     partition_p.add_argument(
-        "--hard-coded",
-        action="store_true",
-        default=False,
-        help="Rely on partition breaks hard-coded in taxalotl.",
+        "--strategy",
+        default="hard-coded",
+        choices=["hard-coded", "previous"],
+        help="Strategy for partitioning the resource. "
+        "'hard-coded' relies on ID-mapping stored in the taxalotl "
+        "code-base (used for OTT and CoL initial partitions). "
+        "The 'previous' strategy uses ID mappings for an external resource "
+        "that are found in the source field of OTT.",
     )
     partition_p.add_argument(
         "resources", nargs="+", help="IDs of the resources to partitition"
@@ -282,8 +285,12 @@ def main():
                     # sys.stderr.write(str(a))
                     if "--level" == a[-1] or (len(a) > 1 and "--level" == a[-2]):
                         comp_list = list(NONTERMINAL_PART_NAMES)
+                    elif "--strategy" == a[-1] or (
+                        len(a) > 1 and "--strategy" == a[-2]
+                    ):
+                        comp_list = list(["hard-coded", "previous"])
                     else:
-                        for x in ["--level", "--hard-coded"]:
+                        for x in ["--level", "--strategy"]:
                             if x not in a:
                                 comp_list.extend([x])
 

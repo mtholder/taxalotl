@@ -18,7 +18,6 @@ from .util import unlink, OutFile
 INP_TAXONOMY_DIRNAME = "__inputs__"
 OUTP_TAXONOMY_DIRNAME = "__outputs__"
 MISC_DIRNAME = "__misc__"
-GEN_MAPPING_FILENAME = "__mapping__.json"
 ROOTS_FILENAME = "__roots__.json"
 TAXONOMY_FN = "taxonomy.tsv"
 SYNONYMS_FN = "synonyms.tsv"
