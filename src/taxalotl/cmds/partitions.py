@@ -212,7 +212,11 @@ def do_partition_from_previous(res, part_name_to_split):
     taxalotl_config = res._config
     ott = taxalotl_config.get_terminalized_res_by_id("ott", "")
     part_root_name_blob = ott.get_part_clade_names_and_blobs()
-    print(res.__dict__)
+    base_name = res.base_id
+    for name, blob in part_root_name_blob.items():
+        src_dict = blob["src_dict"]
+        nid = src_dict.get(base_name)
+        print(name, nid)
     # import sys; sys.exit(json.dumps(part_root_name_blob, indent=2))
     raise NotImplementedError("previous strategy")
 
