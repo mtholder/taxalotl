@@ -12,9 +12,6 @@ from ..cmds.partitions import (
     NAME_TO_PARTS_SUBSETS,
 )
 from ..resource_wrapper import ResourceWrapper, TaxonomyWrapper
-from ..tax_partition import (
-    get_roots_for_subset,
-)
 
 _LOG = logging.getLogger(__name__)
 

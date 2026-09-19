@@ -152,6 +152,11 @@ def has_any_partition_dirs(path_pref, res_id):
     return False
 
 
+def get_all_partition_dirs(path_pref, res_id):
+    assert path_pref
+    return list(iter_existing_tax_dirs(path_pref, res_id))
+
+
 def find_partition_dirs_for_taxonomy(path_pref, res_id):
     return [i for i in iter_existing_tax_dirs(path_pref, res_id)]
 
@@ -204,6 +209,11 @@ def do_partition(res, strategy, part_name_to_split):
 
 
 def do_partition_from_previous(res, part_name_to_split):
+    taxalotl_config = res._config
+    ott = taxalotl_config.get_terminalized_res_by_id("ott", "")
+    part_root_name_blob = ott.get_part_clade_names_and_blobs()
+    print(res.__dict__)
+    # import sys; sys.exit(json.dumps(part_root_name_blob, indent=2))
     raise NotImplementedError("previous strategy")
 
 

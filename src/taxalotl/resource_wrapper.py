@@ -14,6 +14,7 @@ from peyutil import (
     gunzip,
     gunzip_and_untar,
     unzip,
+    read_as_json,
 )
 
 from .ott_schema import (
@@ -25,6 +26,7 @@ from .ott_schema import (
 from .newick import normalize_newick
 from .cmds.partitions import (
     find_partition_dirs_for_taxonomy,
+    get_all_partition_dirs,
     has_any_partition_dirs,
     get_inp_taxdir,
     get_misc_inp_taxdir,
@@ -376,6 +378,20 @@ class ResourceWrapper(FromOTifacts):
     def config(self, c):
         self._config = c
 
+    def get_part_clade_names_and_blobs(self):
+        part_dirs = self.get_partitions_roots()
+        by_name = {}
+        for opd in part_dirs:
+            rfp = os.path.join(opd, ROOTS_FILENAME)
+            if os.path.isfile(rfp):
+                blob = read_as_json(rfp)
+                if len(blob) != 1:
+                    raise RuntimeError(f"Multiple roots found at {blob}")
+                val = [i for i in blob.values()][0]
+                vn = val["name"]
+                by_name[vn] = val
+        return by_name
+
     def get_leaf_obj(self):
         # type: () -> ResourceWrapper
         if self.children:
@@ -456,6 +472,9 @@ class ResourceWrapper(FromOTifacts):
 
     def has_been_partitioned(self):
         return has_any_partition_dirs(self.partitioned_filepath, self.id)
+
+    def get_partitions_roots(self):
+        return get_all_partition_dirs(self.partitioned_filepath, self.id)
 
     def remove_normalize_artifacts(self):
         self._remove_taxonomy_dir(self.normalized_filedir)
