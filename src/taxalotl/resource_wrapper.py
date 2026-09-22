@@ -378,18 +378,39 @@ class ResourceWrapper(FromOTifacts):
     def config(self, c):
         self._config = c
 
-    def get_part_clade_names_and_blobs(self):
+    def get_part_filepaths_by_name(self, basename):
+        """Returns a list filepaths ending in /basename for this partitioned res"""
         part_dirs = self.get_partitions_roots()
-        by_name = {}
+        rfp_list = []
         for opd in part_dirs:
-            rfp = os.path.join(opd, ROOTS_FILENAME)
+            rfp = os.path.join(opd, basename)
             if os.path.isfile(rfp):
-                blob = read_as_json(rfp)
-                if len(blob) != 1:
-                    raise RuntimeError(f"Multiple roots found at {blob}")
-                val = [i for i in blob.values()][0]
-                vn = val["name"]
-                by_name[vn] = val
+                rfp_list.append(rfp)
+        return rfp_list
+
+    def get_part_roots_filepaths(self):
+        """Returns a list of all of the __roots__.json files partitioned."""
+        return self.get_part_filepaths_by_name(ROOTS_FILENAME)
+
+    def get_part_taxa_filepaths(self):
+        """Returns a list of all of the "taxonomy.tsv" files partitioned."""
+        return self.get_part_filepaths_by_name("taxonomy.tsv")
+
+    def get_part_syn_filepaths(self):
+        """Returns a list of all of the "synonyms.tsv" files partitioned."""
+        return self.get_part_filepaths_by_name("synonyms.tsv")
+
+    def get_part_clade_names_and_blobs(self):
+        by_name = {}
+        rfp_list = self.get_part_roots_filepaths()
+        for rfp in rfp_list:
+            rfp = os.path.join(opd, ROOTS_FILENAME)
+            blob = read_as_json(rfp)
+            if len(blob) != 1:
+                raise RuntimeError(f"Multiple roots found at {blob}")
+            val = [i for i in blob.values()][0]
+            vn = val["name"]
+            by_name[vn] = val
         return by_name
 
     def get_leaf_obj(self):

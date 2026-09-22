@@ -11,6 +11,7 @@ from .commands import (
     # analyze_update,
     clean_resources,
     download_resources,
+    grep_in_res,
     info_on_resources,
     normalize_resources,
     partition_resources,
@@ -89,6 +90,8 @@ def main_post_parse(args):
         elif args.which == "info":
             lev = _verify_level_arg(args.level)
             info_on_resources(cfg, args.resources, lev)
+        elif args.which == "grep":
+            grep_in_res(cfg, args.resources, args.name)
         elif args.which == "all":
             m = "Currently you must enter a command to run. Use the --help option or see the Tutorial.md\n"
             sys.stdout.write(m)
@@ -207,6 +210,13 @@ def main():
     _add_level_arg(info_p)
     info_p.set_defaults(which="info")
 
+    # GREP
+    grep_p = subp.add_parser("grep", help="Search the parsed taxonomies")
+    grep_p.add_argument("resources", nargs="+", help="IDs of the resources")
+    _add_level_arg(grep_p)
+    grep_p.add_argument("--name", help="pattern for a name", nargs="*", type=str)
+    grep_p.set_defaults(which="grep")
+
     # CLEAN-PARTITION
     clean_p = subp.add_parser(
         "clean-partition",
@@ -241,63 +251,76 @@ def main():
                 if not found:
                     comp_list.append(u)
             comp_list.extend(all_cmds)
-        else:
-            if (
-                sel_cmd in res_dep_cmds
-                or sel_cmd in ["compare-taxonomies"]
-                or sel_cmd in ver_inp_res_dep_cmds
-            ):
-                # From Ned Batchelder's answer on http://stackoverflow.com/a/14728477
-                class ArgumentParserError(Exception):
-                    pass
-
-                # noinspection PyClassHasNoInit
-                class ThrowingArgumentParser(argparse.ArgumentParser):
-                    def error(self, message):
-                        raise ArgumentParserError(message)
-
-                fake_parser = ThrowingArgumentParser()
-                fake_parser.add_argument("--config", type=str)
-                fake_parser.add_argument("blah", nargs="*")
-                comp_list = []
-                taxalotl_config = None
-                try:
-                    fa = fake_parser.parse_known_args()[0]
-                    config = fa.config
-                    taxalotl_config = TaxalotlConfig(filepath=config)
-                    if sel_cmd in res_dep_cmds:
-                        comp_list = list(taxalotl_config.resources_mgr.resources.keys())
-                    elif sel_cmd in ver_inp_res_dep_cmds:
-                        comp_list = list(
-                            taxalotl_config.resources_mgr.abstract_input_resource_types()
-                        )
-                except Exception as _excep:
-                    _LOG.warning("Exception: {}".format(_excep))
-                    pass
-
-                if sel_cmd == "status":
-                    if "-i" not in a and "--ids-only" not in a:
-                        comp_list.extend(["-i", "--ids-only"])
-                    for x in ["--by-status", "--terminal"]:
-                        if x not in a:
-                            comp_list.extend([x])
-                elif sel_cmd == "partition":
-                    # sys.stderr.write(str(a))
-                    if "--level" == a[-1] or (len(a) > 1 and "--level" == a[-2]):
-                        comp_list = list(NONTERMINAL_PART_NAMES)
-                    elif "--strategy" == a[-1] or (
-                        len(a) > 1 and "--strategy" == a[-2]
-                    ):
-                        comp_list = list(["hard-coded", "previous"])
-                    else:
-                        for x in ["--level", "--strategy"]:
-                            if x not in a:
-                                comp_list.extend([x])
+        elif sel_cmd in res_dep_cmds:
+            comp_list = _cmd_completion(a)
 
         sys.stdout.write("{}\n".format(" ".join(comp_list)))
     else:
         rc = main_post_parse(p.parse_args())
         sys.exit(rc)
+
+
+def _cmd_completion(arg_list):
+    a = arg_list
+
+    # From Ned Batchelder's answer on http://stackoverflow.com/a/14728477
+    class ArgumentParserError(Exception):
+        pass
+
+    # noinspection PyClassHasNoInit
+    class ThrowingArgumentParser(argparse.ArgumentParser):
+        def error(self, message):
+            raise ArgumentParserError(message)
+
+    fake_parser = ThrowingArgumentParser()
+    fake_parser.add_argument("--config", type=str)
+    fake_parser.add_argument("blah", nargs="*")
+    comp_list = []
+    taxalotl_config = None
+    try:
+        fa = fake_parser.parse_known_args()[0]
+        config = fa.config
+        taxalotl_config = TaxalotlConfig(filepath=config)
+        if sel_cmd in res_dep_cmds:
+            comp_list = list(taxalotl_config.resources_mgr.resources.keys())
+        elif sel_cmd in ver_inp_res_dep_cmds:
+            comp_list = list(
+                taxalotl_config.resources_mgr.abstract_input_resource_types()
+            )
+    except Exception as _excep:
+        _LOG.warning("Exception: {}".format(_excep))
+        pass
+
+    if sel_cmd == "status":
+        if "-i" not in a and "--ids-only" not in a:
+            comp_list.extend(["-i", "--ids-only"])
+        for x in ["--by-status", "--terminal"]:
+            if x not in a:
+                comp_list.extend([x])
+    elif sel_cmd == "grep":
+        if "--name" == a[-1] or (len(a) > 1 and "--name" == a[-2]):
+            comp_list = []
+        else:
+            acl = ["--level", "--strategy"]
+            comp_list = _add_level_and_other_completions(a, comp_list, acl)
+    elif sel_cmd == "partition":
+        if "--strategy" == a[-1] or (len(a) > 1 and "--strategy" == a[-2]):
+            comp_list = list(["hard-coded", "previous"])
+        else:
+            acl = ["--level", "--strategy"]
+            comp_list = _add_level_and_other_completions(a, comp_list, acl)
+    return comp_list
+
+
+def _add_level_and_other_completions(arg_list, comp_list, arg_comp_list):
+    a = arg_list
+    if "--level" == a[-1] or (len(a) > 1 and "--level" == a[-2]):
+        comp_list = list(NONTERMINAL_PART_NAMES)
+    else:
+        for x in arg_comp_list:
+            if x not in a:
+                comp_list.extend([x])
+    return comp_list
 
 
 if __name__ == "__main__":

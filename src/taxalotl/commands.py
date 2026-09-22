@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 import subprocess
 import sys
+import re
 
 from peyutil import read_as_json, write_as_json
 from peyotl import (
@@ -129,6 +130,62 @@ You probably need to run the pull-otifacts command. If that does NOT solve the p
 """
         out_stream.write(m)
     return id_list
+
+
+def _do_name_grep_taxonomy(fp, name_pat):
+    return _do_grep_of_col(fp, name_pat, 2)
+
+
+def _do_name_grep_synonyms(fp, name_pat):
+    return _do_grep_of_col(fp, name_pat, 0)
+
+
+def _do_grep_of_col(fp, name_pat, col_idx):
+    matches = []
+    with open(fp, "r") as inp:
+        li = iter(inp)
+        next(li)
+        for line in li:
+            ls = line.split("\t|\t")
+            name_str = ls[col_idx]
+            if name_pat.match(name_str):
+                matches.append(line[:-1])
+    if matches:
+        tp = fp
+        if "partitioned" in tp:
+            tp = tp.split("partitioned")[-1]
+        while tp.startswith("/"):
+            tp = tp[1:]
+        while tp.endswith("/"):
+            tp = tp[:-1]
+        pref = f"{tp}:"
+        for line in matches:
+            print(f"{pref} {line}")
+
+
+def grep_in_res(taxalotl_config, res_id_list, name_pat=None):
+    if name_pat:
+        if len(name_pat) != 1:
+            raise RuntimeError("Only 1 name argument allowed")
+        name_pat = re.compile(name_pat[0])
+    for rid in res_id_list:
+        rw = taxalotl_config.get_terminalized_res_by_id(rid)
+        if rw.has_been_partitioned:
+            print(f"partitioned grep of {rid} for name_pat={repr(name_pat)})")
+            tfp = rw.get_part_taxa_filepaths()
+            for fn in tfp:
+                _do_name_grep_taxonomy(fn, name_pat)
+            sfp = rw.get_part_syn_filepaths()
+            for fn in sfp:
+                _do_name_grep_synonyms(fn, name_pat)
+            # print(f"tfp={tfp}")
+            # print(f"sfp={sfp}")
+        elif rw.has_been_normalized:
+            print(f"normalized grep of {rid} for name_pat={repr(name_pat)})")
+        else:
+            raise RuntimeError(
+                f"{rid} needs to be normalized or partitioned to work with grep"
+            )
 
 
 def status_of_resources(
