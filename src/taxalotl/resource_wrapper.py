@@ -475,14 +475,17 @@ class ResourceWrapper(FromOTifacts):
     def is_abstract_input_resource_type(self):
         return False
 
+    @property
     def has_been_downloaded(self):
         dfp = self.download_filepath
         return dfp is not None and os.path.exists(dfp)
 
+    @property
     def has_been_unpacked(self):
         dfp = self.unpacked_filepath
         return dfp is not None and os.path.exists(dfp)
 
+    @property
     def has_been_normalized(self):
         dfp = self.normalized_filedir
         return (
@@ -491,6 +494,7 @@ class ResourceWrapper(FromOTifacts):
             and os.path.exists(self.normalized_filepath)
         )
 
+    @property
     def has_been_partitioned(self):
         return has_any_partition_dirs(self.partitioned_filepath, self.id)
 
@@ -586,15 +590,15 @@ class ResourceWrapper(FromOTifacts):
             out.write("(unversioned). ")
         out.write("date={}\n".format(self.date if self.date else "unknown"))
         hi = "{}{}".format(indent, hanging_indent)
-        s = "is at" if self.has_been_downloaded() else "not yet downloaded to"
+        s = "is at" if self.has_been_downloaded else "not yet downloaded to"
         down_str = "{}Raw ({} format) {} {}\n".format(hi, self.format, s, dfp)
         ufp = self.unpacked_filepath
-        s = "is at" if self.has_been_unpacked() else "not yet unpacked to"
+        s = "is at" if self.has_been_unpacked else "not yet unpacked to"
         unp_str = "{}Raw ({} schema) {} {}\n".format(hi, self.schema, s, ufp)
         nfp = self.normalized_filedir
-        s = "is at" if self.has_been_normalized() else "not yet normalized to"
+        s = "is at" if self.has_been_normalized else "not yet normalized to"
         norm_str = "{}OTT formatted form {} {}\n".format(hi, s, nfp)
-        if self.has_been_partitioned():
+        if self.has_been_partitioned:
             part_str = "{}Has been partitioned at {}\n".format(
                 hi, self.partitioned_filepath
             )
@@ -603,11 +607,11 @@ class ResourceWrapper(FromOTifacts):
         if list_all_artifacts:
             out.write("{}{}{}{}".format(down_str, unp_str, norm_str, part_str))
         else:
-            if self.has_been_partitioned():
+            if self.has_been_partitioned:
                 out.write(part_str)
-            elif self.has_been_normalized():
+            elif self.has_been_normalized:
                 out.write(norm_str)
-            elif self.has_been_unpacked():
+            elif self.has_been_unpacked:
                 out.write(unp_str)
             else:
                 out.write(down_str)

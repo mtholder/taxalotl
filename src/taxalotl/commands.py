@@ -80,7 +80,7 @@ def download_resources(taxalotl_config, id_list):
                 )
             )
         else:
-            if rw.has_been_downloaded():
+            if rw.has_been_downloaded:
                 m = "{} was already present at {}"
                 _LOG.info(m.format(rw.id, rw.download_filepath))
             else:
@@ -98,13 +98,13 @@ def _group_by_status(res, id_list):
         r = res[i]
         if r.is_abstract:
             a_list.append(i)
-        elif r.has_been_partitioned():
+        elif r.has_been_partitioned:
             p_list.append(i)
-        elif r.has_been_normalized():
+        elif r.has_been_normalized:
             n_list.append(i)
-        elif r.has_been_unpacked():
+        elif r.has_been_unpacked:
             unn_list.append(i)
-        elif r.has_been_downloaded():
+        elif r.has_been_downloaded:
             dnu_list.append(i)
         else:
             nd_list.append(i)
@@ -141,6 +141,8 @@ def _do_name_grep_synonyms(fp, name_pat):
 
 
 def _do_grep_of_col(fp, name_pat, col_idx):
+    if not os.path.exists(fp):
+        return
     matches = []
     with open(fp, "r") as inp:
         li = iter(inp)
@@ -181,7 +183,13 @@ def grep_in_res(taxalotl_config, res_id_list, name_pat=None):
             # print(f"tfp={tfp}")
             # print(f"sfp={sfp}")
         elif rw.has_been_normalized:
-            print(f"normalized grep of {rid} for name_pat={repr(name_pat)})")
+            print(
+                f"normalized grep of {rid} for name_pat={repr(name_pat)}) at {rw.normalized_filedir}"
+            )
+            fn = os.path.join(rw.normalized_filedir, "taxonomy.tsv")
+            _do_name_grep_taxonomy(fn, name_pat)
+            fn = os.path.join(rw.normalized_filedir, "synonyms.tsv")
+            _do_name_grep_synonyms(fn, name_pat)
         else:
             raise RuntimeError(
                 f"{rid} needs to be normalized or partitioned to work with grep"
@@ -263,11 +271,11 @@ def status_of_resources(
 def unpack_resources(taxalotl_config, id_list):
     for rid in id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid, "unpack")
-        if not rw.has_been_downloaded():
+        if not rw.has_been_downloaded:
             m = "{} will be downloaded first..."
             _LOG.info(m.format(rw.id))
             download_resources(taxalotl_config, [rw.id])
-        if rw.has_been_unpacked():
+        if rw.has_been_unpacked:
             m = "{} was already present at {}"
             _LOG.info(m.format(rw.id, rw.unpacked_filepath))
         else:
@@ -278,11 +286,11 @@ def normalize_resources(taxalotl_config, id_list):
     for rid in id_list:
         with VirtCommand(name="analyze-update", res_id=rid):
             rw = taxalotl_config.get_terminalized_res_by_id(rid, "normalize")
-            if not rw.has_been_unpacked():
+            if not rw.has_been_unpacked:
                 m = "{} will be unpacked first..."
                 _LOG.info(m.format(rw.id))
                 unpack_resources(taxalotl_config, [rw.id])
-            if rw.has_been_normalized():
+            if rw.has_been_normalized:
                 m = "{} was already normalized at {}"
                 _LOG.info(m.format(rw.id, rw.normalized_filedir))
             else:
@@ -302,7 +310,7 @@ def _iter_norm_term_res_internal_level_pairs(
         level_list = PREORDER_PART_LIST
     for rid in id_list:
         res = taxalotl_config.get_terminalized_res_by_id(rid, cmd_name)
-        if not res.has_been_normalized():
+        if not res.has_been_normalized:
             normalize_resources(taxalotl_config, [rid])
         for part_name_to_split in level_list:
             if not NAME_TO_PARTS_SUBSETS[part_name_to_split]:
@@ -413,7 +421,7 @@ def clean_resources(taxalotl_config, action, id_list, levels=None):
     for rid in id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid, "clean")
         if action == "partition":
-            if rw.has_been_partitioned():
+            if rw.has_been_partitioned:
                 _LOG.info("Cleaning partition artifact for {}...".format(rid))
                 rw.remove_partition_artifacts()
             else:
@@ -421,7 +429,7 @@ def clean_resources(taxalotl_config, action, id_list, levels=None):
                     "{} had not been partitioned. Skipping clean step...".format(rid)
                 )
         elif action == "normalize":
-            if rw.has_been_normalized():
+            if rw.has_been_normalized:
                 _LOG.info("Cleaning normalize artifact for {}...".format(rid))
                 rw.remove_normalize_artifacts()
             else:

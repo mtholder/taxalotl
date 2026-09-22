@@ -37,7 +37,7 @@ def normalize_silva_taxonomy(source, destination, res_wrapper):
     expect_id_fp, ncbi_mapping_res = None, None
     for dep_id in depends_on:
         dep_res = taxalotl_config.get_terminalized_res_by_id(dep_id, "normalize silva")
-        if not dep_res.has_been_unpacked():
+        if not dep_res.has_been_unpacked:
             unpack_resources(taxalotl_config, [dep_id])
         if dep_res.schema.lower() == "id list":
             dep_fp = os.path.join(dep_res.unpacked_filepath, dep_res.local_filename)

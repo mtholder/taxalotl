@@ -5,7 +5,7 @@ import os
 import sys
 
 from peyutil import read_as_json
-
+import argparse
 from . import TaxalotlConfig
 from .commands import (
     # analyze_update,
@@ -114,7 +114,6 @@ def _add_level_arg(parser, req=False):
 
 
 def main():
-    import argparse
 
     description = "The main CLI for taxalotl"
     p = argparse.ArgumentParser(description=description)
@@ -252,7 +251,7 @@ def main():
                     comp_list.append(u)
             comp_list.extend(all_cmds)
         elif sel_cmd in res_dep_cmds:
-            comp_list = _cmd_completion(a)
+            comp_list = _cmd_completion(a, sel_cmd)
 
         sys.stdout.write("{}\n".format(" ".join(comp_list)))
     else:
@@ -260,7 +259,7 @@ def main():
         sys.exit(rc)
 
 
-def _cmd_completion(arg_list):
+def _cmd_completion(arg_list, sel_cmd):
     a = arg_list
 
     # From Ned Batchelder's answer on http://stackoverflow.com/a/14728477
