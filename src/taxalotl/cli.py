@@ -9,6 +9,7 @@ import argparse
 from . import TaxalotlConfig
 from .commands import (
     # analyze_update,
+    add_mapping,
     clean_resources,
     download_resources,
     grep_in_res,
@@ -38,11 +39,11 @@ res_indep_cmds = [
 ]
 # Commands that take any resource ID
 res_dep_cmds = [
-    "analyze-update",
+    "add-mapping",
     "check-partition",
     "clean-partition",
     "download",
-    "info",
+    "grep" "info",
     "normalize",
     "partition",
     "status",
@@ -92,6 +93,8 @@ def main_post_parse(args):
             info_on_resources(cfg, args.resources, lev)
         elif args.which == "grep":
             grep_in_res(cfg, args.resources, args.name)
+        elif args.which == "add-mapping":
+            add_mapping(cfg, args.ott_id, args.external_id)
         elif args.which == "all":
             m = "Currently you must enter a command to run. Use the --help option or see the Tutorial.md\n"
             sys.stdout.write(m)
@@ -213,8 +216,21 @@ def main():
     grep_p = subp.add_parser("grep", help="Search the parsed taxonomies")
     grep_p.add_argument("resources", nargs="+", help="IDs of the resources")
     _add_level_arg(grep_p)
-    grep_p.add_argument("--name", help="pattern for a name", nargs="*", type=str)
+    grep_p.add_argument("--name", help="pattern for a name", nargs=1, type=str)
     grep_p.set_defaults(which="grep")
+
+    # ADD-MAPPING
+    add_mapping_p = subp.add_parser(
+        "add-mapping",
+        help="Manually associate an external id to an OTT ID in the partitioned OTT dir",
+    )
+    add_mapping_p.add_argument(
+        "--ott-id", help="The OTT ID to add the mapping", nargs=1, type=str
+    )
+    add_mapping_p.add_argument(
+        "--external-id", help="The OTT ID to add the mapping", nargs=1, type=str
+    )
+    add_mapping_p.set_defaults(which="add-mapping")
 
     # CLEAN-PARTITION
     clean_p = subp.add_parser(
@@ -302,6 +318,17 @@ def _cmd_completion(arg_list, sel_cmd):
         else:
             acl = ["--level", "--strategy"]
             comp_list = _add_level_and_other_completions(a, comp_list, acl)
+    elif sel_cmd == "add-mapping":
+        arg_comp_list = ["--ott-id", "--external-id"]
+        found = False
+        for ac in arg_comp_list:
+            if ac == a[-1] or (len(a) > 1 and ac == a[-2]):
+                found = True
+                comp_list = []
+        if not found:
+            for x in arg_comp_list:
+                if x not in a:
+                    comp_list.extend([x])
     elif sel_cmd == "partition":
         if "--strategy" == a[-1] or (len(a) > 1 and "--strategy" == a[-2]):
             comp_list = list(["hard-coded", "previous"])

@@ -172,28 +172,36 @@ def grep_in_res(taxalotl_config, res_id_list, name_pat=None):
         name_pat = re.compile(name_pat[0])
     for rid in res_id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid)
-        if rw.has_been_partitioned:
-            print(f"partitioned grep of {rid} for name_pat={repr(name_pat)})")
-            tfp = rw.get_part_taxa_filepaths()
-            for fn in tfp:
-                _do_name_grep_taxonomy(fn, name_pat)
-            sfp = rw.get_part_syn_filepaths()
-            for fn in sfp:
-                _do_name_grep_synonyms(fn, name_pat)
-            # print(f"tfp={tfp}")
-            # print(f"sfp={sfp}")
-        elif rw.has_been_normalized:
-            print(
-                f"normalized grep of {rid} for name_pat={repr(name_pat)}) at {rw.normalized_filedir}"
-            )
-            fn = os.path.join(rw.normalized_filedir, "taxonomy.tsv")
+
+
+def grep_in_single_res(rw, name_pat):
+    if rw.has_been_partitioned:
+        tfp = rw.get_part_taxa_filepaths()
+        for fn in tfp:
             _do_name_grep_taxonomy(fn, name_pat)
-            fn = os.path.join(rw.normalized_filedir, "synonyms.tsv")
+        sfp = rw.get_part_syn_filepaths()
+        for fn in sfp:
             _do_name_grep_synonyms(fn, name_pat)
-        else:
-            raise RuntimeError(
-                f"{rid} needs to be normalized or partitioned to work with grep"
-            )
+        return
+    if rw.has_been_normalized:
+        fn = os.path.join(rw.normalized_filedir, "taxonomy.tsv")
+        _do_name_grep_taxonomy(fn, name_pat)
+        fn = os.path.join(rw.normalized_filedir, "synonyms.tsv")
+        _do_name_grep_synonyms(fn, name_pat)
+        return
+    raise RuntimeError(f"{rid} needs to be normalized or partitioned to work with grep")
+
+
+def add_mapping(taxalotl_config, ott_id, external_id):
+    csl = [i.strip() for i in external_id[0].split(":")]
+    if len(csl) != 2:
+        msg = f"external_id expected to have exactly one colon, found '{external_id}'"
+        raise RuntimeError(msg)
+    rw = taxalotl_config.get_terminalized_res_by_id("ott", "")
+    res_id, id_in_ext = csl
+    ext_rw = taxalotl_config.get_terminalized_res_by_id(res_id, "")
+
+    raise NotImplementedError(f"add_mapping(cfg, {ott_id}, {external_id})")
 
 
 def status_of_resources(
