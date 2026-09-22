@@ -39,7 +39,7 @@ SEP_MAPPING = "__separator_names_to_dir__.json"
 
 
 # def analyze_update(taxalotl_config, id_list, level_list):
-#     assert(len(id_list) == 2)
+#     assert len(id_list) == 2
 #     eid, lid = id_list
 #     earlier = taxalotl_config.get_terminalized_res_by_id(eid)
 #     later = taxalotl_config.get_terminalized_res_by_id(lid)

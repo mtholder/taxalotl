@@ -69,7 +69,7 @@ class TaxonomySliceCache(object):
         assert isinstance(key, tuple) and len(key) == 3
         old_val = self._ck_to_obj.get(key)
         if old_val is not None and old_val is not vttrs:
-            assert (False, "should not be creating a new object for a cached taxdi!")
+            assert False, "should not be creating a new object for a cached taxdi!"
         self._ck_to_obj[key] = vttrs
 
     def __getitem__(self, ck):
