@@ -109,7 +109,15 @@ def main_post_parse(args):
                 raise RuntimeError("either name or tax_id_field must be used.")
             grep_in_res(cfg, args.resources, name_arg, tax_id_arg, args.target)
         elif args.which == "add-mapping":
-            add_mapping(cfg, args.ott_id, args.external_id)
+            if not args.ott_id:
+                raise RuntimeError("ott_id is required.")
+            if len(args.ott_id) > 1:
+                raise RuntimeError("Only 1 ott_id argument allowed")
+            if not args.external_id:
+                raise RuntimeError("external_id is required.")
+            if len(args.external_id) > 1:
+                raise RuntimeError("Only 1 external_id argument allowed")
+            add_mapping(cfg, args.ott_id[0], args.external_id[0])
         elif args.which == "all":
             m = "Currently you must enter a command to run. Use the --help option or see the Tutorial.md\n"
             sys.stdout.write(m)
@@ -337,8 +345,12 @@ def _cmd_completion(arg_list, sel_cmd):
     elif sel_cmd == "grep":
         if "--name" == a[-1] or (len(a) > 1 and "--name" == a[-2]):
             comp_list = []
+        elif "--tax-id" == a[-1] or (len(a) > 1 and "--tax-id" == a[-2]):
+            comp_list = []
+        elif "--target" == a[-1] or (len(a) > 1 and "--target" == a[-2]):
+            comp_list = list(["both", "taxa", "synonyms"])
         else:
-            acl = ["--level", "--strategy"]
+            acl = ["--level", "--target", "--name", "--tax-id"]
             comp_list = _add_level_and_other_completions(a, comp_list, acl)
     elif sel_cmd == "add-mapping":
         arg_comp_list = ["--ott-id", "--external-id"]

@@ -132,23 +132,23 @@ You probably need to run the pull-otifacts command. If that does NOT solve the p
     return id_list
 
 
-def _do_name_grep_taxonomy(fp, name_pat):
-    return _do_grep_of_col(fp, name_pat, 2)
+def _do_name_grep_taxonomy(fp, name_pat, outstream=sys.stdout):
+    return _do_grep_of_col(fp, name_pat, 2, outstream=outstream)
 
 
-def _do_name_grep_synonyms(fp, name_pat):
-    return _do_grep_of_col(fp, name_pat, 0)
+def _do_name_grep_synonyms(fp, name_pat, outstream=sys.stdout):
+    return _do_grep_of_col(fp, name_pat, 0, outstream=outstream)
 
 
-def _do_tax_id_grep_taxonomy(fp, tax_id_pat):
-    return _do_grep_of_col(fp, tax_id_pat, 0)
+def _do_tax_id_grep_taxonomy(fp, tax_id_pat, outstream=sys.stdout):
+    return _do_grep_of_col(fp, tax_id_pat, 0, outstream=outstream)
 
 
-def _do_tax_id_grep_synonyms(fp, tax_id_pat):
-    return _do_grep_of_col(fp, tax_id_pat, 1)
+def _do_tax_id_grep_synonyms(fp, tax_id_pat, outstream=sys.stdout):
+    return _do_grep_of_col(fp, tax_id_pat, 1, outstream=outstream)
 
 
-def _do_grep_of_col(fp, name_pat, col_idx):
+def _do_grep_of_col(fp, name_pat, col_idx, outstream=sys.stdout):
     if not os.path.exists(fp):
         return []
     matches = []
@@ -173,12 +173,18 @@ def _do_grep_of_col(fp, name_pat, col_idx):
     ret = []
     for line in matches:
         ret.append((fp, line))
-        print(f"{pref} {line}")
+        if outstream:
+            outstream.write(f"{pref} {line}\n")
     return ret
 
 
 def grep_in_res(
-    taxalotl_config, res_id_list, name_pat=None, tax_id_field=None, target="both"
+    taxalotl_config,
+    res_id_list,
+    name_pat=None,
+    tax_id_field=None,
+    target="both",
+    outstream=sys.stdout,
 ):
     if name_pat:
         name_pat = re.compile(name_pat)
@@ -190,29 +196,39 @@ def grep_in_res(
     for rid in res_id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid)
         if name_pat:
-            r.extend(grep_name_in_single_res(rw, name_pat, target=target))
+            r.extend(
+                grep_name_in_single_res(
+                    rw, name_pat, target=target, outstream=outstream
+                )
+            )
         else:
-            r.extend(grep_tax_id_in_single_res(rw, id_pat, target=target))
+            r.extend(
+                grep_tax_id_in_single_res(
+                    rw, id_pat, target=target, outstream=outstream
+                )
+            )
     return r
 
 
-def grep_name_in_single_res(rw, name_pat, target):
+def grep_name_in_single_res(rw, name_pat, target, outstream=sys.stdout):
     return _generic_grep_in_one_res(
         rw,
         name_pat,
         tax_fn=_do_name_grep_taxonomy,
         syn_fn=_do_name_grep_synonyms,
         target=target,
+        outstream=outstream,
     )
 
 
-def grep_tax_id_in_single_res(rw, tax_id_pat, target):
+def grep_tax_id_in_single_res(rw, tax_id_pat, target, outstream=sys.stdout):
     return _generic_grep_in_one_res(
         rw,
         tax_id_pat,
         tax_fn=_do_tax_id_grep_taxonomy,
         syn_fn=_do_tax_id_grep_synonyms,
         target=target,
+        outstream=outstream,
     )
 
 
@@ -220,19 +236,24 @@ _SEARCH_TAX_SET = frozenset(["both", "taxa"])
 _SEARCH_SYN_SET = frozenset(["both", "synonyms"])
 
 
-def _generic_grep_in_one_res(rw, pat, tax_fn, syn_fn, target="both"):
+def _generic_grep_in_one_res(
+    rw, pat, tax_fn, syn_fn, target="both", outstream=sys.stdout
+):
     search_tax = target.lower() in _SEARCH_TAX_SET
     search_syn = target.lower() in _SEARCH_SYN_SET
+    if not (search_tax or search_syn):
+        msg = f"target should be both, taxa, or synonyms. Got {target}"
+        raise ValueError(msg)
     r = []
     if rw.has_been_partitioned:
         if search_tax:
             tfp = rw.get_part_taxa_filepaths()
             for fn in tfp:
-                r.extend(tax_fn(fn, pat))
+                r.extend(tax_fn(fn, pat, outstream=outstream))
         if search_syn:
             sfp = rw.get_part_syn_filepaths()
             for fn in sfp:
-                r.extend(syn_fn(fn, pat))
+                r.extend(syn_fn(fn, pat, outstream=outstream))
         return r
     if not rw.has_been_normalized:
         raise RuntimeError(
@@ -240,15 +261,15 @@ def _generic_grep_in_one_res(rw, pat, tax_fn, syn_fn, target="both"):
         )
     if search_tax:
         fn = os.path.join(rw.normalized_filedir, "taxonomy.tsv")
-        r = tax_fn(fn, pat)
+        r = tax_fn(fn, pat, outstream=outstream)
     if search_syn:
         fn = os.path.join(rw.normalized_filedir, "synonyms.tsv")
-        r.extend(syn_fn(fn, pat))
+        r.extend(syn_fn(fn, pat, outstream=outstream))
     return r
 
 
 def add_mapping(taxalotl_config, ott_id, external_id):
-    csl = [i.strip() for i in external_id[0].split(":")]
+    csl = [i.strip() for i in external_id.split(":")]
     if len(csl) != 2:
         msg = f"external_id expected to have exactly one colon, found '{external_id}'"
         raise RuntimeError(msg)
@@ -259,8 +280,10 @@ def add_mapping(taxalotl_config, ott_id, external_id):
         )
     res_id, id_in_ext = csl
     ext_rw = taxalotl_config.get_terminalized_res_by_id(res_id, "")
+    ott_pat = re.compile(f"^{ott_id}$")
+    ret = grep_tax_id_in_single_res(ott_rw, ott_pat, target="taxa", outstream=None)
 
-    raise NotImplementedError(f"add_mapping(cfg, {ott_id}, {external_id})")
+    raise NotImplementedError(f"add_mapping(cfg, {ott_id}, {external_id}) ret={ret}")
 
 
 def status_of_resources(
