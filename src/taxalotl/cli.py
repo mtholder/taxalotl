@@ -43,7 +43,8 @@ res_dep_cmds = [
     "check-partition",
     "clean-partition",
     "download",
-    "grep" "info",
+    "grep",
+    "info",
     "normalize",
     "partition",
     "status",
@@ -92,7 +93,21 @@ def main_post_parse(args):
             lev = _verify_level_arg(args.level)
             info_on_resources(cfg, args.resources, lev)
         elif args.which == "grep":
-            grep_in_res(cfg, args.resources, args.name)
+            if args.name:
+                if len(args.name) > 1:
+                    raise RuntimeError("Only 1 name argument allowed")
+                name_arg = args.name[0]
+                if args.tax_id:
+                    raise RuntimeError("name or tax_id_field can be used, not both")
+                tax_id_arg = None
+            elif args.tax_id:
+                if len(args.tax_id) > 1:
+                    raise RuntimeError("Only 1 tax_id argument allowed")
+                tax_id_arg = args.tax_id[0]
+                name_arg = None
+            else:
+                raise RuntimeError("either name or tax_id_field must be used.")
+            grep_in_res(cfg, args.resources, name_arg, tax_id_arg, args.target)
         elif args.which == "add-mapping":
             add_mapping(cfg, args.ott_id, args.external_id)
         elif args.which == "all":
@@ -217,6 +232,13 @@ def main():
     grep_p.add_argument("resources", nargs="+", help="IDs of the resources")
     _add_level_arg(grep_p)
     grep_p.add_argument("--name", help="pattern for a name", nargs=1, type=str)
+    grep_p.add_argument("--tax-id", help="ID for taxon", nargs=1, type=str)
+    grep_p.add_argument(
+        "--target",
+        default="both",
+        choices=["both", "taxa", "synonyms"],
+        help="Search in taxa, synonyms or both",
+    )
     grep_p.set_defaults(which="grep")
 
     # ADD-MAPPING

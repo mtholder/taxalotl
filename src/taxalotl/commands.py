@@ -140,9 +140,17 @@ def _do_name_grep_synonyms(fp, name_pat):
     return _do_grep_of_col(fp, name_pat, 0)
 
 
+def _do_tax_id_grep_taxonomy(fp, tax_id_pat):
+    return _do_grep_of_col(fp, tax_id_pat, 0)
+
+
+def _do_tax_id_grep_synonyms(fp, tax_id_pat):
+    return _do_grep_of_col(fp, tax_id_pat, 1)
+
+
 def _do_grep_of_col(fp, name_pat, col_idx):
     if not os.path.exists(fp):
-        return
+        return []
     matches = []
     with open(fp, "r") as inp:
         li = iter(inp)
@@ -152,44 +160,91 @@ def _do_grep_of_col(fp, name_pat, col_idx):
             name_str = ls[col_idx]
             if name_pat.match(name_str):
                 matches.append(line[:-1])
-    if matches:
-        tp = fp
-        if "partitioned" in tp:
-            tp = tp.split("partitioned")[-1]
-        while tp.startswith("/"):
-            tp = tp[1:]
-        while tp.endswith("/"):
-            tp = tp[:-1]
-        pref = f"{tp}:"
-        for line in matches:
-            print(f"{pref} {line}")
+    if not matches:
+        return []
+    tp = fp
+    if "partitioned" in tp:
+        tp = tp.split("partitioned")[-1]
+    while tp.startswith("/"):
+        tp = tp[1:]
+    while tp.endswith("/"):
+        tp = tp[:-1]
+    pref = f"{tp}:"
+    ret = []
+    for line in matches:
+        ret.append((fp, line))
+        print(f"{pref} {line}")
+    return ret
 
 
-def grep_in_res(taxalotl_config, res_id_list, name_pat=None):
+def grep_in_res(
+    taxalotl_config, res_id_list, name_pat=None, tax_id_field=None, target="both"
+):
     if name_pat:
-        if len(name_pat) != 1:
-            raise RuntimeError("Only 1 name argument allowed")
-        name_pat = re.compile(name_pat[0])
+        name_pat = re.compile(name_pat)
+    elif tax_id_field:
+        id_pat = re.compile(f"^{tax_id_field}$")
+    else:
+        assert False, "name_pat or tax_id_field required"
+    r = []
     for rid in res_id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid)
+        if name_pat:
+            r.extend(grep_name_in_single_res(rw, name_pat, target=target))
+        else:
+            r.extend(grep_tax_id_in_single_res(rw, id_pat, target=target))
+    return r
 
 
-def grep_in_single_res(rw, name_pat):
+def grep_name_in_single_res(rw, name_pat, target):
+    return _generic_grep_in_one_res(
+        rw,
+        name_pat,
+        tax_fn=_do_name_grep_taxonomy,
+        syn_fn=_do_name_grep_synonyms,
+        target=target,
+    )
+
+
+def grep_tax_id_in_single_res(rw, tax_id_pat, target):
+    return _generic_grep_in_one_res(
+        rw,
+        tax_id_pat,
+        tax_fn=_do_tax_id_grep_taxonomy,
+        syn_fn=_do_tax_id_grep_synonyms,
+        target=target,
+    )
+
+
+_SEARCH_TAX_SET = frozenset(["both", "taxa"])
+_SEARCH_SYN_SET = frozenset(["both", "synonyms"])
+
+
+def _generic_grep_in_one_res(rw, pat, tax_fn, syn_fn, target="both"):
+    search_tax = target.lower() in _SEARCH_TAX_SET
+    search_syn = target.lower() in _SEARCH_SYN_SET
+    r = []
     if rw.has_been_partitioned:
-        tfp = rw.get_part_taxa_filepaths()
-        for fn in tfp:
-            _do_name_grep_taxonomy(fn, name_pat)
-        sfp = rw.get_part_syn_filepaths()
-        for fn in sfp:
-            _do_name_grep_synonyms(fn, name_pat)
-        return
-    if rw.has_been_normalized:
+        if search_tax:
+            tfp = rw.get_part_taxa_filepaths()
+            for fn in tfp:
+                r.extend(tax_fn(fn, pat))
+        if search_syn:
+            sfp = rw.get_part_syn_filepaths()
+            for fn in sfp:
+                r.extend(syn_fn(fn, pat))
+        return r
+    if not rw.has_been_normalized:
+        raise RuntimeError(
+            f"{rid} needs to be normalized or partitioned to work with grep"
+        )
+    if search_tax:
         fn = os.path.join(rw.normalized_filedir, "taxonomy.tsv")
-        _do_name_grep_taxonomy(fn, name_pat)
+        r = tax_fn(fn, pat)
+    if search_syn:
         fn = os.path.join(rw.normalized_filedir, "synonyms.tsv")
-        _do_name_grep_synonyms(fn, name_pat)
-        return
-    raise RuntimeError(f"{rid} needs to be normalized or partitioned to work with grep")
+        r.extend(syn_fn(fn, pat))
+    return r
 
 
 def add_mapping(taxalotl_config, ott_id, external_id):
@@ -197,7 +252,11 @@ def add_mapping(taxalotl_config, ott_id, external_id):
     if len(csl) != 2:
         msg = f"external_id expected to have exactly one colon, found '{external_id}'"
         raise RuntimeError(msg)
-    rw = taxalotl_config.get_terminalized_res_by_id("ott", "")
+    ott_rw = taxalotl_config.get_terminalized_res_by_id("ott", "")
+    if not ott_rw.has_been_partitioned:
+        raise RuntimeError(
+            "OTT must be partitioned before running the add-mapping command"
+        )
     res_id, id_in_ext = csl
     ext_rw = taxalotl_config.get_terminalized_res_by_id(res_id, "")
 
