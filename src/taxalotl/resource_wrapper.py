@@ -404,7 +404,6 @@ class ResourceWrapper(FromOTifacts):
         by_name = {}
         rfp_list = self.get_part_roots_filepaths()
         for rfp in rfp_list:
-            rfp = os.path.join(opd, ROOTS_FILENAME)
             blob = read_as_json(rfp)
             if len(blob) != 1:
                 raise RuntimeError(f"Multiple roots found at {blob}")

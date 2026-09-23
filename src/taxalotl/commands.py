@@ -21,6 +21,7 @@ from .cmds.partitions import (
     write_info_for_res,
 )
 from .tax_partition import (
+    ROOTS_FILENAME,
     INP_TAXONOMY_DIRNAME,
     MISC_DIRNAME,
     use_tax_partitions,
@@ -268,6 +269,71 @@ def _generic_grep_in_one_res(
     return r
 
 
+def _do_add_mapping(ott_fp, ott_pat, external_id, ott_id):
+    _LOG.debug(f"reading {ott_fp} to patch it...")
+    lines_to_write = []
+    external_id = external_id.strip()
+    found = False
+    with open(ott_fp, "r") as inp:
+        for line in inp:
+            ls = line.split("\t|\t")
+            id_str = ls[0]
+            if ott_pat.match(id_str):
+                src_field = ls[4]
+                if src_field:
+                    src_list = src_field.split(",")
+                    if external_id in src_list:
+                        _LOG.info(f"{external_id} already mapped to ott.")
+                    else:
+                        src_list.append(external_id)
+                    ls[4] = ",".join(src_list)
+                else:
+                    ls[4] = external_id
+                nl = "\t|\t".join(ls)
+                lines_to_write.append(nl)
+                if found:
+                    raise RuntimeError("OTT ID found twice!")
+                found = True
+            else:
+                lines_to_write.append(line)
+    if not found:
+        raise RuntimeError("OTT not found!")
+    _LOG.debug(f"writing new {ott_fp} to patch it...")
+    with OutFile(ott_fp) as outp:
+        outp.writelines(lines_to_write)
+    _LOG.debug(f"patched {ott_fp} written")
+    pd = os.path.split(ott_fp)[0]
+    rfp = os.path.join(pd, ROOTS_FILENAME)
+    if not os.path.exists(rfp):
+        return True
+    _LOG.debug(f"Checking {rfp}")
+    blob = read_as_json(rfp)
+    ott_taxon = blob.get(ott_id)
+    if ott_taxon is None:
+        return True
+    _LOG.debug(f"adding mapping to root taxon ...")
+    src_dict = ott_taxon.get("src_dict")
+    base, ext_id_suffix = external_id.split(":")
+    if src_dict:
+        v = src_dict.get(base)
+        if v is None:
+            _LOG.debug(f"creating {base} -> {ext_id_suffix} mapping in src_dict")
+            src_dict[base] = [ext_id_suffix]
+        else:
+            if ext_id_suffix not in v:
+                _LOG.debug(f"appending {base} -> {ext_id_suffix} mapping in src_dict")
+                v.append(ext_id_suffix)
+            else:
+                _LOG.debug(f"{base} -> {ext_id_suffix} mapping found")
+    else:
+        _LOG.debug(f"creating new src_dict")
+        src_dict = {base: ext_id_suffix}
+    with OutFile(rfp) as outs:
+        write_as_json(blob, outs, indent=1)
+
+    return True
+
+
 def add_mapping(taxalotl_config, ott_id, external_id):
     csl = [i.strip() for i in external_id.split(":")]
     if len(csl) != 2:
@@ -281,6 +347,7 @@ def add_mapping(taxalotl_config, ott_id, external_id):
     res_id, id_in_ext = csl
     ext_rw = taxalotl_config.get_terminalized_res_by_id(res_id, "")
     ott_pat = re.compile(f"^{ott_id}$")
+    _LOG.debug(f"Verifying {ott_id} is found and unique in ott")
     ret = grep_tax_id_in_single_res(ott_rw, ott_pat, target="taxa", outstream=None)
     if len(ret) != 1:
         msg = f"Expecting one hit for OTT ID {ott_id} Found: {ret}"
@@ -288,14 +355,14 @@ def add_mapping(taxalotl_config, ott_id, external_id):
     ott_fp, line = ret[0]
 
     ext_pat = re.compile(f"^{id_in_ext}$")
+
+    _LOG.debug(f"Verifying {id_in_ext} is found and unique in {res_id}")
     ext_ret = grep_tax_id_in_single_res(ext_rw, ext_pat, target="taxa", outstream=None)
     if len(ext_ret) != 1:
         msg = f"Expecting one hit for {res_id} ID {id_in_ext} Found: {ext_ret}"
         raise RuntimeError(msg)
     ext_fp, ext_line = ext_ret[0]
-    raise NotImplementedError(
-        f"add_mapping(cfg, {ott_id}, {external_id}).\n(ott_fp, line)={(ott_fp, line)}\n(ext_fp, line)={(ext_fp, ext_line)}"
-    )
+    _do_add_mapping(ott_fp, ott_pat, external_id, ott_id)
 
 
 def status_of_resources(
