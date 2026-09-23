@@ -133,16 +133,21 @@ def _rec_populate(d_to_fill, key_to_filled_set):
 def iter_existing_tax_dirs(path_pref, res_id):
     suffix = os.path.join(INP_TAXONOMY_DIRNAME, res_id)
     misc_suffix = os.path.join(MISC_DIRNAME, INP_TAXONOMY_DIRNAME, res_id)
+    returned = set()
     for tup in os.walk(path_pref):
         dirname = tup[0]
         if dirname == path_pref:
             continue
         p = os.path.join(dirname, suffix)
         if os.path.exists(p):
-            yield p
+            if p not in returned:
+                returned.add(p)
+                yield p
         p = os.path.join(dirname, misc_suffix)
         if os.path.exists(p):
-            yield p
+            if p not in returned:
+                returned.add(p)
+                yield p
 
 
 def has_any_partition_dirs(path_pref, res_id):
@@ -213,12 +218,20 @@ def do_partition_from_previous(res, part_name_to_split):
     ott = taxalotl_config.get_terminalized_res_by_id("ott", "")
     part_root_name_blob = ott.get_part_clade_names_and_blobs()
     base_name = res.base_id
+    dpm = {}
     for name, blob in part_root_name_blob.items():
         src_dict = blob["src_dict"]
         nid = src_dict.get(base_name)
-        print(name, nid)
+        if nid:
+            assert isinstance(nid, list)
+            dpm[name] = frozenset(nid)
+    res.dynamic_part_map = dpm
+    do_hard_coded_partition(res, part_name_to_split)
+    # TODO - won't work for
+    # print(f"part_name_to_split={part_name_to_split}")
+    # print(json.dumps(NAME_TO_PARENT_FRAGMENT))
     # import sys; sys.exit(json.dumps(part_root_name_blob, indent=2))
-    raise NotImplementedError("previous strategy")
+    # raise NotImplementedError("previous strategy")
 
 
 def do_hard_coded_partition(res, part_name_to_split):

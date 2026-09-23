@@ -249,6 +249,7 @@ def _generic_grep_in_one_res(
     if rw.has_been_partitioned:
         if search_tax:
             tfp = rw.get_part_taxa_filepaths()
+            # raise RuntimeError("\n".join(tfp))
             for fn in tfp:
                 r.extend(tax_fn(fn, pat, outstream=outstream))
         if search_syn:

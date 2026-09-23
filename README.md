@@ -82,6 +82,16 @@ This information is "extra" in the sense that it was not
 emitted by the reference-taxonomy repo's version of the code.
 
 
+## MTH Notes
+
+    taxalotlcli partition ott
+    taxalotlcli normalize ncbi
+    taxalotlcli add-mapping --ott-id=5246039  --external-id ncbi:2698737
+    # add chloroplastida as only children of archaeplastida for initial partition
+    taxalotlcli add-mapping --ott-id=5268475  --external-id ncbi:33090
+    taxalotlcli partition --strategy previous ncbi
+
+
 ## Structure
 ### Resources directory
 That dir should hold descriptions of the taxonomies that

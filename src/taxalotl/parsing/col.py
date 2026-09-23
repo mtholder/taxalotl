@@ -138,6 +138,8 @@ class CoLXRTaxonomyWrapper(TaxonomyWrapper):
     schema = {"https://github.com/CatalogueOfLife/coldp/releases/tag/v1.2.0"}
 
     def get_primary_partition_map(self):
+        if self.dynamic_part_map is not None:
+            return self.dynamic_part_map
         return COLXR_PARTMAP
 
     def normalize(self):

@@ -336,6 +336,7 @@ class ResourceWrapper(FromOTifacts):
 
     def __init__(self, obj, parent=None, refs=None, config=None):
         FromOTifacts.__init__(self)
+        self.dynamic_part_map = None
         self.base_id = None
         for k in _known_res_attr:
             self.__dict__[k] = obj.get(k)
@@ -628,6 +629,8 @@ class ResourceWrapper(FromOTifacts):
         return get_misc_inp_taxdir(self.partitioned_filepath, fragment, self.id)
 
     def get_primary_partition_map(self):
+        if self.dynamic_part_map is not None:
+            return self.dynamic_part_map
         raise RuntimeError(
             f"Resource {self.id} does not contain a hard-coded primary partition map"
         )
