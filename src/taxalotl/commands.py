@@ -282,8 +282,20 @@ def add_mapping(taxalotl_config, ott_id, external_id):
     ext_rw = taxalotl_config.get_terminalized_res_by_id(res_id, "")
     ott_pat = re.compile(f"^{ott_id}$")
     ret = grep_tax_id_in_single_res(ott_rw, ott_pat, target="taxa", outstream=None)
+    if len(ret) != 1:
+        msg = f"Expecting one hit for OTT ID {ott_id} Found: {ret}"
+        raise RuntimeError(msg)
+    ott_fp, line = ret[0]
 
-    raise NotImplementedError(f"add_mapping(cfg, {ott_id}, {external_id}) ret={ret}")
+    ext_pat = re.compile(f"^{id_in_ext}$")
+    ext_ret = grep_tax_id_in_single_res(ext_rw, ext_pat, target="taxa", outstream=None)
+    if len(ext_ret) != 1:
+        msg = f"Expecting one hit for {res_id} ID {id_in_ext} Found: {ext_ret}"
+        raise RuntimeError(msg)
+    ext_fp, ext_line = ext_ret[0]
+    raise NotImplementedError(
+        f"add_mapping(cfg, {ott_id}, {external_id}).\n(ott_fp, line)={(ott_fp, line)}\n(ext_fp, line)={(ext_fp, ext_line)}"
+    )
 
 
 def status_of_resources(
