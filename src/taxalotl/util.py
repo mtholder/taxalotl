@@ -133,6 +133,10 @@ class OutFile(object):
         self.out_stream = None
 
     def __enter__(self):
+        pd = os.path.split(self.filepath)[0]
+        if not os.path.isdir(pd):
+            with OutDir(pd) as opd:
+                pass
         if "b" in self.mode:
             self.out_stream = io.open(self.filepath, mode=self.mode)
         else:

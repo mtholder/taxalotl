@@ -6,7 +6,7 @@ import os
 import logging
 import json
 
-from peyutil import read_as_json
+from peyutil import read_as_json, write_as_json
 
 from ..tax_partition import (
     INP_TAXONOMY_DIRNAME,
@@ -14,9 +14,11 @@ from ..tax_partition import (
     get_taxon_partition,
     use_tax_partitions,
 )
+from ..util import OutFile
 
 _LOG = logging.getLogger(__name__)
 _BASE_PARTITIONS_DICT = None
+_LIFE = "Life"
 
 
 def _get_base_partition_dict():
@@ -24,7 +26,6 @@ def _get_base_partition_dict():
     if _BASE_PARTITIONS_DICT is not None:
         return _BASE_PARTITIONS_DICT
 
-    _LIFE = "Life"
     ####################################################################################################
     # Some data (to later be refactored
     _x = {
@@ -73,6 +74,35 @@ def _get_base_partition_dict():
     return _BASE_PARTITIONS_DICT
 
 
+def _fill_name_to_depth_par_dict(target, p2d, level, stem=""):
+    for key, value in p2d.items():
+        if key != MISC_DIRNAME:
+            target[key] = (level, stem)
+            if value:
+                ns = f"{stem}/{key}" if stem else key
+                _fill_name_to_depth_par_dict(target, value, 1 + level, ns)
+
+
+def _n2p_to_n2dp(n2p):
+    """converts name to par to name => (depth, par) mapping."""
+    n2pd = {}
+    for k, v in n2p.items():
+        if not v:
+            n2pd[k] = [0, v]
+            continue
+        sslash = v.split("/")
+        n2pd[k] = [len(sslash), v]
+    return n2pd
+
+
+def _n2dp_to_n2p(n2pd):
+    """converts name to (depth, par) to name => par mapping."""
+    n2p = {}
+    for k, v in n2pd.items():
+        n2p[k] = v[-1]
+    return n2p
+
+
 class PartitionMgr(object):
     CACHE_FN = "partitions.json"
 
@@ -93,10 +123,17 @@ class PartitionMgr(object):
             pd = self.cfg.partitioned_dir
             jpf = os.path.join(pd, self.CACHE_FN)
             if os.path.exists(jpf):
-                self._name2depth_par = read_as_json(jpf)
+                n2p = read_as_json(jpf)
+                self._name2depth_par = _n2p_to_n2dp(n2p)
             else:
                 p2d = self.par2des
-                raise RuntimeError(str(p2d))
+                part_d = p2d[_LIFE]
+                n2dp = {}
+                _fill_name_to_depth_par_dict(n2dp, part_d, 0)
+                n2p = _n2dp_to_n2p(n2dp)
+                with OutFile(jpf) as outs:
+                    write_as_json(n2p, outs, indent=1)
+                raise RuntimeError(json.dumps(n2dp, indent=1))
         return self._name2depth_par
 
     def get_preorder_roots(self):
