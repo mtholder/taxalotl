@@ -136,6 +136,10 @@ class PartitionMgr(object):
                 raise RuntimeError(json.dumps(n2dp, indent=1))
         return self._name2depth_par
 
+    @property
+    def root_names(self):
+        return list(self.name2depth_par.keys())
+
     def get_preorder_roots(self):
         v_list = [(v[0], k) for k, v in self.name2depth_par.items()]
         v_list.sort()

@@ -349,7 +349,9 @@ def _cmd_completion(arg_list, sel_cmd):
             comp_list = list(["both", "taxa", "synonyms"])
         else:
             acl = ["--level", "--target", "--name", "--tax-id"]
-            comp_list = _add_level_and_other_completions(a, comp_list, acl)
+            comp_list = _add_level_and_other_completions(
+                taxalotl_config, a, comp_list, acl
+            )
     elif sel_cmd == "add-mapping":
         arg_comp_list = ["--ott-id", "--external-id"]
         found = False
@@ -366,14 +368,19 @@ def _cmd_completion(arg_list, sel_cmd):
             comp_list = list(["hard-coded", "previous"])
         else:
             acl = ["--level", "--strategy"]
-            comp_list = _add_level_and_other_completions(a, comp_list, acl)
+            comp_list = _add_level_and_other_completions(
+                taxalotl_config, a, comp_list, acl
+            )
     return comp_list
 
 
-def _add_level_and_other_completions(arg_list, comp_list, arg_comp_list):
+def _add_level_and_other_completions(
+    taxalotl_config, arg_list, comp_list, arg_comp_list
+):
     a = arg_list
     if "--level" == a[-1] or (len(a) > 1 and "--level" == a[-2]):
-        comp_list = list(get_partition_root_names())
+        pm = partition_mgr(taxalotl_config)
+        comp_list = list(pm.root_names)
     else:
         for x in arg_comp_list:
             if x not in a:
