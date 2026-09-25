@@ -20,12 +20,7 @@ from .commands import (
     status_of_resources,
     unpack_resources,
 )
-from .cmds.partitions import (
-    PART_NAMES,
-    NAME_TO_PARTS_SUBSETS,
-    NONTERMINAL_PART_NAMES,
-    TERMINAL_PART_NAMES,
-)
+from .cmds.partitions import partition_mgr
 import logging
 
 LOGLEVEL = os.environ.get("LOGLEVEL", "WARNING").upper()
@@ -55,10 +50,13 @@ ver_inp_res_dep_cmds = []
 all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 
 
-def _verify_level_arg(lev_arg):
-    if lev_arg is not None and lev_arg not in NAME_TO_PARTS_SUBSETS:
-        opts = '", "'.join(PART_NAMES)
-        raise RuntimeError(f'--level should be one of "{opts}"')
+def _verify_level_arg(cfg, lev_arg):
+    if lev_arg is not None:
+        pm = partition_mgr(cfg)
+        prn = pm.get_root_names()
+        if lev_arg not in prn:
+            opts = '", "'.join(prn)
+            raise RuntimeError(f'--level should be one of "{opts}"')
     return [lev_arg]
 
 
@@ -87,10 +85,10 @@ def main_post_parse(args):
         elif args.which == "pull-otifacts":
             pull_otifacts(cfg)
         elif args.which == "partition":
-            lev = _verify_level_arg(args.level)
+            lev = _verify_level_arg(cfg, args.level)
             partition_resources(cfg, args.strategy, args.resources, lev)
         elif args.which == "info":
-            lev = _verify_level_arg(args.level)
+            lev = _verify_level_arg(cfg, args.level)
             info_on_resources(cfg, args.resources, lev)
         elif args.which == "grep":
             if args.name:
@@ -375,7 +373,7 @@ def _cmd_completion(arg_list, sel_cmd):
 def _add_level_and_other_completions(arg_list, comp_list, arg_comp_list):
     a = arg_list
     if "--level" == a[-1] or (len(a) > 1 and "--level" == a[-2]):
-        comp_list = list(NONTERMINAL_PART_NAMES)
+        comp_list = list(get_partition_root_names())
     else:
         for x in arg_comp_list:
             if x not in a:

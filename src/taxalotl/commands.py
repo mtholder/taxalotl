@@ -14,11 +14,8 @@ from peyotl import (
 )
 from .cmds.partitions import (
     do_partition,
-    NAME_TO_PARTS_SUBSETS,
-    PART_NAMES,
-    PREORDER_PART_LIST,
-    TERMINAL_PART_NAMES,
     write_info_for_res,
+    partition_mgr,
 )
 from .tax_partition import (
     ROOTS_FILENAME,
@@ -476,21 +473,20 @@ def _iter_norm_term_res_internal_level_pairs(
     This generator serves as a common iterator for them.
     Working on the specified and (as the inner loop) over the requested levels.
     """
+    pm = partition_mgr(taxalotl_config)
     if level_list == [None]:
-        level_list = PREORDER_PART_LIST
+        level_list = pm.get_preorder_roots()
+        raise RuntimeError(level_list)
     for rid in id_list:
         res = taxalotl_config.get_terminalized_res_by_id(rid, cmd_name)
         if not res.has_been_normalized:
             normalize_resources(taxalotl_config, [rid])
-        for part_name_to_split in level_list:
-            if not NAME_TO_PARTS_SUBSETS[part_name_to_split]:
-                _LOG.info(
-                    '"{}" is a terminal group in the primary partition map'.format(
-                        part_name_to_split
-                    )
-                )
-            else:
-                yield res, part_name_to_split
+        for name2split in level_list:
+            if not pm.is_terminal(name2split):
+                msg = f'"{name2split}" is a terminal group in the primary partition map'
+                _LOG.info(msg)
+                continue
+            yield res, name2split
 
 
 def info_on_resources(taxalotl_config, id_list, level_list):

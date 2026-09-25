@@ -16,58 +16,134 @@ from ..tax_partition import (
 )
 
 _LOG = logging.getLogger(__name__)
-_LIFE = "Life"
-####################################################################################################
-# Some data (to later be refactored
-_x = {
-    "Archaea": {},
-    "Bacteria": {},
-    "Eukaryota": {
-        "Archaeplastida": {
-            "Glaucophyta": {},
-            "Rhodophyta": {},
-            "Chloroplastida": {},
-            MISC_DIRNAME: {},
-        },
-        "Fungi": {},
-        "Haptophyta": {},
-        "Metazoa": {
-            "Annelida": {},
-            "Arthropoda": {
-                "Arachnida": {},
-                "Malacostraca": {},
-                "Insecta": {
-                    "Diptera": {},
-                    "Coleoptera": {},
-                    "Lepidoptera": {},
-                    "Hymenoptera": {},
-                    MISC_DIRNAME: {},
-                },
+_BASE_PARTITIONS_DICT = None
+
+
+def _get_base_partition_dict():
+    global _BASE_PARTITIONS_DICT
+    if _BASE_PARTITIONS_DICT is not None:
+        return _BASE_PARTITIONS_DICT
+
+    _LIFE = "Life"
+    ####################################################################################################
+    # Some data (to later be refactored
+    _x = {
+        "Archaea": {},
+        "Bacteria": {},
+        "Eukaryota": {
+            "Archaeplastida": {
+                "Glaucophyta": {},
+                "Rhodophyta": {},
+                "Chloroplastida": {},
                 MISC_DIRNAME: {},
             },
-            "Bryozoa": {},
-            "Chordata": {},
-            "Cnidaria": {},
-            "Ctenophora": {},
-            "Mollusca": {},
-            "Nematoda": {},
-            "Platyhelminthes": {},
-            "Porifera": {},
+            "Fungi": {},
+            "Haptophyta": {},
+            "Metazoa": {
+                "Annelida": {},
+                "Arthropoda": {
+                    "Arachnida": {},
+                    "Malacostraca": {},
+                    "Insecta": {
+                        "Diptera": {},
+                        "Coleoptera": {},
+                        "Lepidoptera": {},
+                        "Hymenoptera": {},
+                        MISC_DIRNAME: {},
+                    },
+                    MISC_DIRNAME: {},
+                },
+                "Bryozoa": {},
+                "Chordata": {},
+                "Cnidaria": {},
+                "Ctenophora": {},
+                "Mollusca": {},
+                "Nematoda": {},
+                "Platyhelminthes": {},
+                "Porifera": {},
+                MISC_DIRNAME: {},
+            },
+            "SAR": {},
             MISC_DIRNAME: {},
         },
-        "SAR": {},
+        "Viruses": {},
         MISC_DIRNAME: {},
-    },
-    "Viruses": {},
-    MISC_DIRNAME: {},
-}
-BASE_PARTITIONS_DICT = {_LIFE: _x}
-del _x
-NAME_TO_PARTS_SUBSETS = {}
-NAME_TO_PARENT_FRAGMENT = {}
-NONTERMINAL_PART_NAMES = []
-TERMINAL_PART_NAMES = []
-PART_NAME_TO_FRAGMENT = {}
+    }
+    _BASE_PARTITIONS_DICT = {_LIFE: _x}
+    return _BASE_PARTITIONS_DICT
+
+
+class PartitionMgr(object):
+    CACHE_FN = "partitions.json"
+
+    def __init__(self, taxalotl_config):
+        self.cfg = taxalotl_config
+        self._par2des = None
+        self._name2depth_par = None
+
+    @property
+    def par2des(self):
+        if self._par2des is None:
+            self._par2des = _get_base_partition_dict()
+        return self._par2des
+
+    @property
+    def name2depth_par(self):
+        if self._name2depth_par is None:
+            pd = self.cfg.partitioned_dir
+            jpf = os.path.join(pd, self.CACHE_FN)
+            if os.path.exists(jpf):
+                self._name2depth_par = read_as_json(jpf)
+            else:
+                p2d = self.par2des
+                raise RuntimeError(str(p2d))
+        return self._name2depth_par
+
+    def get_preorder_roots(self):
+        v_list = [(v[0], k) for k, v in self.name2depth_par.items()]
+        v_list.sort()
+        return [i[1] for i in v_list]
+
+    NAME_TO_PARTS_SUBSETS = {}
+    NAME_TO_PARENT_FRAGMENT = {}
+    PART_NAME_TO_FRAGMENT = {}
+
+    # def _fill_parts_indices(d, par_frag):
+    #     global NAME_TO_PARTS_SUBSETS, NAME_TO_PARENT_FRAGMENT, NONTERMINAL_PART_NAMES
+    #     for k, subd in d.items():
+    #         NAME_TO_PARTS_SUBSETS[k] = tuple(subd.keys())
+    #         NAME_TO_PARENT_FRAGMENT[k] = par_frag
+    #         if par_frag:
+    #             cf = os.path.join(par_frag, k)
+    #         else:
+    #             cf = k
+    #         PART_NAME_TO_FRAGMENT[k] = cf
+    #         if subd:
+    #             NONTERMINAL_PART_NAMES.append(k)
+    #             _fill_parts_indices(subd, cf)
+    #         elif k != MISC_DIRNAME:
+    #             TERMINAL_PART_NAMES.append(k)
+
+    # _fill_parts_indices(_BASE_PARTITIONS_DICT, "")
+
+
+_Partition_Manager = None
+
+
+def partition_mgr(cfg):
+    """Access to the singleton PartitionMgr"""
+    global _Partition_Manager
+    if _Partition_Manager is None:
+        _Partition_Manager = PartitionMgr(cfg)
+    return _Partition_Manager
+
+
+def get_preorder_partition_roots():
+    raise NotImplementedError("new get_preorder_partition_roots")
+
+
+def get_partition_root_names():
+    raise NotImplementedError("new get_partition_root_names")
 
 
 def get_inp_taxdir(parts_dir, frag, taxonomy_id):
@@ -78,35 +154,6 @@ def get_misc_inp_taxdir(parts_dir, frag, taxonomy_id):
     return os.path.join(
         parts_dir, frag, MISC_DIRNAME, INP_TAXONOMY_DIRNAME, taxonomy_id
     )
-
-
-def _fill_parts_indices(d, par_frag):
-    global NAME_TO_PARTS_SUBSETS, NAME_TO_PARENT_FRAGMENT, NONTERMINAL_PART_NAMES
-    for k, subd in d.items():
-        NAME_TO_PARTS_SUBSETS[k] = tuple(subd.keys())
-        NAME_TO_PARENT_FRAGMENT[k] = par_frag
-        if par_frag:
-            cf = os.path.join(par_frag, k)
-        else:
-            cf = k
-        PART_NAME_TO_FRAGMENT[k] = cf
-        if subd:
-            NONTERMINAL_PART_NAMES.append(k)
-            _fill_parts_indices(subd, cf)
-        elif k != MISC_DIRNAME:
-            TERMINAL_PART_NAMES.append(k)
-
-
-_fill_parts_indices(BASE_PARTITIONS_DICT, "")
-PART_NAMES = list(NAME_TO_PARTS_SUBSETS.keys())
-PART_NAMES.sort()
-PART_NAMES = tuple(PART_NAMES)
-PREORDER_PART_LIST = tuple(NONTERMINAL_PART_NAMES)
-# POSTORDER_PART_LIST = tuple(reversed(PREORDER_PART_LIST))
-NONTERMINAL_PART_NAMES.sort()
-NONTERMINAL_PART_NAMES = tuple(NONTERMINAL_PART_NAMES)
-TERMINAL_PART_NAMES.sort()
-TERMINAL_PART_NAMES = tuple(TERMINAL_PART_NAMES)
 
 
 def _rec_populate(d_to_fill, key_to_filled_set):

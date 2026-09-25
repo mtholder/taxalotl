@@ -5,12 +5,6 @@ import os
 import logging
 
 from peyutil import StringIO
-
-from ..cmds.partitions import (
-    MISC_DIRNAME,
-    PREORDER_PART_LIST,
-    NAME_TO_PARTS_SUBSETS,
-)
 from ..resource_wrapper import ResourceWrapper, TaxonomyWrapper
 
 _LOG = logging.getLogger(__name__)
