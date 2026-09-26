@@ -150,7 +150,7 @@ class PartitionMgr(object):
                 self._name2depth_par = _n2p_to_n2dp(n2p)
             else:
                 p2d = self.nested_par2des
-                part_d = p2d[_LIFE]
+                part_d = p2d
                 n2dp = {}
                 _fill_name_to_depth_par_dict(n2dp, part_d, 0)
                 n2p = _n2dp_to_n2p(n2dp)

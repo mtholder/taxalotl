@@ -19,6 +19,12 @@ from .taxon import Taxon
 from .util import OutFile
 import logging
 
+
+class NoTaxonomyError(RuntimeError):
+    def __init__(self, msg):
+        RuntimeError.__init__(self, msg)
+
+
 _LOG = logging.getLogger("taxalotl")
 
 INP_OTT_TAXONOMY_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\t\n"
@@ -80,7 +86,7 @@ def _parse_taxa(tax_part):  # type (TaxonPartition) -> None
     complete_taxon_fp = tax_part.tax_fp
     tax_part.taxon_header = ""
     if not os.path.exists(complete_taxon_fp):
-        raise RuntimeError(f"No taxonomy found at {complete_taxon_fp}")
+        raise NoTaxonomyError(f"No taxonomy found at {complete_taxon_fp}")
     ptp = shorter_fp_form(complete_taxon_fp)
     _LOG.debug('parsing taxa from "{}" ...'.format(ptp))
     with io.open(complete_taxon_fp, "r", encoding="utf-8") as inp:
@@ -109,7 +115,10 @@ def partition_ott_by_root_id(tax_part):  # type (TaxonPartition) -> None
     _LOG.debug(f"_parse_synonyms({tax_part})")
     _parse_synonyms(tax_part)
     _LOG.debug(f"_parse_synonyms({tax_part})")
-    _parse_taxa(tax_part)
+    try:
+        _parse_taxa(tax_part)
+    except NoTaxonomyError:
+        _LOG.exception("No taxonomy found")
     _LOG.debug(f"done with partition_ott_by_root_id({tax_part})")
 
 
