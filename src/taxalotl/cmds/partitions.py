@@ -301,7 +301,7 @@ def write_info_for_res(outstream, res, part_name_to_split):
     )
 
 
-def do_partition(res, strategy, part_name_to_split):
+def do_partition(taxalotl_config, res, strategy, part_name_to_split):
     """Partition a parent taxon into descendants and garbage (__misc__) dir
 
     :param res: a wrapper around the resource. Used for id, part_source_filepath,
@@ -309,13 +309,13 @@ def do_partition(res, strategy, part_name_to_split):
     :param part_name_to_split must be one of the hard-coded keys in NAME_TO_PARENT_FRAGMENT
     """
     if strategy == "hard-coded":
-        return do_hard_coded_partition(res, part_name_to_split)
+        return do_hard_coded_partition(taxalotl_config, res, part_name_to_split)
     if strategy == "previous":
-        return do_partition_from_previous(res, part_name_to_split)
+        return do_partition_from_previous(taxalotl_config, res, part_name_to_split)
     raise NotImplementedError("dynamic partitioning.")
 
 
-def do_partition_from_previous(res, part_name_to_split):
+def do_partition_from_previous(taxalotl_config, res, part_name_to_split):
     taxalotl_config = res._config
     ott = taxalotl_config.get_terminalized_res_by_id("ott", "")
     part_root_name_blob = ott.get_part_clade_names_and_blobs()
@@ -328,7 +328,7 @@ def do_partition_from_previous(res, part_name_to_split):
             assert isinstance(nid, list)
             dpm[name] = frozenset(nid)
     res.dynamic_part_map = dpm
-    do_hard_coded_partition(res, part_name_to_split)
+    do_hard_coded_partition(taxalotl_config, res, part_name_to_split)
     # TODO - won't work for
     # print(f"part_name_to_split={part_name_to_split}")
     # print(json.dumps(NAME_TO_PARENT_FRAGMENT))
@@ -336,18 +336,20 @@ def do_partition_from_previous(res, part_name_to_split):
     # raise NotImplementedError("previous strategy")
 
 
-def do_hard_coded_partition(res, part_name_to_split):
+def do_hard_coded_partition(taxalotl_config, res, part_name_to_split):
     """Partition a parent taxon into descendants and garbage (__misc__) dir
 
     :param res: a wrapper around the resource. Used for id, part_source_filepath,
     :param part_name_to_split must be one of the hard-coded keys in NAME_TO_PARENT_FRAGMENT
     """
+    cfg = taxalotl_config
+    pm = partition_mgr(cfg)
     _LOG.debug(f"part_name_to_split = {part_name_to_split}")
-    par_frag = NAME_TO_PARENT_FRAGMENT[part_name_to_split]
+    par_frag = pm.get_par_frag(part_name_to_split)
     _LOG.debug(f"par_frag = {repr(par_frag)}")
     if par_frag and not res.has_been_partitioned_for_fragment(par_frag):
         par_name = os.path.split(par_frag)[-1]
-        do_partition(res, hard_coded=True, part_name_to_split=par_name)
+        do_partition(cfg, res, hard_coded=True, part_name_to_split=par_name)
     part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
     _LOG.debug(f"part_keys = {part_keys}")
     master_map = res.get_primary_partition_map()

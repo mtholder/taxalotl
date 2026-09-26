@@ -501,7 +501,7 @@ def partition_resources(taxalotl_config, strategy, id_list, level_list):
     ):
         with VirtCommand("partition", res_id=res.id, level=part_name_to_split):
             with use_tax_partitions():
-                do_partition(res, strategy, part_name_to_split)
+                do_partition(taxalotl_config, res, strategy, part_name_to_split)
 
 
 def exec_or_runtime_error(invocation, working_dir="."):
