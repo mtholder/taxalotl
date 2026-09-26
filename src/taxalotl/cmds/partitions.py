@@ -110,6 +110,7 @@ class PartitionMgr(object):
         self.cfg = taxalotl_config
         self._par2des = None
         self._name2depth_par = None
+        self._internal_names = None
 
     @property
     def par2des(self):
@@ -135,6 +136,19 @@ class PartitionMgr(object):
                     write_as_json(n2p, outs, indent=1)
                 raise RuntimeError(json.dumps(n2dp, indent=1))
         return self._name2depth_par
+
+    @property
+    def internal_names(self):
+        if self._internal_names is None:
+            n2dp = self.name2depth_par
+            x = set()
+            for v in n2dp.values():
+                x.update(v[-1].split("/"))
+            self._internal_names = x
+        return self._internal_names
+
+    def is_terminal(self, name):
+        return not (name in self.internal_names)
 
     @property
     def root_names(self):

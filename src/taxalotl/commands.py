@@ -476,7 +476,6 @@ def _iter_norm_term_res_internal_level_pairs(
     pm = partition_mgr(taxalotl_config)
     if level_list == [None]:
         level_list = pm.get_preorder_roots()
-        raise RuntimeError(level_list)
     for rid in id_list:
         res = taxalotl_config.get_terminalized_res_by_id(rid, cmd_name)
         if not res.has_been_normalized:
