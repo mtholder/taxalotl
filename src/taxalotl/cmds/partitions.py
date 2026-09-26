@@ -103,20 +103,42 @@ def _n2dp_to_n2p(n2pd):
     return n2p
 
 
+def _rec_fill_flat(flat_dict, nested_dict):
+    for key, value in nested_dict.items():
+        assert isinstance(value, dict)
+        if key in flat_dict:
+            raise RuntimeError(f'Repeated key "{key}"')
+        assert key not in flat_dict
+        if key != MISC_DIRNAME:
+            flat_dict[key] = list(value.keys())
+            if value:
+                _rec_fill_flat(flat_dict, value)
+
+
 class PartitionMgr(object):
     CACHE_FN = "partitions.json"
 
     def __init__(self, taxalotl_config):
         self.cfg = taxalotl_config
-        self._par2des = None
+        self._nested_par2des = None
+        self._flat_par2des = None
         self._name2depth_par = None
         self._internal_names = None
 
     @property
-    def par2des(self):
-        if self._par2des is None:
-            self._par2des = _get_base_partition_dict()
-        return self._par2des
+    def nested_par2des(self):
+        if self._nested_par2des is None:
+            self._nested_par2des = _get_base_partition_dict()
+        return self._nested_par2des
+
+    @property
+    def flat_par2des(self):
+        if self._flat_par2des is None:
+            np2d = self.nested_par2des
+            fd = {}
+            _rec_fill_flat(fd, np2d)
+            self._flat_par2des = fd
+        return self._flat_par2des
 
     @property
     def name2depth_par(self):
@@ -127,7 +149,7 @@ class PartitionMgr(object):
                 n2p = read_as_json(jpf)
                 self._name2depth_par = _n2p_to_n2dp(n2p)
             else:
-                p2d = self.par2des
+                p2d = self.nested_par2des
                 part_d = p2d[_LIFE]
                 n2dp = {}
                 _fill_name_to_depth_par_dict(n2dp, part_d, 0)
@@ -146,6 +168,13 @@ class PartitionMgr(object):
                 x.update(v[-1].split("/"))
             self._internal_names = x
         return self._internal_names
+
+    def get_par_frag(self, name):
+        return self.name2depth_par[name][-1]
+
+    def get_daughter_names(self, name):
+        print(self.flat_par2des)
+        return self.flat_par2des[name]
 
     def is_terminal(self, name):
         return not (name in self.internal_names)
@@ -349,15 +378,15 @@ def do_hard_coded_partition(taxalotl_config, res, part_name_to_split):
     _LOG.debug(f"par_frag = {repr(par_frag)}")
     if par_frag and not res.has_been_partitioned_for_fragment(par_frag):
         par_name = os.path.split(par_frag)[-1]
-        do_partition(cfg, res, hard_coded=True, part_name_to_split=par_name)
-    part_keys = NAME_TO_PARTS_SUBSETS[part_name_to_split]
+        do_partition(cfg, res, strategy="hard-coded", part_name_to_split=par_name)
+    part_keys = pm.get_daughter_names(part_name_to_split)
     _LOG.debug(f"part_keys = {part_keys}")
     master_map = res.get_primary_partition_map()
     _LOG.debug(f"master_map = {master_map}")
     mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
     _LOG.debug(f"mapping = {mapping}")
     if not mapping:
-        _LOG.info("No {} mapping for {}".format(res.id, part_name_to_split))
+        _LOG.info("No {} sub-mapping for {}".format(res.id, part_name_to_split))
         return
     fragment = (
         os.path.join(par_frag, part_name_to_split) if par_frag else part_name_to_split
