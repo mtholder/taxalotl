@@ -52,7 +52,7 @@ class TaxalotlHistory(object):
         with io.open(self.hist_filepath, mode="w", encoding="utf-8") as outp:
             json.dump(self.hist_content, outp, indent=2)
 
-    def add_virtual_command(self, name, res_id=None, level=None, wrote_files=None):
+    def add_virtual_command(self, name, res_id=None, taxon=None, wrote_files=None):
         if not wrote_files:
             return
         try:
@@ -66,8 +66,8 @@ class TaxalotlHistory(object):
         record = {"command": name}
         if res_id:
             record["res_id"] = res_id
-        if level:
-            record["level"] = level
+        if taxon:
+            record["taxon"] = taxon
         if wrote_files:
             record["wrote_files"] = wrote_files
         self.hist_content.append(record)
@@ -90,10 +90,10 @@ def clear_filepaths_overwritten():
 
 
 class VirtCommand(object):
-    def __init__(self, name, res_id=None, level=None):
+    def __init__(self, name, res_id=None, taxon=None):
         self.name = name
         self.res_id = res_id
-        self.level = level
+        self.taxon = taxon
         self.th = _HISTORY_WRAPPER
 
     def __enter__(self):
@@ -105,7 +105,7 @@ class VirtCommand(object):
         if not fpo:
             return
         self.th.add_virtual_command(
-            self.name, res_id=self.res_id, level=self.level, wrote_files=fpo
+            self.name, res_id=self.res_id, taxon=self.taxon, wrote_files=fpo
         )
         clear_filepaths_overwritten()
 

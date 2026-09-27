@@ -74,13 +74,13 @@ def _get_base_partition_dict():
     return _BASE_PARTITIONS_DICT
 
 
-def _fill_name_to_depth_par_dict(target, p2d, level, stem=""):
+def _fill_name_to_depth_par_dict(target, p2d, taxon, stem=""):
     for key, value in p2d.items():
         if key != MISC_DIRNAME:
-            target[key] = (level, stem)
+            target[key] = (taxon, stem)
             if value:
                 ns = f"{stem}/{key}" if stem else key
-                _fill_name_to_depth_par_dict(target, value, 1 + level, ns)
+                _fill_name_to_depth_par_dict(target, value, 1 + taxon, ns)
 
 
 def _n2p_to_n2dp(n2p):

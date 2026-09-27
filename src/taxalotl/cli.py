@@ -50,13 +50,13 @@ ver_inp_res_dep_cmds = []
 all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 
 
-def _verify_level_arg(cfg, lev_arg):
+def _verify_taxon_arg(cfg, lev_arg):
     if lev_arg is not None:
         pm = partition_mgr(cfg)
         prn = pm.get_root_names()
         if lev_arg not in prn:
             opts = '", "'.join(prn)
-            raise RuntimeError(f'--level should be one of "{opts}"')
+            raise RuntimeError(f'--taxon should be one of "{opts}"')
     return [lev_arg]
 
 
@@ -64,7 +64,7 @@ def main_post_parse(args):
     cfg = TaxalotlConfig(filepath=args.config)
     try:
         # if args.which == 'analyze-update':
-        #     analyze_update(cfg, args.resources, [args.level])
+        #     analyze_update(cfg, args.resources, [args.taxon])
         # elif
         if args.which == "clean-partition":
             clean_resources(cfg, "partition", args.resources)
@@ -85,10 +85,10 @@ def main_post_parse(args):
         elif args.which == "pull-otifacts":
             pull_otifacts(cfg)
         elif args.which == "partition":
-            lev = _verify_level_arg(cfg, args.level)
+            lev = _verify_taxon_arg(cfg, args.taxon)
             partition_resources(cfg, args.strategy, args.resources, lev)
         elif args.which == "info":
-            lev = _verify_level_arg(cfg, args.level)
+            lev = _verify_taxon_arg(cfg, args.taxon)
             info_on_resources(cfg, args.resources, lev)
         elif args.which == "grep":
             if args.name:
@@ -131,9 +131,9 @@ def main_post_parse(args):
     return 0
 
 
-def _add_level_arg(parser, req=False):
+def _add_taxon_arg(parser, req=False):
     parser.add_argument(
-        "--level", default=None, required=req, help="The highest taxon to work on."
+        "--taxon", default=None, required=req, help="The highest taxon to work on."
     )
 
 
@@ -156,7 +156,7 @@ def main():
     #                                    help="calculates a diff between the last version of a "
     #                                         "taxonomy used and the latest version downloaded.")
     # analyze_update_p.add_argument('resources', nargs=2, help="IDs of the resources to analyzed.")
-    # _add_level_arg(analyze_update_p)
+    # _add_taxon_arg(analyze_update_p)
     # analyze_update_p.set_defaults(which="analyze-update")
 
     # PULL OTifacts
@@ -224,19 +224,19 @@ def main():
     partition_p.add_argument(
         "resources", nargs="+", help="IDs of the resources to partitition"
     )
-    _add_level_arg(partition_p)
+    _add_taxon_arg(partition_p)
     partition_p.set_defaults(which="partition")
 
     # INFO
     info_p = subp.add_parser("info", help="Report statistics about a resource")
     info_p.add_argument("resources", nargs="+", help="IDs of the resources")
-    _add_level_arg(info_p)
+    _add_taxon_arg(info_p)
     info_p.set_defaults(which="info")
 
     # GREP
     grep_p = subp.add_parser("grep", help="Search the parsed taxonomies")
     grep_p.add_argument("resources", nargs="+", help="IDs of the resources")
-    _add_level_arg(grep_p)
+    _add_taxon_arg(grep_p)
     grep_p.add_argument("--name", help="pattern for a name", nargs=1, type=str)
     grep_p.add_argument("--tax-id", help="ID for taxon", nargs=1, type=str)
     grep_p.add_argument(
@@ -348,8 +348,8 @@ def _cmd_completion(arg_list, sel_cmd):
         elif "--target" == a[-1] or (len(a) > 1 and "--target" == a[-2]):
             comp_list = list(["both", "taxa", "synonyms"])
         else:
-            acl = ["--level", "--target", "--name", "--tax-id"]
-            comp_list = _add_level_and_other_completions(
+            acl = ["--taxon", "--target", "--name", "--tax-id"]
+            comp_list = _add_taxon_and_other_completions(
                 taxalotl_config, a, comp_list, acl
             )
     elif sel_cmd == "add-mapping":
@@ -367,18 +367,18 @@ def _cmd_completion(arg_list, sel_cmd):
         if "--strategy" == a[-1] or (len(a) > 1 and "--strategy" == a[-2]):
             comp_list = list(["hard-coded", "previous"])
         else:
-            acl = ["--level", "--strategy"]
-            comp_list = _add_level_and_other_completions(
+            acl = ["--taxon", "--strategy"]
+            comp_list = _add_taxon_and_other_completions(
                 taxalotl_config, a, comp_list, acl
             )
     return comp_list
 
 
-def _add_level_and_other_completions(
+def _add_taxon_and_other_completions(
     taxalotl_config, arg_list, comp_list, arg_comp_list
 ):
     a = arg_list
-    if "--level" == a[-1] or (len(a) > 1 and "--level" == a[-2]):
+    if "--taxon" == a[-1] or (len(a) > 1 and "--taxon" == a[-2]):
         pm = partition_mgr(taxalotl_config)
         comp_list = list(pm.root_names)
     else:
