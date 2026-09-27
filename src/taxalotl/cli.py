@@ -12,6 +12,7 @@ from .commands import (
     add_mapping,
     clean_resources,
     download_resources,
+    do_tree_cmd,
     grep_in_res,
     info_on_resources,
     normalize_resources,
@@ -43,6 +44,7 @@ res_dep_cmds = [
     "normalize",
     "partition",
     "status",
+    "tree",
     "unpack",
 ]
 # Commands that take an resource ID for a class of input resource (no version number suffix).
@@ -116,6 +118,14 @@ def main_post_parse(args):
             if len(args.external_id) > 1:
                 raise RuntimeError("Only 1 external_id argument allowed")
             add_mapping(cfg, args.ott_id[0], args.external_id[0])
+        elif args.which == "tree":
+            assert isinstance(args.depth, list)
+            assert len(args.depth) == 1
+            d = args.depth[0]
+            if d < 1:
+                raise RuntimeError(f"depth must be positive. got {d})")
+            t = args.taxon if args.taxon else "Life"
+            do_tree_cmd(cfg, args.resources, t, d)
         elif args.which == "all":
             m = "Currently you must enter a command to run. Use the --help option or see the Tutorial.md\n"
             sys.stdout.write(m)
@@ -260,6 +270,19 @@ def main():
     )
     add_mapping_p.set_defaults(which="add-mapping")
 
+    # Tree
+    tree_p = subp.add_parser("tree", help="Show a tree of the root of taxon")
+    tree_p.add_argument("resources", nargs="*", help="IDs of the resources")
+    _add_taxon_arg(tree_p)
+    tree_p.add_argument(
+        "--depth",
+        help="depth of children to dispay. 1=just children",
+        nargs=1,
+        type=int,
+        default=[1],
+    )
+    tree_p.set_defaults(which="tree")
+
     # CLEAN-PARTITION
     clean_p = subp.add_parser(
         "clean-partition",
@@ -368,6 +391,14 @@ def _cmd_completion(arg_list, sel_cmd):
             comp_list = list(["hard-coded", "previous"])
         else:
             acl = ["--taxon", "--strategy"]
+            comp_list = _add_taxon_and_other_completions(
+                taxalotl_config, a, comp_list, acl
+            )
+    elif sel_cmd == "tree":
+        if "--depth" == a[-1] or (len(a) > 1 and "--strategy" == a[-2]):
+            comp_list = list(["depth"])
+        else:
+            acl = ["--taxon", "--depth"]
             comp_list = _add_taxon_and_other_completions(
                 taxalotl_config, a, comp_list, acl
             )

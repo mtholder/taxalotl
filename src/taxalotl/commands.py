@@ -36,7 +36,7 @@ SEP_NAMES = "__separator_names__.json"
 SEP_MAPPING = "__separator_names_to_dir__.json"
 
 
-# def analyze_update(taxalotl_config, id_list, level_list):
+# def analyze_update(taxalotl_config, id_list, taxon_list):
 #     assert len(id_list) == 2
 #     eid, lid = id_list
 #     earlier = taxalotl_config.get_terminalized_res_by_id(eid)
@@ -44,7 +44,7 @@ SEP_MAPPING = "__separator_names_to_dir__.json"
 #     if earlier.base_id != later.base_id:
 #         m = 'Can only analyze updates of the same taxonomy base: {}( base = {}), but {} (base = {})'
 #         raise ValueError(m.format(eid, earlier.base_id, lid, later.base_id))
-#     analyze_update_to_resources(taxalotl_config, earlier, later, level_list)
+#     analyze_update_to_resources(taxalotl_config, earlier, later, taxon_list)
 
 
 def download_resources(taxalotl_config, id_list):
@@ -464,23 +464,23 @@ def normalize_resources(taxalotl_config, id_list):
                 rw.normalize()
 
 
-def _iter_norm_term_res_internal_level_pairs(
-    taxalotl_config, id_list, level_list, cmd_name
+def _iter_norm_term_res_internal_taxon_pairs(
+    taxalotl_config, id_list, taxon_list, cmd_name
 ):
-    """iterates over (non abstract resource, level) pairs
+    """iterates over (non abstract resource, taxon) pairs
 
-    Several cmds work on normalized resources and work on levels.
+    Several cmds work on normalized resources and work on taxa.
     This generator serves as a common iterator for them.
-    Working on the specified and (as the inner loop) over the requested levels.
+    Working on the specified and (as the inner loop) over the requested taxa.
     """
     pm = partition_mgr(taxalotl_config)
-    if level_list == [None]:
-        level_list = pm.get_preorder_roots()
+    if taxon_list == [None]:
+        taxon_list = pm.get_preorder_roots()
     for rid in id_list:
         res = taxalotl_config.get_terminalized_res_by_id(rid, cmd_name)
         if not res.has_been_normalized:
             normalize_resources(taxalotl_config, [rid])
-        for name2split in level_list:
+        for name2split in taxon_list:
             if not pm.is_terminal(name2split):
                 msg = f'"{name2split}" is a terminal group in the primary partition map'
                 _LOG.info(msg)
@@ -488,18 +488,22 @@ def _iter_norm_term_res_internal_level_pairs(
             yield res, name2split
 
 
-def info_on_resources(taxalotl_config, id_list, level_list):
-    for res, part_name_to_split in _iter_norm_term_res_internal_level_pairs(
-        taxalotl_config, id_list, level_list, "partition"
+def info_on_resources(taxalotl_config, id_list, taxon_list):
+    for res, part_name_to_split in _iter_norm_term_res_internal_taxon_pairs(
+        taxalotl_config, id_list, taxon_list, "partition"
     ):
         write_info_for_res(out_stream, res, part_name_to_split)
 
 
-def partition_resources(taxalotl_config, strategy, id_list, level_list):
-    for res, part_name_to_split in _iter_norm_term_res_internal_level_pairs(
-        taxalotl_config, id_list, level_list, "partition"
+def do_tree_cmd(taxalotl_config, res_id_list, taxon, depth):
+    raise RuntimeError(f"do_tree_cmd(cfg, {res_id_list}, {taxon}, {depth})")
+
+
+def partition_resources(taxalotl_config, strategy, id_list, taxon_list):
+    for res, part_name_to_split in _iter_norm_term_res_internal_taxon_pairs(
+        taxalotl_config, id_list, taxon_list, "partition"
     ):
-        with VirtCommand("partition", res_id=res.id, level=part_name_to_split):
+        with VirtCommand("partition", res_id=res.id, taxon=part_name_to_split):
             with use_tax_partitions():
                 do_partition(taxalotl_config, res, strategy, part_name_to_split)
 
@@ -578,9 +582,9 @@ def cache_separator_names(taxalotl_config):
     _LOG.info("Separator name to dir mapping written to {}".format(outfn))
 
 
-def clean_resources(taxalotl_config, action, id_list, levels=None):
-    if levels is None:
-        levels = [None]
+def clean_resources(taxalotl_config, action, id_list, taxa=None):
+    if taxa is None:
+        taxa = [None]
     if not id_list:
         raise NotImplementedError("clean of {} not yet implemented".format(action))
     for rid in id_list:
