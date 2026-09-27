@@ -496,8 +496,10 @@ def info_on_resources(taxalotl_config, id_list, taxon_list):
         write_info_for_res(out_stream, res, part_name_to_split)
 
 
-def _do_tree_on_taxonomy_dir(tax_dir, depth):
-    _LOG.debug(f"_do_tree_on_taxonomy_dir({tax_dir}, {depth})")
+def _do_tree_on_taxonomy_dir(tax_part, depth):
+    _LOG.debug(f"_do_tree_on_taxonomy_dir({tax_part}, {depth})")
+    forest = tax_part.get_taxa_as_forest()
+    _LOG.debug(f"forest = {forest}")
 
 
 def do_tree_cmd(taxalotl_config, res_id_list, taxon, depth):
@@ -522,17 +524,15 @@ def do_tree_cmd(taxalotl_config, res_id_list, taxon, depth):
     for d in taxonomy_dirs:
         if d.startswith("ott"):
             res = cfg.get_terminalized_res_by_id(d)
-            print(res)
             tp = get_taxon_partition(res, rpath)
-            print(tp)
+            _do_tree_on_taxonomy_dir(tp, depth)
 
     for d in taxonomy_dirs:
         if d.startswith("ott"):
             continue
         res = cfg.get_terminalized_res_by_id(d)
-        print(res)
         tp = get_taxon_partition(res, rpath)
-        print(tp)
+        _do_tree_on_taxonomy_dir(tp, depth)
 
 
 def partition_resources(taxalotl_config, strategy, id_list, taxon_list):

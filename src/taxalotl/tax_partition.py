@@ -261,6 +261,8 @@ class LightTaxonomyHolder(object):
     ]
 
     def __init__(self, fragment):
+        from .ott_schema import FULL_OTT_HEADER
+
         self.fragment = fragment
         self._id_order = []
         self._id_to_line = {}  # id -> line
@@ -270,7 +272,7 @@ class LightTaxonomyHolder(object):
         self._des_in_other_slices = {}
         self._syn_by_id = {}  # accepted_id -> list of synonym lines
         self._parsed_syn_by_id = None
-        self.taxon_header = None
+        self.taxon_header = FULL_OTT_HEADER
         self.syn_header = None
         self.treat_syn_as_taxa = False
         self._populated = False
