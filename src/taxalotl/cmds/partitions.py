@@ -169,8 +169,12 @@ class PartitionMgr(object):
             self._internal_names = x
         return self._internal_names
 
-    def get_par_frag(self, name):
-        return self.name2depth_par[name][-1]
+    def get_par_frag(self, name, relative=True):
+        par_frag = self.name2depth_par[name][-1]
+        if relative:
+            return par_frag
+        pd = self.cfg.partitioned_dir
+        return os.path.join(pd, par_frag)
 
     def get_daughter_names(self, name):
         print(self.flat_par2des)

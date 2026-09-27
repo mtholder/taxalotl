@@ -22,6 +22,7 @@ from .tax_partition import (
     INP_TAXONOMY_DIRNAME,
     MISC_DIRNAME,
     use_tax_partitions,
+    get_taxon_partition,
 )
 
 
@@ -112,7 +113,7 @@ def _group_by_status(res, id_list):
         ["downloaded, but not unpacked", dnu_list],
         ["unpacked, but not normalized", unn_list],
         ["normalized", n_list],
-        ["parititioned", p_list],
+        ["partitioned", p_list],
     ]
 
 
@@ -495,8 +496,43 @@ def info_on_resources(taxalotl_config, id_list, taxon_list):
         write_info_for_res(out_stream, res, part_name_to_split)
 
 
+def _do_tree_on_taxonomy_dir(tax_dir, depth):
+    _LOG.debug(f"_do_tree_on_taxonomy_dir({tax_dir}, {depth})")
+
+
 def do_tree_cmd(taxalotl_config, res_id_list, taxon, depth):
-    raise RuntimeError(f"do_tree_cmd(cfg, {res_id_list}, {taxon}, {depth})")
+    cfg = taxalotl_config
+    pm = partition_mgr(cfg)
+    path = pm.get_par_frag(taxon, relative=False)
+    rpath = pm.get_par_frag(taxon, relative=True)
+    fp = os.path.join(path, taxon)
+    misc_dir = os.path.join(fp, MISC_DIRNAME)
+    if os.path.exists(misc_dir):
+        raise NotImplementedError("tree on already partitioned dir")
+    contents = os.listdir(fp)
+    if len(contents) != 1 or "__inputs__" not in contents:
+        raise NotImplementedError(
+            "tree on already partitioned dir. currently just supports __inputs__"
+        )
+    inps_dir = os.path.join(fp, INP_TAXONOMY_DIRNAME)
+    taxonomy_dirs = os.listdir(inps_dir)
+    if len(taxonomy_dirs) == 0:
+        raise RuntimeError(f"No taxonomies found at {inps_dir}")
+    taxonomy_dirs.sort()
+    for d in taxonomy_dirs:
+        if d.startswith("ott"):
+            res = cfg.get_terminalized_res_by_id(d)
+            print(res)
+            tp = get_taxon_partition(res, rpath)
+            print(tp)
+
+    for d in taxonomy_dirs:
+        if d.startswith("ott"):
+            continue
+        res = cfg.get_terminalized_res_by_id(d)
+        print(res)
+        tp = get_taxon_partition(res, rpath)
+        print(tp)
 
 
 def partition_resources(taxalotl_config, strategy, id_list, taxon_list):
