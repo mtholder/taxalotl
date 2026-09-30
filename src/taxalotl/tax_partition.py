@@ -512,15 +512,23 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
             return True
         return os.path.exists(self.res.get_misc_taxon_dir_for_part(frag))
 
-    def do_partition(self, list_of_subdirname_and_roots):
+    def create_partition(self, list_of_subdirname_and_roots):
         _LOG.debug(f"list_of_subdirname_and_roots = {list_of_subdirname_and_roots}")
+        to_add_to_key_file = None
         if self._subdirname_to_tp_roots:
-            raise ValueError("do_partition called twice for {}".format(self.fragment))
+            raise ValueError(
+                "create_partition called twice for {}".format(self.fragment)
+            )
         if not self._populated:
             self._diagnose_state_of_fs()
             if (self._fs_is_partitioned is None) and (not self._external_inp_fp):
                 m = "Taxa files not found for {} and TaxonPartition is empty"
                 _LOG.info(m.format(self.fragment))
+            else:
+                to_add_to_key_file = {}
+                for nar in list_of_subdirname_and_roots:
+                    name = nar[0]
+                    to_add_to_key_file[name] = self.fragment
         blob = self._sub_part_helper(list_of_subdirname_and_roots)
         do_part_if_reading, having_inp_to_read = blob
         for subname, subroot in list_of_subdirname_and_roots:
@@ -543,6 +551,7 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
             self._partition_from_in_mem()
         else:
             self._read_inputs(do_part_if_reading)
+        return to_add_to_key_file
 
     def _sub_part_helper(self, list_of_subdirname_and_roots):
         cur_sub_names = self.scaffold_tax_subdir_names()

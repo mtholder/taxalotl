@@ -160,6 +160,14 @@ class PartitionMgr(object):
                 raise RuntimeError(json.dumps(n2dp, indent=1))
         return self._name2depth_par
 
+    def add_to_n2pd_cache(self, d):
+        pd = self.cfg.partitioned_dir
+        jpf = os.path.join(pd, self.CACHE_FN)
+        blob = read_as_json(jpf)
+        blob.update(d)
+        with OutFile(jpf) as outs:
+            write_as_json(blob, outs, indent=1)
+
     @property
     def internal_names(self):
         if self._internal_names is None:
@@ -413,21 +421,27 @@ def do_hard_coded_partition(
     else:
         from taxalotl.grep import grep_name_in_single_res_taxa
 
-        name_pat = re.compile(f"^{part_name_to_split}$")
-        matches = grep_name_in_single_res_taxa(res, name_pat)
-        line_matches = []
-        for fp, line in matches:
-            if new_par_name in fp:
-                line_matches.append(line)
-        if len(line_matches) != 1:
+        if not isinstance(part_name_to_split, list):
             raise RuntimeError(
-                f"Expected 1 line match for {part_name_to_split} under {new_par_name}.\nGot {matches}"
+                f"Expecting list of names to split. got {part_name_to_split}"
             )
-        line = line_matches[0]
-        taxon_id = line.split("\t")[0]
-        if not taxon_id:
-            raise RuntimeError(f"Expected a taxon ID in first field of {line}")
-        mapping = [(part_name_to_split, frozenset([taxon_id]))]
+        mapping = []
+        for subn in part_name_to_split:
+            name_pat = re.compile(f"^{subn}$")
+            matches = grep_name_in_single_res_taxa(res, name_pat)
+            line_matches = []
+            for fp, line in matches:
+                if new_par_name in fp:
+                    line_matches.append(line)
+            if len(line_matches) != 1:
+                raise RuntimeError(
+                    f"Expected 1 line match for {subn} under {new_par_name}.\nGot {matches}"
+                )
+            line = line_matches[0]
+            taxon_id = line.split("\t")[0]
+            if not taxon_id:
+                raise RuntimeError(f"Expected a taxon ID in first field of {line}")
+            mapping.append((subn, frozenset([taxon_id])))
         fragment = par_frag
 
     _LOG.debug(f"fragment = {fragment}")
@@ -437,4 +451,6 @@ def do_hard_coded_partition(
     tp = get_taxon_partition(res, fragment)
     if not par_frag:
         tp.external_input_fp = os.path.join(res.partition_source_dir, "taxonomy.tsv")
-    tp.do_partition(mapping)
+    to_put_in_key_file = tp.create_partition(mapping)
+    if to_put_in_key_file:
+        pm.add_to_n2pd_cache(to_put_in_key_file)

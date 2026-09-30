@@ -452,9 +452,7 @@ def do_tree_cmd(taxalotl_config, res_id_list, taxon, depth):
         _do_tree_on_taxonomy_dir(tp, depth)
 
 
-def partition_resources(
-    taxalotl_config, strategy, id_list, taxon_list, child_name=None
-):
+def parition_cmd(taxalotl_config, strategy, id_list, taxon_list, child_name=None):
     for res, part_name_to_split in _iter_norm_term_res_internal_taxon_pairs(
         taxalotl_config, id_list, taxon_list, "partition", new_child=child_name
     ):

@@ -16,7 +16,7 @@ from .commands import (
     grep_in_res,
     info_on_resources,
     normalize_resources,
-    partition_resources,
+    parition_cmd,
     pull_otifacts,
     status_of_resources,
     unpack_resources,
@@ -52,14 +52,14 @@ ver_inp_res_dep_cmds = []
 all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 
 
-def _verify_taxon_arg(cfg, lev_arg):
-    if lev_arg is not None:
+def _verify_taxon_arg(cfg, taxon_arg):
+    if taxon_arg is not None:
         pm = partition_mgr(cfg)
         prn = pm.root_names
-        if lev_arg not in prn:
+        if taxon_arg not in prn:
             opts = '", "'.join(prn)
             raise RuntimeError(f'--taxon should be one of "{opts}"')
-    return [lev_arg]
+    return [taxon_arg]
 
 
 def main_post_parse(args):
@@ -88,7 +88,17 @@ def main_post_parse(args):
             pull_otifacts(cfg)
         elif args.which == "partition":
             lev = _verify_taxon_arg(cfg, args.taxon)
-            partition_resources(cfg, args.strategy, args.resources, lev, args.child)
+            carg = None
+            if args.child:
+                assert isinstance(args.child, list)
+                carg = []
+                for el in args.child:
+                    if isinstance(el, str):
+                        carg.append(el)
+                    else:
+                        assert isinstance(el, list)
+                        carg.extend(el)
+            parition_cmd(cfg, args.strategy, args.resources, lev, carg)
         elif args.which == "info":
             lev = _verify_taxon_arg(cfg, args.taxon)
             info_on_resources(cfg, args.resources, lev)
@@ -238,6 +248,8 @@ def main():
     partition_p.add_argument(
         "--child",
         default=None,
+        action="append",
+        nargs="*",
         help="Name of taxon to partition from parent taxon (indicated by taxon arg)",
         type=str,
     )
