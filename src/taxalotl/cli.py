@@ -55,7 +55,7 @@ all_cmds = res_dep_cmds + res_indep_cmds + ver_inp_res_dep_cmds
 def _verify_taxon_arg(cfg, lev_arg):
     if lev_arg is not None:
         pm = partition_mgr(cfg)
-        prn = pm.get_root_names()
+        prn = pm.root_names
         if lev_arg not in prn:
             opts = '", "'.join(prn)
             raise RuntimeError(f'--taxon should be one of "{opts}"')
@@ -88,7 +88,7 @@ def main_post_parse(args):
             pull_otifacts(cfg)
         elif args.which == "partition":
             lev = _verify_taxon_arg(cfg, args.taxon)
-            partition_resources(cfg, args.strategy, args.resources, lev)
+            partition_resources(cfg, args.strategy, args.resources, lev, args.child)
         elif args.which == "info":
             lev = _verify_taxon_arg(cfg, args.taxon)
             info_on_resources(cfg, args.resources, lev)
@@ -235,6 +235,12 @@ def main():
         "resources", nargs="+", help="IDs of the resources to partitition"
     )
     _add_taxon_arg(partition_p)
+    partition_p.add_argument(
+        "--child",
+        default=None,
+        help="Name of taxon to partition from parent taxon (indicated by taxon arg)",
+        type=str,
+    )
     partition_p.set_defaults(which="partition")
 
     # INFO
@@ -390,7 +396,7 @@ def _cmd_completion(arg_list, sel_cmd):
         if "--strategy" == a[-1] or (len(a) > 1 and "--strategy" == a[-2]):
             comp_list = list(["hard-coded", "previous"])
         else:
-            acl = ["--taxon", "--strategy"]
+            acl = ["--taxon", "--strategy", "--child"]
             comp_list = _add_taxon_and_other_completions(
                 taxalotl_config, a, comp_list, acl
             )

@@ -14,23 +14,32 @@ from .taxonomic_ranks import (
 _LOG = logging.getLogger(__name__)
 
 
-def write_indented_subtree(out, node, indent_level):
+def write_indented_subtree(out, node, indent_level, max_depth=None):
+    if max_depth is None:
+        next_max_dep = None
+    elif max_depth < 1:
+        # exit do to depth
+        return
+    else:
+        next_max_dep = max_depth - 1
+
     fmsd = node.formatted_src_dict()
     f = "flags={}".format(", ".join(node.sorted_flags)) if node.sorted_flags else ""
     s = "src={}".format(fmsd) if fmsd else ""
-    m = "{}{}\t|\tid={}\t|\trank={}\t|\t{}\t|\t{}\n"
-    out.write(
-        m.format(
-            "    " * indent_level, node.name_that_is_unique, node.id, node.rank, s, f
-        )
-    )
+    il = "    " * indent_level
+    un = node.name_that_is_unique
+    r = node.rank
+    p = node.par_id
+    out.write(f"{il}{un}\t|\tid={node.id}\t|\tp={p}\t|\trank={r}\t|\t{s}\t|\t{f}\n")
     if node.children_refs:
         sortable = []
         for c in node.children_refs:
             sortable.append((c.name_that_is_unique, c))
         sortable.sort()
         for el in sortable:
-            write_indented_subtree(out, el[1], indent_level=1 + indent_level)
+            write_indented_subtree(
+                out, el[1], indent_level=1 + indent_level, max_depth=next_max_dep
+            )
 
 
 class TaxonTree(object):
@@ -275,9 +284,9 @@ class TaxonForest(object):
                 taxon_partition=taxon_partition,
             )
 
-    def write_indented(self, out):
+    def write_indented(self, out, max_depth=None):
         for r in self.roots.values():
-            write_indented_subtree(out, r.root, indent_level=0)
+            write_indented_subtree(out, r.root, indent_level=0, max_depth=max_depth)
 
     @property
     def trees(self):

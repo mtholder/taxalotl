@@ -24,7 +24,11 @@ from .tax_partition import (
     use_tax_partitions,
     get_taxon_partition,
 )
-
+from .grep import (
+    grep_tax_id_in_single_res_syn,
+    grep_name_in_single_res,
+    grep_tax_id_in_single_res,
+)
 
 # from .cmds.analyze_update import analyze_update_to_resources
 from .util import unlink, VirtCommand, OutFile
@@ -131,143 +135,6 @@ You probably need to run the pull-otifacts command. If that does NOT solve the p
     return id_list
 
 
-def _do_name_grep_taxonomy(fp, name_pat, outstream=sys.stdout):
-    return _do_grep_of_col(fp, name_pat, 2, outstream=outstream)
-
-
-def _do_name_grep_synonyms(fp, name_pat, outstream=sys.stdout):
-    return _do_grep_of_col(fp, name_pat, 0, outstream=outstream)
-
-
-def _do_tax_id_grep_taxonomy(fp, tax_id_pat, outstream=sys.stdout):
-    return _do_grep_of_col(fp, tax_id_pat, 0, outstream=outstream)
-
-
-def _do_tax_id_grep_synonyms(fp, tax_id_pat, outstream=sys.stdout):
-    return _do_grep_of_col(fp, tax_id_pat, 1, outstream=outstream)
-
-
-def _do_grep_of_col(fp, name_pat, col_idx, outstream=sys.stdout):
-    if not os.path.exists(fp):
-        return []
-    matches = []
-    with open(fp, "r") as inp:
-        li = iter(inp)
-        next(li)
-        for line in li:
-            ls = line.split("\t|\t")
-            name_str = ls[col_idx]
-            if name_pat.match(name_str):
-                matches.append(line[:-1])
-    if not matches:
-        return []
-    tp = fp
-    if "partitioned" in tp:
-        tp = tp.split("partitioned")[-1]
-    while tp.startswith("/"):
-        tp = tp[1:]
-    while tp.endswith("/"):
-        tp = tp[:-1]
-    pref = f"{tp}:"
-    ret = []
-    for line in matches:
-        ret.append((fp, line))
-        if outstream:
-            outstream.write(f"{pref} {line}\n")
-    return ret
-
-
-def grep_in_res(
-    taxalotl_config,
-    res_id_list,
-    name_pat=None,
-    tax_id_field=None,
-    target="both",
-    outstream=sys.stdout,
-):
-    if name_pat:
-        name_pat = re.compile(name_pat)
-    elif tax_id_field:
-        id_pat = re.compile(f"^{tax_id_field}$")
-    else:
-        assert False, "name_pat or tax_id_field required"
-    r = []
-    for rid in res_id_list:
-        rw = taxalotl_config.get_terminalized_res_by_id(rid)
-        if name_pat:
-            r.extend(
-                grep_name_in_single_res(
-                    rw, name_pat, target=target, outstream=outstream
-                )
-            )
-        else:
-            r.extend(
-                grep_tax_id_in_single_res(
-                    rw, id_pat, target=target, outstream=outstream
-                )
-            )
-    return r
-
-
-def grep_name_in_single_res(rw, name_pat, target, outstream=sys.stdout):
-    return _generic_grep_in_one_res(
-        rw,
-        name_pat,
-        tax_fn=_do_name_grep_taxonomy,
-        syn_fn=_do_name_grep_synonyms,
-        target=target,
-        outstream=outstream,
-    )
-
-
-def grep_tax_id_in_single_res(rw, tax_id_pat, target, outstream=sys.stdout):
-    return _generic_grep_in_one_res(
-        rw,
-        tax_id_pat,
-        tax_fn=_do_tax_id_grep_taxonomy,
-        syn_fn=_do_tax_id_grep_synonyms,
-        target=target,
-        outstream=outstream,
-    )
-
-
-_SEARCH_TAX_SET = frozenset(["both", "taxa"])
-_SEARCH_SYN_SET = frozenset(["both", "synonyms"])
-
-
-def _generic_grep_in_one_res(
-    rw, pat, tax_fn, syn_fn, target="both", outstream=sys.stdout
-):
-    search_tax = target.lower() in _SEARCH_TAX_SET
-    search_syn = target.lower() in _SEARCH_SYN_SET
-    if not (search_tax or search_syn):
-        msg = f"target should be both, taxa, or synonyms. Got {target}"
-        raise ValueError(msg)
-    r = []
-    if rw.has_been_partitioned:
-        if search_tax:
-            tfp = rw.get_part_taxa_filepaths()
-            # raise RuntimeError("\n".join(tfp))
-            for fn in tfp:
-                r.extend(tax_fn(fn, pat, outstream=outstream))
-        if search_syn:
-            sfp = rw.get_part_syn_filepaths()
-            for fn in sfp:
-                r.extend(syn_fn(fn, pat, outstream=outstream))
-        return r
-    if not rw.has_been_normalized:
-        raise RuntimeError(
-            f"{rid} needs to be normalized or partitioned to work with grep"
-        )
-    if search_tax:
-        fn = os.path.join(rw.normalized_filedir, "taxonomy.tsv")
-        r = tax_fn(fn, pat, outstream=outstream)
-    if search_syn:
-        fn = os.path.join(rw.normalized_filedir, "synonyms.tsv")
-        r.extend(syn_fn(fn, pat, outstream=outstream))
-    return r
-
-
 def _do_add_mapping(ott_fp, ott_pat, external_id, ott_id):
     _LOG.debug(f"reading {ott_fp} to patch it...")
     lines_to_write = []
@@ -347,7 +214,7 @@ def add_mapping(taxalotl_config, ott_id, external_id):
     ext_rw = taxalotl_config.get_terminalized_res_by_id(res_id, "")
     ott_pat = re.compile(f"^{ott_id}$")
     _LOG.debug(f"Verifying {ott_id} is found and unique in ott")
-    ret = grep_tax_id_in_single_res(ott_rw, ott_pat, target="taxa", outstream=None)
+    ret = grep_tax_id_in_single_res_tax(ott_rw, ott_pat, outstream=None)
     if len(ret) != 1:
         msg = f"Expecting one hit for OTT ID {ott_id} Found: {ret}"
         raise RuntimeError(msg)
@@ -356,12 +223,46 @@ def add_mapping(taxalotl_config, ott_id, external_id):
     ext_pat = re.compile(f"^{id_in_ext}$")
 
     _LOG.debug(f"Verifying {id_in_ext} is found and unique in {res_id}")
-    ext_ret = grep_tax_id_in_single_res(ext_rw, ext_pat, target="taxa", outstream=None)
+    ext_ret = grep_tax_id_in_single_res_syn(
+        ext_rw, ext_pat, target="taxa", outstream=None
+    )
     if len(ext_ret) != 1:
         msg = f"Expecting one hit for {res_id} ID {id_in_ext} Found: {ext_ret}"
         raise RuntimeError(msg)
     ext_fp, ext_line = ext_ret[0]
     _do_add_mapping(ott_fp, ott_pat, external_id, ott_id)
+
+
+def grep_in_res(
+    taxalotl_config,
+    res_id_list,
+    name_pat=None,
+    tax_id_field=None,
+    target="both",
+    outstream=sys.stdout,
+):
+    if name_pat:
+        name_pat = re.compile(name_pat)
+    elif tax_id_field:
+        id_pat = re.compile(f"^{tax_id_field}$")
+    else:
+        assert False, "name_pat or tax_id_field required"
+    r = []
+    for rid in res_id_list:
+        rw = taxalotl_config.get_terminalized_res_by_id(rid)
+        if name_pat:
+            r.extend(
+                grep_name_in_single_res(
+                    rw, name_pat, target=target, outstream=outstream
+                )
+            )
+        else:
+            r.extend(
+                grep_tax_id_in_single_res(
+                    rw, id_pat, target=target, outstream=outstream
+                )
+            )
+    return r
 
 
 def status_of_resources(
@@ -466,7 +367,7 @@ def normalize_resources(taxalotl_config, id_list):
 
 
 def _iter_norm_term_res_internal_taxon_pairs(
-    taxalotl_config, id_list, taxon_list, cmd_name
+    taxalotl_config, id_list, taxon_list, cmd_name, new_child=None
 ):
     """iterates over (non abstract resource, taxon) pairs
 
@@ -481,12 +382,19 @@ def _iter_norm_term_res_internal_taxon_pairs(
         res = taxalotl_config.get_terminalized_res_by_id(rid, cmd_name)
         if not res.has_been_normalized:
             normalize_resources(taxalotl_config, [rid])
-        for name2split in taxon_list:
-            if not pm.is_terminal(name2split):
-                msg = f'"{name2split}" is a terminal group in the primary partition map'
-                _LOG.info(msg)
-                continue
-            yield res, name2split
+        if new_child is None:
+            for name2split in taxon_list:
+                if pm.is_terminal(name2split):
+                    msg = f'"{name2split}" is a terminal group in the primary partition map'
+                    _LOG.info(msg)
+                    continue
+                yield res, name2split
+        else:
+            if len(taxon_list) != 1:
+                raise ValueError(
+                    f"One parent taxon must be specified when creating new child partition. Got {taxon_list}"
+                )
+            yield res, new_child
 
 
 def info_on_resources(taxalotl_config, id_list, taxon_list):
@@ -500,14 +408,17 @@ def _do_tree_on_taxonomy_dir(tax_part, depth):
     _LOG.debug(f"_do_tree_on_taxonomy_dir({tax_part}, {depth})")
     forest = tax_part.get_taxa_as_forest()
     _LOG.debug(f"forest = {forest}")
+    _LOG.debug(f"forest.roots = {forest.__dict__}")
+    print(f"{tax_part.res.base_id} @ {tax_part.fragment}")
+    forest.write_indented(sys.stdout, max_depth=depth)
 
 
 def do_tree_cmd(taxalotl_config, res_id_list, taxon, depth):
     cfg = taxalotl_config
     pm = partition_mgr(cfg)
-    path = pm.get_par_frag(taxon, relative=False)
-    rpath = pm.get_par_frag(taxon, relative=True)
-    fp = os.path.join(path, taxon)
+    par = pm.get_par_frag(taxon, relative=False)
+    rpath = os.path.join(pm.get_par_frag(taxon, relative=True), taxon)
+    fp = os.path.join(par, taxon)
     misc_dir = os.path.join(fp, MISC_DIRNAME)
     if os.path.exists(misc_dir):
         raise NotImplementedError("tree on already partitioned dir")
@@ -521,6 +432,12 @@ def do_tree_cmd(taxalotl_config, res_id_list, taxon, depth):
     if len(taxonomy_dirs) == 0:
         raise RuntimeError(f"No taxonomies found at {inps_dir}")
     taxonomy_dirs.sort()
+    if res_id_list:
+        for res_id in res_id_list:
+            res = cfg.get_terminalized_res_by_id(res_id)
+            tp = get_taxon_partition(res, rpath)
+            _do_tree_on_taxonomy_dir(tp, depth)
+        return
     for d in taxonomy_dirs:
         if d.startswith("ott"):
             res = cfg.get_terminalized_res_by_id(d)
@@ -535,13 +452,23 @@ def do_tree_cmd(taxalotl_config, res_id_list, taxon, depth):
         _do_tree_on_taxonomy_dir(tp, depth)
 
 
-def partition_resources(taxalotl_config, strategy, id_list, taxon_list):
+def partition_resources(
+    taxalotl_config, strategy, id_list, taxon_list, child_name=None
+):
     for res, part_name_to_split in _iter_norm_term_res_internal_taxon_pairs(
-        taxalotl_config, id_list, taxon_list, "partition"
+        taxalotl_config, id_list, taxon_list, "partition", new_child=child_name
     ):
+        print(f"partition res_id={res.id}, taxon={part_name_to_split}")
         with VirtCommand("partition", res_id=res.id, taxon=part_name_to_split):
             with use_tax_partitions():
-                do_partition(taxalotl_config, res, strategy, part_name_to_split)
+                par_name = None if child_name is None else taxon_list[0]
+                do_partition(
+                    taxalotl_config,
+                    res,
+                    strategy,
+                    part_name_to_split,
+                    par_name=par_name,
+                )
 
 
 def exec_or_runtime_error(invocation, working_dir="."):

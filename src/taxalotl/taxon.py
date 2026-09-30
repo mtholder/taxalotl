@@ -105,6 +105,14 @@ class Taxon(object):
     def __repr__(self):
         return "Taxon(d={})".format(self.to_serializable_dict())
 
+    def __lt__(self, other):
+        try:
+            return self.id < other.id
+        except:
+            st = type(self).__name__
+            ot = type(other).__name__
+            raise TypeError(f"'<' not supported between instances of '{st}' and '{ot}'")
+
     @property
     def name_that_is_unique(self):
         return self.uniqname if self.uniqname else self.name

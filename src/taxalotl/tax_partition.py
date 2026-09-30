@@ -388,7 +388,7 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
     def __init__(self, fragment):
         ls = fragment.split("/")
         if len(ls) > 1:
-            assert ls[-2] != ls[-1]
+            assert ls[-2] != ls[-1], f"fragment error {fragment} {ls}"
         LightTaxonomyHolder.__init__(self, fragment)
         self._subdirname_to_tp_roots = {}
         self._misc_part = LightTaxonomyHolder(os.path.join(fragment, MISC_DIRNAME))
@@ -696,6 +696,8 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
             self._read_inputs(do_part_if_reading=False)
 
     def get_id_to_ott_taxon(self):
+        if not self._populated:
+            self.read_inputs_for_read_only()
         id_to_obj = {}
         lp = HEADER_TO_LINE_PARSER[self.taxon_header]
         for line in self._id_to_line.values():
@@ -706,7 +708,8 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
         return id_to_obj
 
     def get_taxa_as_forest(self):
-        return TaxonForest(id_to_taxon=self.get_id_to_ott_taxon(), taxon_partition=self)
+        i2t = self.get_id_to_ott_taxon()
+        return TaxonForest(id_to_taxon=i2t, taxon_partition=self)
 
     def _read_inputs(self, do_part_if_reading=True):
         self._has_unread_tax_inp = False

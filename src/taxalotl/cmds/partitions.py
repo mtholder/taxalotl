@@ -5,6 +5,7 @@ import copy
 import os
 import logging
 import json
+import re
 
 from peyutil import read_as_json, write_as_json
 
@@ -177,7 +178,6 @@ class PartitionMgr(object):
         return os.path.join(pd, par_frag)
 
     def get_daughter_names(self, name):
-        print(self.flat_par2des)
         return self.flat_par2des[name]
 
     def is_terminal(self, name):
@@ -334,7 +334,7 @@ def write_info_for_res(outstream, res, part_name_to_split):
     )
 
 
-def do_partition(taxalotl_config, res, strategy, part_name_to_split):
+def do_partition(taxalotl_config, res, strategy, part_name_to_split, par_name=None):
     """Partition a parent taxon into descendants and garbage (__misc__) dir
 
     :param res: a wrapper around the resource. Used for id, part_source_filepath,
@@ -342,13 +342,17 @@ def do_partition(taxalotl_config, res, strategy, part_name_to_split):
     :param part_name_to_split must be one of the hard-coded keys in NAME_TO_PARENT_FRAGMENT
     """
     if strategy == "hard-coded":
-        return do_hard_coded_partition(taxalotl_config, res, part_name_to_split)
+        return do_hard_coded_partition(
+            taxalotl_config, res, part_name_to_split, new_par_name=par_name
+        )
     if strategy == "previous":
-        return do_partition_from_previous(taxalotl_config, res, part_name_to_split)
+        return do_partition_from_previous(
+            taxalotl_config, res, part_name_to_split, new_par_name=par_name
+        )
     raise NotImplementedError("dynamic partitioning.")
 
 
-def do_partition_from_previous(taxalotl_config, res, part_name_to_split):
+def do_partition_from_previous(taxalotl_config, res, part_name_to_split, par_name=None):
     taxalotl_config = res._config
     ott = taxalotl_config.get_terminalized_res_by_id("ott", "")
     part_root_name_blob = ott.get_part_clade_names_and_blobs()
@@ -369,7 +373,9 @@ def do_partition_from_previous(taxalotl_config, res, part_name_to_split):
     # raise NotImplementedError("previous strategy")
 
 
-def do_hard_coded_partition(taxalotl_config, res, part_name_to_split):
+def do_hard_coded_partition(
+    taxalotl_config, res, part_name_to_split, new_par_name=None
+):
     """Partition a parent taxon into descendants and garbage (__misc__) dir
 
     :param res: a wrapper around the resource. Used for id, part_source_filepath,
@@ -378,23 +384,52 @@ def do_hard_coded_partition(taxalotl_config, res, part_name_to_split):
     cfg = taxalotl_config
     pm = partition_mgr(cfg)
     _LOG.debug(f"part_name_to_split = {part_name_to_split}")
-    par_frag = pm.get_par_frag(part_name_to_split)
-    _LOG.debug(f"par_frag = {repr(par_frag)}")
+    if new_par_name is None:
+        par_frag = pm.get_par_frag(part_name_to_split)
+        _LOG.debug(f"par_frag = {repr(par_frag)}")
+    else:
+        par_frag = pm.get_par_frag(new_par_name)
+        par_frag = os.path.join(par_frag, new_par_name)
     if par_frag and not res.has_been_partitioned_for_fragment(par_frag):
         par_name = os.path.split(par_frag)[-1]
-        do_partition(cfg, res, strategy="hard-coded", part_name_to_split=par_name)
-    part_keys = pm.get_daughter_names(part_name_to_split)
-    _LOG.debug(f"part_keys = {part_keys}")
-    master_map = res.get_primary_partition_map()
-    _LOG.debug(f"master_map = {master_map}")
-    mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
-    _LOG.debug(f"mapping = {mapping}")
-    if not mapping:
-        _LOG.info("No {} sub-mapping for {}".format(res.id, part_name_to_split))
-        return
-    fragment = (
-        os.path.join(par_frag, part_name_to_split) if par_frag else part_name_to_split
-    )
+        if par_name != new_par_name:
+            do_partition(cfg, res, strategy="hard-coded", part_name_to_split=par_name)
+
+    if new_par_name is None:
+        part_keys = pm.get_daughter_names(part_name_to_split)
+        _LOG.debug(f"part_keys = {part_keys}")
+        master_map = res.get_primary_partition_map()
+        _LOG.debug(f"master_map = {master_map}")
+        mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
+        _LOG.debug(f"mapping = {mapping}")
+        raise RuntimeError("early")
+        if not mapping:
+            _LOG.info("No {} sub-mapping for {}".format(res.id, part_name_to_split))
+            return
+        if par_frag:
+            fragment = os.path.join(par_frag, part_name_to_split)
+        else:
+            fragment = part_name_to_split
+    else:
+        from taxalotl.grep import grep_name_in_single_res_taxa
+
+        name_pat = re.compile(f"^{part_name_to_split}$")
+        matches = grep_name_in_single_res_taxa(res, name_pat)
+        line_matches = []
+        for fp, line in matches:
+            if new_par_name in fp:
+                line_matches.append(line)
+        if len(line_matches) != 1:
+            raise RuntimeError(
+                f"Expected 1 line match for {part_name_to_split} under {new_par_name}.\nGot {matches}"
+            )
+        line = line_matches[0]
+        taxon_id = line.split("\t")[0]
+        if not taxon_id:
+            raise RuntimeError(f"Expected a taxon ID in first field of {line}")
+        mapping = [(part_name_to_split, frozenset([taxon_id]))]
+        fragment = par_frag
+
     _LOG.debug(f"fragment = {fragment}")
     if res.has_been_partitioned_for_fragment(fragment):
         _LOG.info("Partition for fragment {} has already been done.".format(fragment))
