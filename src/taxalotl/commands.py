@@ -545,26 +545,20 @@ def cache_separator_names(taxalotl_config):
 
 def clean_resources(taxalotl_config, action, id_list, taxa=None):
     if taxa is None:
-        taxa = [None]
+        taxa = "Life"
+    pm = partition_mgr(taxalotl_config)
+    par_dir = pm.get_par_frag(taxa, relative=False)
     if not id_list:
-        raise NotImplementedError("clean of {} not yet implemented".format(action))
+        from taxalotl.tax_partition import get_taxonomies_for_dir
+
+        _LOG.debug(f"par_dir = {par_dir}")
+        id_list = get_taxonomies_for_dir(par_dir)
+    if taxa == "Life":
+        fragment = taxa
+    else:
+        rpar_dir = pm.get_par_frag(taxa, relative=True)
+        fragment = os.path.join(rpar_dir, taxa)
     for rid in id_list:
         rw = taxalotl_config.get_terminalized_res_by_id(rid, "clean")
-        if action == "partition":
-            if rw.has_been_partitioned:
-                _LOG.info("Cleaning partition artifact for {}...".format(rid))
-                rw.remove_partition_artifacts()
-            else:
-                _LOG.info(
-                    "{} had not been partitioned. Skipping clean step...".format(rid)
-                )
-        elif action == "normalize":
-            if rw.has_been_normalized:
-                _LOG.info("Cleaning normalize artifact for {}...".format(rid))
-                rw.remove_normalize_artifacts()
-            else:
-                _LOG.info(
-                    "{} had not been normalized. Skipping clean step...".format(rid)
-                )
-        else:
-            raise NotImplementedError("clean of {} not yet implemented".format(action))
+        tp = get_taxon_partition(rw, fragment)
+        tp.lump_with_par()

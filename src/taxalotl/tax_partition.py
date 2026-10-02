@@ -467,6 +467,43 @@ class PartitioningLightTaxHolder(LightTaxonomyHolder):
         other.treat_syn_as_taxa = self.treat_syn_as_taxa
 
 
+def _append_after_header(src_fp, dst_fp, header):
+    _LOG.debug(f"Appending from {src_fp} to {dst_fp}")
+    with open(src_fp, "r") as inp:
+        init = iter(inp)
+        dest_size = os.path.getsize(dst_fp)
+        if header and (dest_size > 0):
+            first_line = next(init)
+            assert (
+                first_line == header
+            ), f"Unexpected header\n{repr(first_line)}\ninstead of\n{repr(header)}"
+        with open(dst_fp, "a") as outp:
+            for line in inp:
+                outp.write(line)
+
+
+def _do_lump_to(src_dir, dest_dir):
+    tax_header = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\t|\t\n"
+    for fn_header in [(TAXONOMY_FN, tax_header), (SYNONYMS_FN, None)]:
+        fn, header = fn_header
+        src_fp = os.path.join(src_dir, fn)
+        dst_fp = os.path.join(dest_dir, fn)
+        if os.path.isfile(src_fp):
+            if os.path.isfile(dst_fp):
+                _append_after_header(src_fp, dst_fp, header)
+                os.remove(src_fp)
+            else:
+                _LOG.debug(f"Moving {src_fp} to {dst_fp}")
+                os.rename(src_fp, dst_fp)
+    for fn in [ROOTS_FILENAME, ACCUM_DES_FILENAME]:
+        src_fp = os.path.join(src_dir, fn)
+        if os.path.isfile(src_fp):
+            _LOG.debug(f"Removing {src_fp}")
+            os.remove(src_fp)
+    _LOG.debug(f"Removing {src_dir}")
+    os.rmdir(src_dir)
+
+
 # noinspection PyProtectedMember
 class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     def __init__(self, res, fragment):
@@ -498,6 +535,49 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
     @external_input_fp.setter
     def external_input_fp(self, value):
         self._external_inp_fp = value
+
+    def _lump_children(self):
+        tax_suffix = os.path.join(self.res.id, TAXONOMY_FN)
+        for subname in os.listdir(self.scaffold_dir):
+            _LOG.debug(f"subname = {subname}")
+        raise NotImplementedError("_lump_children")
+
+    def lump_with_par(self):
+        self._diagnose_state_of_fs()
+        if self._fs_is_partitioned:
+            self._lump_children()
+        par_scaffold, name = os.path.split(self.scaffold_dir)
+        child_of_par = os.listdir(par_scaffold)
+        _LOG.debug(f"child_of_par = {child_of_par}")
+        move_to_misc = False
+        for sdir in child_of_par:
+            if sdir == name:
+                continue
+            if sdir in [INP_TAXONOMY_DIRNAME, MISC_DIRNAME]:
+                continue
+            move_to_misc = True
+            _LOG.debug(f"move_to_misc = True because of  {sdir}")
+            break
+        if self.fragment == "Life":
+            raise NotImplementedError("lump of Life not implemented")
+        par_frag = os.path.split(self.fragment)[0]
+        par_tp = get_taxon_partition(self.res, par_frag)
+        if move_to_misc:
+            self._lump_to_misc(par_tp)
+        else:
+            self._lump_to_inp(par_tp)
+
+    def _lump_to_misc(self, par_tp):
+        if not os.path.isdir(par_tp.tax_dir_misc):
+            os.makedirs(par_tp.tax_dir_misc)
+        _LOG.debug(f"{par_tp.tax_dir_misc} exists")
+        _do_lump_to(self.tax_dir_unpartitioned, par_tp.tax_dir_misc)
+
+    def _lump_to_inp(self, par_tp):
+        if os.path.isdir(par_tp.tax_dir_misc):
+            self._lump_to_misc()
+
+        raise RuntimeError(f"{self.__dict__}")
 
     def _diagnose_state_of_fs(self):
         if os.path.exists(self.tax_fp_misc):

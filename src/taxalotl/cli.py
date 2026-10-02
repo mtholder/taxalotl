@@ -69,7 +69,7 @@ def main_post_parse(args):
         #     analyze_update(cfg, args.resources, [args.taxon])
         # elif
         if args.which == "clean-partition":
-            clean_resources(cfg, "partition", args.resources)
+            clean_resources(cfg, "partition", args.resources, args.taxon)
         elif args.which == "download":
             download_resources(cfg, args.resources)
         elif args.which == "status":
@@ -307,6 +307,7 @@ def main():
         help="remove the results the partition+enforce-new-separator for a resource.",
     )
     clean_p.add_argument("resources", nargs="*", help="IDs of the resources to clean")
+    _add_taxon_arg(clean_p)
     clean_p.set_defaults(which="clean-partition")
 
     # Handle --show-completions differently from the others, because
@@ -393,6 +394,11 @@ def _cmd_completion(arg_list, sel_cmd):
             comp_list = _add_taxon_and_other_completions(
                 taxalotl_config, a, comp_list, acl
             )
+    elif sel_cmd == "clean-partition":
+        acl = [
+            "--taxon",
+        ]
+        comp_list = _add_taxon_and_other_completions(taxalotl_config, a, comp_list, acl)
     elif sel_cmd == "add-mapping":
         arg_comp_list = ["--ott-id", "--external-id"]
         found = False
