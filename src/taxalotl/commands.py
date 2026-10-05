@@ -31,7 +31,7 @@ from .grep import (
 )
 
 # from .cmds.analyze_update import analyze_update_to_resources
-from .util import unlink, VirtCommand, OutFile
+from .util import unlink, VirtCommand, OutFile, remove_subdirs_if_fileless
 import logging
 
 _LOG = logging.getLogger(__name__)
@@ -562,3 +562,6 @@ def clean_resources(taxalotl_config, action, id_list, taxa=None):
         rw = taxalotl_config.get_terminalized_res_by_id(rid, "clean")
         tp = get_taxon_partition(rw, fragment)
         tp.lump_with_par()
+    cleaned_dir = os.path.join(par_dir, taxa)
+    if os.path.isdir(cleaned_dir):
+        remove_subdirs_if_fileless(cleaned_dir)

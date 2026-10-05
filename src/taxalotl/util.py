@@ -15,6 +15,33 @@ def _startswith_y(r):
     return r.lower() == "y"
 
 
+def remove_subdirs_if_fileless(d):
+    _LOG.debug(f"remove_subdirs_if_fileless({d})")
+    sub = os.listdir(d)
+    files = []
+    for s in sub:
+        j = os.path.join(d, s)
+        if os.path.isfile(j):
+            files.append(s)
+    if files:
+        _LOG.debug(f'Not removing directory "{d}" because of files {files}')
+        return
+    fsubidrs = []
+    for s in sub:
+        j = os.path.join(d, s)
+        if os.path.isdir(j):
+            fsubidrs.append(j)
+    for j in fsubidrs:
+        remove_subdirs_if_fileless(j)
+    remaining = os.listdir(d)
+    if remaining:
+        _LOG.debug(
+            f'Not removing directory "{d}" because of remaining sub-entries {remaining}'
+        )
+        return
+    os.rmdir(d)
+
+
 def get_true_false_repsonse(p, true_func=_startswith_y, def_value=False):
     if not INTERACTIVE_MODE:
         _LOG.warning('non-interactive mode. Answering {} to "{}"'.format(def_value, p))
