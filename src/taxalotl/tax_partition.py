@@ -482,8 +482,9 @@ def _append_after_header(src_fp, dst_fp, header):
                 outp.write(line)
 
 
-def _do_lump_to(src_dir, dest_dir):
-    tax_header = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\t|\t\n"
+def _do_lump_to(src_dir, dest_dir, tax_header=None):
+    if tax_header is None:
+        tax_header = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\tflags\t|\t\n"
     for fn_header in [(TAXONOMY_FN, tax_header), (SYNONYMS_FN, None)]:
         fn, header = fn_header
         src_fp = os.path.join(src_dir, fn)
@@ -500,8 +501,9 @@ def _do_lump_to(src_dir, dest_dir):
         if os.path.isfile(src_fp):
             _LOG.debug(f"Removing {src_fp}")
             os.remove(src_fp)
-    _LOG.debug(f"Removing {src_dir}")
-    os.rmdir(src_dir)
+    if os.path.isfile(src_dir):
+        _LOG.debug(f"Removing {src_dir}")
+        os.rmdir(src_dir)
 
 
 # noinspection PyProtectedMember
@@ -571,7 +573,13 @@ class TaxonPartition(PartitionedTaxDirBase, PartitioningLightTaxHolder):
         if not os.path.isdir(par_tp.tax_dir_misc):
             os.makedirs(par_tp.tax_dir_misc)
         _LOG.debug(f"{par_tp.tax_dir_misc} exists")
-        _do_lump_to(self.tax_dir_unpartitioned, par_tp.tax_dir_misc)
+        if self.res.id.startswith("ott"):
+            from .ott_schema import FULL_OTT_HEADER
+
+            header = FULL_OTT_HEADER
+        else:
+            header = None
+        _do_lump_to(self.tax_dir_unpartitioned, par_tp.tax_dir_misc, tax_header=header)
 
     def _lump_to_inp(self, par_tp):
         if os.path.isdir(par_tp.tax_dir_misc):
