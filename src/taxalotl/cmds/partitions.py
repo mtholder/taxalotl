@@ -403,6 +403,7 @@ def do_hard_coded_partition(
         if par_name != new_par_name:
             do_partition(cfg, res, strategy="hard-coded", part_name_to_split=par_name)
 
+    found_new_par_in_misc = False
     if new_par_name is None:
         part_keys = pm.get_daughter_names(part_name_to_split)
         _LOG.debug(f"part_keys = {part_keys}")
@@ -431,6 +432,8 @@ def do_hard_coded_partition(
             matches = grep_name_in_single_res_taxa(res, name_pat)
             line_matches = []
             for fp, line in matches:
+                if "__misc__" in fp:
+                    found_new_par_in_misc = True
                 if new_par_name in fp:
                     line_matches.append(line)
             if len(line_matches) != 1:
@@ -446,8 +449,16 @@ def do_hard_coded_partition(
 
     _LOG.debug(f"fragment = {fragment}")
     if res.has_been_partitioned_for_fragment(fragment):
-        _LOG.info("Partition for fragment {} has already been done.".format(fragment))
-        return
+        if new_par_name is None:
+            _LOG.info(
+                "Partition for fragment {} has already been done.".format(fragment)
+            )
+            return
+        if not new_par_name:
+            _LOG.info(
+                f"Partition for fragment {fragment} needs to be removed, or a more terminal clade for {new_par_name}"
+            )
+            return
     tp = get_taxon_partition(res, fragment)
     if not par_frag:
         tp.external_input_fp = os.path.join(res.partition_source_dir, "taxonomy.tsv")
