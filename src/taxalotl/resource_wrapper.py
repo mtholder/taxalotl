@@ -379,9 +379,9 @@ class ResourceWrapper(FromOTifacts):
     def config(self, c):
         self._config = c
 
-    def get_part_filepaths_by_name(self, basename):
+    def get_part_filepaths_by_name(self, basename, below=None):
         """Returns a list filepaths ending in /basename for this partitioned res"""
-        part_dirs = self.get_partitions_roots()
+        part_dirs = self.get_partitions_roots(below=below)
         rfp_list = []
         for opd in part_dirs:
             rfp = os.path.join(opd, basename)
@@ -389,17 +389,17 @@ class ResourceWrapper(FromOTifacts):
                 rfp_list.append(rfp)
         return rfp_list
 
-    def get_part_roots_filepaths(self):
+    def get_part_roots_filepaths(self, below=None):
         """Returns a list of all of the __roots__.json files partitioned."""
-        return self.get_part_filepaths_by_name(ROOTS_FILENAME)
+        return self.get_part_filepaths_by_name(ROOTS_FILENAME, below=below)
 
-    def get_part_taxa_filepaths(self):
+    def get_part_taxa_filepaths(self, below=None):
         """Returns a list of all of the "taxonomy.tsv" files partitioned."""
-        return self.get_part_filepaths_by_name("taxonomy.tsv")
+        return self.get_part_filepaths_by_name("taxonomy.tsv", below=below)
 
-    def get_part_syn_filepaths(self):
+    def get_part_syn_filepaths(self, below=None):
         """Returns a list of all of the "synonyms.tsv" files partitioned."""
-        return self.get_part_filepaths_by_name("synonyms.tsv")
+        return self.get_part_filepaths_by_name("synonyms.tsv", below=below)
 
     def get_part_clade_names_and_blobs(self):
         by_name = {}
@@ -498,8 +498,8 @@ class ResourceWrapper(FromOTifacts):
     def has_been_partitioned(self):
         return has_any_partition_dirs(self.partitioned_filepath, self.id)
 
-    def get_partitions_roots(self):
-        return get_all_partition_dirs(self.partitioned_filepath, self.id)
+    def get_partitions_roots(self, below=None):
+        return get_all_partition_dirs(self.partitioned_filepath, self.id, below=below)
 
     def remove_normalize_artifacts(self):
         self._remove_taxonomy_dir(self.normalized_filedir)

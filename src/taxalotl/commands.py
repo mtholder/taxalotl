@@ -236,6 +236,7 @@ def add_mapping(taxalotl_config, ott_id, external_id):
 def grep_in_res(
     taxalotl_config,
     res_id_list,
+    taxon_level,
     name_pat=None,
     tax_id_field=None,
     target="both",
@@ -253,13 +254,21 @@ def grep_in_res(
         if name_pat:
             r.extend(
                 grep_name_in_single_res(
-                    rw, name_pat, target=target, outstream=outstream
+                    rw,
+                    name_pat,
+                    target=target,
+                    outstream=outstream,
+                    root_taxon=taxon_level,
                 )
             )
         else:
             r.extend(
                 grep_tax_id_in_single_res(
-                    rw, id_pat, target=target, outstream=outstream
+                    rw,
+                    id_pat,
+                    target=target,
+                    outstream=outstream,
+                    root_taxon=taxon_level,
                 )
             )
     return r

@@ -300,9 +300,19 @@ def has_any_partition_dirs(path_pref, res_id):
     return False
 
 
-def get_all_partition_dirs(path_pref, res_id):
+def get_all_partition_dirs(path_pref, res_id, below=None):
     assert path_pref
-    return list(iter_existing_tax_dirs(path_pref, res_id))
+    fl = list(iter_existing_tax_dirs(path_pref, res_id))
+    if below is None:
+        return fl
+    #
+    filter_str = f"/{below}/"
+    end_str = f"/{below}"
+    rl = []
+    for i in fl:
+        if filter_str in i or i.endswith(end_str):
+            rl.append(i)
+    return rl
 
 
 def find_partition_dirs_for_taxonomy(path_pref, res_id):
@@ -429,7 +439,8 @@ def do_hard_coded_partition(
         mapping = []
         for subn in part_name_to_split:
             name_pat = re.compile(f"^{subn}$")
-            matches = grep_name_in_single_res_taxa(res, name_pat)
+            root_taxon = os.path.split(par_frag)[-1]
+            matches = grep_name_in_single_res_taxa(res, name_pat, root_taxon)
             line_matches = []
             for fp, line in matches:
                 if "__misc__" in fp:

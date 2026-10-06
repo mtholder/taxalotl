@@ -49,7 +49,9 @@ def _do_grep_of_col(fp, name_pat, col_idx, outstream=sys.stdout):
     return ret
 
 
-def grep_name_in_single_res(rw, name_pat, target, outstream=sys.stdout):
+def grep_name_in_single_res(
+    rw, name_pat, target, outstream=sys.stdout, root_taxon=None
+):
     return _generic_grep_in_one_res(
         rw,
         name_pat,
@@ -57,10 +59,13 @@ def grep_name_in_single_res(rw, name_pat, target, outstream=sys.stdout):
         syn_fn=_do_name_grep_synonyms,
         target=target,
         outstream=outstream,
+        root_taxon=root_taxon,
     )
 
 
-def grep_tax_id_in_single_res(rw, tax_id_pat, target, outstream=sys.stdout):
+def grep_tax_id_in_single_res(
+    rw, tax_id_pat, target, outstream=sys.stdout, root_taxon=None
+):
     return _generic_grep_in_one_res(
         rw,
         tax_id_pat,
@@ -68,6 +73,7 @@ def grep_tax_id_in_single_res(rw, tax_id_pat, target, outstream=sys.stdout):
         syn_fn=_do_tax_id_grep_synonyms,
         target=target,
         outstream=outstream,
+        root_taxon=root_taxon,
     )
 
 
@@ -75,26 +81,36 @@ _SEARCH_TAX_SET = frozenset(["both", "taxa"])
 _SEARCH_SYN_SET = frozenset(["both", "synonyms"])
 
 
-def grep_name_in_single_res_taxa(rw, name_pat, outstream=sys.stdout):
-    return grep_name_in_single_res(rw, name_pat, target="taxa", outstream=outstream)
+def grep_name_in_single_res_taxa(rw, name_pat, outstream=sys.stdout, root_taxon=None):
+    return grep_name_in_single_res(
+        rw, name_pat, target="taxa", outstream=outstream, root_taxon=root_taxon
+    )
 
 
-def grep_name_in_single_res_syn(rw, name_pat, outstream=sys.stdout):
-    return grep_name_in_single_res(rw, name_pat, target="synonyms", outstream=outstream)
+def grep_name_in_single_res_syn(rw, name_pat, outstream=sys.stdout, root_taxon=None):
+    return grep_name_in_single_res(
+        rw, name_pat, target="synonyms", outstream=outstream, root_taxon=root_taxon
+    )
 
 
-def grep_tax_id_in_single_res_taxa(rw, tax_id_pat, outstream=sys.stdout):
-    return grep_tax_id_in_single_res(rw, tax_id_pat, target="taxa", outstream=outstream)
-
-
-def grep_tax_id_in_single_res_syn(rw, tax_id_pat, outstream=sys.stdout):
+def grep_tax_id_in_single_res_taxa(
+    rw, tax_id_pat, outstream=sys.stdout, root_taxon=None
+):
     return grep_tax_id_in_single_res(
-        rw, tax_id_pat, target="synonyms", outstream=outstream
+        rw, tax_id_pat, target="taxa", outstream=outstream, root_taxon=root_taxon
+    )
+
+
+def grep_tax_id_in_single_res_syn(
+    rw, tax_id_pat, outstream=sys.stdout, root_taxon=None
+):
+    return grep_tax_id_in_single_res(
+        rw, tax_id_pat, target="synonyms", outstream=outstream, root_taxon=root_taxon
     )
 
 
 def _generic_grep_in_one_res(
-    rw, pat, tax_fn, syn_fn, target="both", outstream=sys.stdout
+    rw, pat, tax_fn, syn_fn, target="both", outstream=sys.stdout, root_taxon=None
 ):
     search_tax = target.lower() in _SEARCH_TAX_SET
     search_syn = target.lower() in _SEARCH_SYN_SET
@@ -104,12 +120,11 @@ def _generic_grep_in_one_res(
     r = []
     if rw.has_been_partitioned:
         if search_tax:
-            tfp = rw.get_part_taxa_filepaths()
-            # raise RuntimeError("\n".join(tfp))
+            tfp = rw.get_part_taxa_filepaths(below=root_taxon)
             for fn in tfp:
                 r.extend(tax_fn(fn, pat, outstream=outstream))
         if search_syn:
-            sfp = rw.get_part_syn_filepaths()
+            sfp = rw.get_part_syn_filepaths(below=root_taxon)
             for fn in sfp:
                 r.extend(syn_fn(fn, pat, outstream=outstream))
         return r

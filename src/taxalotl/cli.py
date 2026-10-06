@@ -117,7 +117,9 @@ def main_post_parse(args):
                 name_arg = None
             else:
                 raise RuntimeError("either name or tax_id_field must be used.")
-            grep_in_res(cfg, args.resources, name_arg, tax_id_arg, args.target)
+            grep_in_res(
+                cfg, args.resources, args.taxon, name_arg, tax_id_arg, args.target
+            )
         elif args.which == "add-mapping":
             if not args.ott_id:
                 raise RuntimeError("ott_id is required.")
