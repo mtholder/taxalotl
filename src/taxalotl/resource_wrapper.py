@@ -31,7 +31,7 @@ from .cmds.partitions import (
     get_inp_taxdir,
     get_misc_inp_taxdir,
 )
-from .tax_partition import TAX_SLICE_CACHE, ROOTS_FILENAME, ACCUM_DES_FILENAME
+from .tax_partition import TAX_SLICE_CACHE, ROOTS_FILENAME
 from .util import unlink, OutFile, OutDir
 from .wikispecies import parse_wikispecies
 from .wikidata import parse_wikidata
@@ -366,6 +366,10 @@ class ResourceWrapper(FromOTifacts):
         self._config = config
 
     @property
+    def base_id_in_src(self):
+        return self.base_id
+
+    @property
     def config(self):
         if self._config is None:
             m = (
@@ -520,7 +524,6 @@ class ResourceWrapper(FromOTifacts):
             ROOTS_FILENAME,
             "about.json",
             "details.json",
-            ACCUM_DES_FILENAME,
         ]
         if self.synonyms_filename:
             f_to_remove.append(self.synonyms_filename)

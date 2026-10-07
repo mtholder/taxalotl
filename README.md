@@ -91,6 +91,7 @@ emitted by the reference-taxonomy repo's version of the code.
     taxalotlcli add-mapping --ott-id=5268475  --external-id ncbi:33090
     taxalotlcli partition --strategy previous ncbi
 
+Manually updated irmng mapping for Metazoa in OTT from 11 to 2
 
 ## Structure
 ### Resources directory

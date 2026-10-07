@@ -26,6 +26,7 @@ from .tax_partition import (
 )
 from .grep import (
     grep_tax_id_in_single_res_syn,
+    grep_tax_id_in_single_res_taxa,
     grep_name_in_single_res,
     grep_tax_id_in_single_res,
 )
@@ -214,7 +215,7 @@ def add_mapping(taxalotl_config, ott_id, external_id):
     ext_rw = taxalotl_config.get_terminalized_res_by_id(res_id, "")
     ott_pat = re.compile(f"^{ott_id}$")
     _LOG.debug(f"Verifying {ott_id} is found and unique in ott")
-    ret = grep_tax_id_in_single_res_tax(ott_rw, ott_pat, outstream=None)
+    ret = grep_tax_id_in_single_res_taxa(ott_rw, ott_pat, outstream=None)
     if len(ret) != 1:
         msg = f"Expecting one hit for OTT ID {ott_id} Found: {ret}"
         raise RuntimeError(msg)
@@ -223,9 +224,7 @@ def add_mapping(taxalotl_config, ott_id, external_id):
     ext_pat = re.compile(f"^{id_in_ext}$")
 
     _LOG.debug(f"Verifying {id_in_ext} is found and unique in {res_id}")
-    ext_ret = grep_tax_id_in_single_res_syn(
-        ext_rw, ext_pat, target="taxa", outstream=None
-    )
+    ext_ret = grep_tax_id_in_single_res_syn(ext_rw, ext_pat, outstream=None)
     if len(ext_ret) != 1:
         msg = f"Expecting one hit for {res_id} ID {id_in_ext} Found: {ext_ret}"
         raise RuntimeError(msg)

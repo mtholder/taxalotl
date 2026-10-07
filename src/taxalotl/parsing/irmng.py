@@ -565,6 +565,10 @@ class IRMNGWrapper(TaxonomyWrapper):
     def normalize(self):
         normalize_irmng(self.unpacked_filepath, self.normalized_filedir, self)
 
+    @property
+    def base_id_in_src(self):
+        return "irmng"
+
 
 """
     

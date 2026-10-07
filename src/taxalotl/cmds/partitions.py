@@ -370,11 +370,18 @@ def do_partition(taxalotl_config, res, strategy, part_name_to_split, par_name=No
     raise NotImplementedError("dynamic partitioning.")
 
 
-def do_partition_from_previous(taxalotl_config, res, part_name_to_split, par_name=None):
+def do_partition_from_previous(
+    taxalotl_config, res, part_name_to_split, par_name=None, new_par_name=None
+):
+    assert (
+        new_par_name is None
+    ), "non-None  new_par_name ({new_par_name}). might work, just not tested..."
     taxalotl_config = res._config
     ott = taxalotl_config.get_terminalized_res_by_id("ott", "")
     part_root_name_blob = ott.get_part_clade_names_and_blobs()
-    base_name = res.base_id
+
+    base_name = res.base_id_in_src
+
     dpm = {}
     for name, blob in part_root_name_blob.items():
         src_dict = blob["src_dict"]
@@ -421,7 +428,6 @@ def do_hard_coded_partition(
         _LOG.debug(f"master_map = {master_map}")
         mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
         _LOG.debug(f"mapping = {mapping}")
-        raise RuntimeError("early")
         if not mapping:
             _LOG.info("No {} sub-mapping for {}".format(res.id, part_name_to_split))
             return

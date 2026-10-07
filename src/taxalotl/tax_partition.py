@@ -21,7 +21,6 @@ MISC_DIRNAME = "__misc__"
 ROOTS_FILENAME = "__roots__.json"
 TAXONOMY_FN = "taxonomy.tsv"
 SYNONYMS_FN = "synonyms.tsv"
-ACCUM_DES_FILENAME = "__accum_des__.json"
 
 _LOG = logging.getLogger(__name__)
 
@@ -40,13 +39,33 @@ def get_roots_for_subset(tax_dir, misc_tax_dir):
     return _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, ROOTS_FILENAME)
 
 
-def get_accum_des_for_subset(tax_dir, misc_tax_dir):
-    return _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, ACCUM_DES_FILENAME)
+def get_accum_des_for_subset(tax_dir):
+    end_inp_dir, res_id_dir = os.path.split(tax_dir)
+    bef_inp_dir, inp_dir = os.path.split(end_inp_dir)
+    assert inp_dir == INP_TAXONOMY_DIRNAME
+    sd = os.listdir(bef_inp_dir)
+    accum_inp_list = []
+    for d in sd:
+        if d == MISC_DIRNAME:
+            continue
+        if d == INP_TAXONOMY_DIRNAME:
+            idir = os.path.join(bef_inp_dir, d)
+        else:
+            nsd = os.path.join(bef_inp_dir, d)
+            idir = os.path.join(nsd, INP_TAXONOMY_DIRNAME)
+        ridir = os.path.join(idir, res_id_dir)
+        if os.path.isdir(ridir):
+            accum_inp_list.append(ridir)
+    return _read_json_and_coerce_to_otttaxon_gen(accum_inp_list, ROOTS_FILENAME)
 
 
 def _read_json_and_coerce_to_otttaxon(tax_dir, misc_tax_dir, fn):
+    return _read_json_and_coerce_to_otttaxon_gen([tax_dir, misc_tax_dir], fn)
+
+
+def _read_json_and_coerce_to_otttaxon_gen(dir_list, fn):
     r = {}
-    for td in [tax_dir, misc_tax_dir]:
+    for td in dir_list:
         rf = os.path.join(td, fn)
         if os.path.exists(rf):
             rd = read_as_json(rf)
@@ -496,7 +515,7 @@ def _do_lump_to(src_dir, dest_dir, tax_header=None):
             else:
                 _LOG.debug(f"Moving {src_fp} to {dst_fp}")
                 os.rename(src_fp, dst_fp)
-    for fn in [ROOTS_FILENAME, ACCUM_DES_FILENAME]:
+    for fn in [ROOTS_FILENAME]:
         src_fp = os.path.join(src_dir, fn)
         if os.path.isfile(src_fp):
             _LOG.debug(f"Removing {src_fp}")
@@ -827,7 +846,7 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
             self.res.partition_parsing_fn(self)
             read_roots = self._read_roots()
             self._roots.update(read_roots)
-            self._des_in_other_slices.update(self.read_acccumulated_des())
+            self._des_in_other_slices.update(self.read_accumulated_des())
             self._read_from_fs = True
             if do_part_if_reading:
                 self._has_moved_taxa = True
@@ -845,8 +864,9 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
     def _read_roots(self):
         return get_roots_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
 
-    def read_acccumulated_des(self):
-        return get_accum_des_for_subset(self.tax_dir_unpartitioned, self.tax_dir_misc)
+    def read_accumulated_des(self):
+        return get_accum_des_for_subset(self.tax_dir_unpartitioned)
+        raise NotImplementedError("unimpl since getting rid of __accum_des__.json")
 
     def _flush(self):
         if self._has_flushed:
@@ -872,7 +892,6 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
             unpart_syn_fp = os.path.join(tfu_par, "synonyms.tsv")
             if unpart_syn_fp:
                 tr.append(unpart_syn_fp)
-            tr.append(os.path.join(self.tax_dir_unpartitioned, ACCUM_DES_FILENAME))
             for f in tr:
                 if os.path.exists(f):
                     try:
@@ -915,10 +934,6 @@ self._subdirname_to_tp_roots = {self._subdirname_to_tp_roots}
         syndest = self.output_synonyms_filepath
         if syndest is not None:
             _write_syn_d_as_tsv(self.syn_header, dh._syn_by_id, syn_id_order, syndest)
-        if dh._des_in_other_slices:
-            write_taxon_json(
-                dh._des_in_other_slices, os.path.join(out_dir, ACCUM_DES_FILENAME)
-            )
         return True
 
 
