@@ -17,6 +17,15 @@ _LOG = logging.getLogger(__name__)
 
 
 def _find_irmng_input_files(source):
+    # New file name in 2026 Oct 6 IRMNG
+    # TODO: should read from meta.xml
+    taxfn = "taxon.txt"
+    proffn = "speciesprofile.txt"
+    taxfp = os.path.join(source, taxfn)
+    proffp = os.path.join(source, proffn)
+    if os.path.isfile(taxfp) and os.path.isfile(proffp):
+        return taxfp, proffp
+
     irmng_file_pat = re.compile(r"IRMNG_DWC.*\.csv")
     irmng_profile_pat = re.compile(r"IRMNG_DWC_SP_PROFILE.*\.csv")
     files = os.listdir(source)
@@ -37,7 +46,160 @@ def _find_irmng_input_files(source):
     )
 
 
+def _read_fields_idx_from_dwc_meta(fp, info_type="taxa"):
+    import xml.etree.ElementTree as ET
+
+    manifest_root = ET.parse(fp).getroot()
+    field2index = {}
+    if info_type == "taxa":
+        for el in manifest_root.findall("{http://rs.tdwg.org/dwc/text/}core"):
+            for sub in el:
+                if sub.tag.endswith("}id"):
+                    field2index["id"] = int(sub.attrib["index"])
+                elif sub.tag.endswith("}field"):
+                    nns = os.path.split(sub.attrib["term"])[-1]
+                    field2index[nns] = int(sub.attrib["index"])
+    else:
+        assert info_type == "speciesprofile"
+        for el in manifest_root.findall("{http://rs.tdwg.org/dwc/text/}extension"):
+            if "SpeciesProfile" not in el.attrib["rowType"]:
+                continue
+            for sub in el:
+                if sub.tag.endswith("}coreid"):
+                    field2index["id"] = int(sub.attrib["index"])
+                elif sub.tag.endswith("}field"):
+                    nns = os.path.split(sub.attrib["term"])[-1]
+                    field2index[nns] = int(sub.attrib["index"])
+    return field2index
+
+
 def read_irmng_file(irmng_file_name):
+    par = os.path.split(irmng_file_name)[0]
+    meta_fp = os.path.join(par, "meta.xml")
+    f2i = _read_fields_idx_from_dwc_meta(meta_fp, info_type="taxa")
+
+    itd = InterimTaxonomyData()
+    rows = 0
+    to_par = itd.to_par
+    to_children = itd.to_children
+    to_rank = itd.to_rank
+    synonyms = itd.synonyms
+    itd.extra_blob = {}
+    to_tsta_nstat_keep = itd.extra_blob
+    itd.syn_id_to_valid = {}
+    syn_id_to_valid = itd.syn_id_to_valid
+
+    id_idx = f2i["taxonID"]
+    name_idx = f2i["scientificName"]
+    auth_idx = f2i["scientificNameAuthorship"]
+    rank_idx = f2i["taxonRank"]
+    tstat_idx = f2i["taxonomicStatus"]
+    nstat_idx = f2i["nomenclaturalStatus"]
+    syn_idx = f2i["acceptedNameUsageID"]
+    par_idx = f2i["parentNameUsageID"]
+    gen_idx = f2i["genus"]
+    fam_idx = f2i["family"]
+    sp_epi_idx = f2i["specificEpithet"]
+
+    id_pref = "urn:lsid:irmng.org:taxname:"
+    id_pref_len = len(id_pref)
+    with open(irmng_file_name, "r", encoding="utf-8") as csvfile:
+        csvreader = csv.reader(
+            csvfile, delimiter="\t"
+        )  # TODO should get delimiter from meta
+        header = next(csvreader)
+
+        for raw_row in csvreader:
+            # noinspection PyCompatibility
+            row = [i for i in raw_row]
+            taxon_id = row[id_idx].strip()
+            assert taxon_id.startswith(
+                id_pref
+            ), f"tax id expected to start with {id_pref} got {taxon_id}"
+            taxon_id = taxon_id[id_pref_len:]
+            long_name = row[name_idx].strip()
+            auth = row[auth_idx].strip()
+            rank = row[rank_idx].strip().lower()
+            tstatus = row[tstat_idx]  # TAXONOMICSTATUS
+            nstatus = row[nstat_idx]  # NOMENCLATURALSTATUS
+            syn_target_id = None
+            if row[syn_idx]:
+                syn_target_id = row[syn_idx].strip()
+                assert syn_target_id.startswith(
+                    id_pref
+                ), f"acceptedNameUsageID expected to start with {id_pref} got {syn_target_id}"
+                syn_target_id = syn_target_id[id_pref_len:]
+
+            parent = row[par_idx].strip()
+            if parent:
+                assert parent.startswith(
+                    id_pref
+                ), f"parentNameUsageID expected to start with {id_pref} got {parent}"
+                parent = parent[id_pref_len:]
+
+            diff_target = (syn_target_id is not None) and (syn_target_id != taxon_id)
+            synonymp = tstatus == "synonym" or diff_target
+            # Calculate taxon name
+            genus = row[gen_idx]
+            if rank == "species":
+                epithet = row[sp_epi_idx]
+                name = "{} {}".format(genus, epithet)
+            elif rank == "genus":
+                name = genus
+            elif rank == "family":
+                family = row[fam_idx]
+                name = family
+            elif auth and long_name.endswith(auth):
+                raise RuntimeError("name ({long_name}) ending with auth ({auth})")
+                name = long_name[-len(auth) - 1 :]
+            else:
+                name = long_name
+            if synonymp:
+                if diff_target:
+                    synstat = nstatus if nstatus else tstatus
+                    itd.register_synonym(syn_target_id, name, synstat, syn_id=taxon_id)
+                    assert taxon_id != syn_target_id
+                    syn_id_to_valid[taxon_id] = syn_target_id
+                else:
+                    _LOG.info(
+                        "Dropping synonym without target: {} '{}'".format(
+                            taxon_id, name
+                        )
+                    )
+                continue
+            # Kludge to get rid of redundancies e.g. Megastoma
+            if tstatus == "":
+                aa_found = False
+                for value in row:
+                    if "awaiting allocation" in value:
+                        aa_found = True
+                        break
+                if aa_found:
+                    _LOG.info(
+                        "Dropping awaiting allocation taxon: {} '{}'".format(
+                            taxon_id, name
+                        )
+                    )
+                    continue
+            if parent == "":
+                itd.root_nodes.add(taxon_id)
+                parent = None
+            else:
+                parent = parent.strip()
+            to_par[taxon_id] = parent
+            itd.register_id_and_name(taxon_id, name)
+            if parent:
+                to_children.setdefault(parent, []).append(taxon_id)
+            to_rank[taxon_id] = rank
+            to_tsta_nstat_keep[taxon_id] = [tstatus, nstatus, False]
+            rows += 1
+            if rows % 250000 == 0:
+                _LOG.info("{} rows {} {}".format(rows, taxon_id, name))
+    _LOG.info("Processed: {} taxa, {} synonyms".format(len(to_par), len(synonyms)))
+    return itd
+
+
+def old_read_irmng_file(irmng_file_name):
     # 0 "TAXONID","SCIENTIFICNAME","SCIENTIFICNAMEAUTHORSHIP","GENUS",
     # 4 "SPECIFICEPITHET","FAMILY","TAXONRANK","TAXONOMICSTATUS",
     # 8 "NOMENCLATURALSTATUS","NAMEACCORDINGTO","ORIGINALNAMEUSAGEID",
@@ -307,7 +469,7 @@ def fix_irmng(itd):
                     roots.add(psi)
                     break
 
-    ids_reg = to_par.keys()
+    ids_reg = list(to_par.keys())
     for irmng_id in ids_reg:
         if not to_tsta_nstat_keep[irmng_id][2]:
             par_id = to_par[irmng_id]
@@ -329,6 +491,13 @@ def fix_irmng(itd):
 
 
 def read_extinct_info(profile_file_name, itd):
+    par = os.path.split(profile_file_name)[0]
+    meta_fp = os.path.join(par, "meta.xml")
+    f2i = _read_fields_idx_from_dwc_meta(meta_fp, info_type="speciesprofile")
+
+    id_idx = f2i["id"]
+    is_extinct_idx = f2i["isExtinct"]
+
     not_extinct = frozenset(
         [
             "1531",  # Sarcopterygii
@@ -348,16 +517,24 @@ def read_extinct_info(profile_file_name, itd):
     )
     to_par = itd.to_par
     d = {}
+
+    id_pref = "urn:lsid:irmng.org:taxname:"
+    id_pref_len = len(id_pref)
+
     with open(profile_file_name, "r", encoding="utf-8") as csvfile:
-        csvreader = csv.reader(csvfile)
+        csvreader = csv.reader(csvfile, delimiter="\t")
         header = next(csvreader)
-        if header[1] != "ISEXTINCT":
-            raise ValueError('ISEXTINCT in header row but found "{}"'.format(header[1]))
         for row in csvreader:
-            taxonid = row[0].strip()
+            taxonid = row[id_idx].strip()
+            assert taxonid.startswith(id_pref)
+            taxonid = taxonid[id_pref_len:]
             if taxonid not in to_par:
                 continue
-            is_extinct = row[1] == "TRUE"
+            try:
+                is_extinct_val = row[is_extinct_idx]
+            except:
+                raise RuntimeError(f"No idx {is_extinct_idx} in {row}")
+            is_extinct = is_extinct_val == "1"
             if taxonid in not_extinct:
                 if not is_extinct:
                     _LOG.info("protected IRMNG ID {} not extinct:".format(taxonid))
