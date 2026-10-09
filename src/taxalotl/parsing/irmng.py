@@ -556,6 +556,37 @@ def normalize_irmng(source, destination, res_wrapper):
     itd.write_to_dir(destination)
 
 
+IRMNG_PARTMAP = {
+    "Annelida": frozenset(["234"]),
+    "Arachnida": frozenset(["1136"]),
+    "Archaea": frozenset(["8"]),
+    "Archaeplastida": frozenset(["7", "3"]),
+    "Arthropoda": frozenset(["235"]),
+    "Bacteria": frozenset(["6"]),
+    "Bryozoa": frozenset(["140"]),
+    "Chloroplastida": frozenset(["238", "11905112", "11918454"]),
+    "Chordata": frozenset(["148"]),
+    "Cnidaria": frozenset(["151"]),
+    "Coleoptera": frozenset(["10279"]),
+    "Ctenophora": frozenset(["109"]),
+    "Diptera": frozenset(["10063"]),
+    "Eukaryota": frozenset(["7", "2", "3", ""]),
+    "Fungi": frozenset(["4"]),
+    "Glaucophyta": frozenset(["164"]),
+    "Hymenoptera": frozenset(["10830"]),
+    "Insecta": frozenset(["1096"]),
+    "Lepidoptera": frozenset(["12144"]),
+    "Malacostraca": frozenset(["1190"]),
+    "Metazoa": frozenset(["2"]),
+    "Mollusca": frozenset(["175"]),
+    "Nematoda": frozenset(["177"]),
+    "Platyhelminthes": frozenset(["116"]),
+    "Porifera": frozenset(["190"]),
+    "Rhodophyta": frozenset(["250"]),
+    "Viruses": frozenset(["10"]),
+}
+
+
 class IRMNGWrapper(TaxonomyWrapper):
     schema = {"irmng dwc"}
 
@@ -568,6 +599,9 @@ class IRMNGWrapper(TaxonomyWrapper):
     @property
     def base_id_in_src(self):
         return "irmng"
+
+    def get_primary_partition_map(self):
+        return IRMNG_PARTMAP
 
 
 """

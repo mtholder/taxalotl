@@ -93,6 +93,7 @@ emitted by the reference-taxonomy repo's version of the code.
 
 Manually updated irmng mapping for Metazoa in OTT from 11 to 2
 
+
 ## Structure
 ### Resources directory
 That dir should hold descriptions of the taxonomies that

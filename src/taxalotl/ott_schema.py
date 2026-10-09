@@ -44,9 +44,10 @@ TAXWIKIDATA_HEADER = "uid\t|\tparent_uid\t|\tname\t|\trank\t|\taut_id\t|\taut_yr
 def _parse_synonyms(tax_part):  # type (TaxonPartition) -> None
     syn_fp = tax_part.input_synonyms_filepath
     tax_part.syn_header = ""
-    if not os.path.exists(syn_fp):
-        return
     _LOG.debug('parsing synonyms from "{}" ...'.format(syn_fp))
+    if not os.path.exists(syn_fp):
+        _LOG.debug(" ... file does not exist")
+        return
     try:
         with io.open(syn_fp, "r", encoding="utf-8") as inp:
             iinp = iter(inp)
