@@ -90,8 +90,18 @@ emitted by the reference-taxonomy repo's version of the code.
     # add chloroplastida as only children of archaeplastida for initial partition
     taxalotlcli add-mapping --ott-id=5268475  --external-id ncbi:33090
     taxalotlcli partition --strategy previous ncbi
+    for src in ott ncbi colxr irmng-20261006 ; do 
+        taxalotlcli partition "{src}" --taxon Chordata --child Vertebrata
+        taxalotlcli partition "{src}" --taxon Vertebrata --child Actinopterygii \
+            --child  Tetrapoda
+        taxalotlcli partition "{src}" --taxon Vertebrata --child Tetrapoda
+        taxalotlcli partition "{src}" --taxon Tetrapoda --child  Mammalia \
+            --child  Aves --child  Amphibia --child Squamata
+    done
 
-Manually updated irmng mapping for Metazoa in OTT from 11 to 2
+Manually updated irmng mapping for Metazoa in OTT from 11 to 2 (but that is no
+longer neeed after a more recent commit provided a hard-coding for the master
+parition step)
 
 
 ## Structure
