@@ -360,8 +360,12 @@ def do_partition(taxalotl_config, res, strategy, part_name_to_split, par_name=No
     :param part_name_to_split must be one of the hard-coded keys in NAME_TO_PARENT_FRAGMENT
     """
     if strategy == "hard-coded":
-        return do_hard_coded_partition(
-            taxalotl_config, res, part_name_to_split, new_par_name=par_name
+        return partition_from_res_maps(
+            taxalotl_config,
+            res,
+            part_name_to_split,
+            new_par_name=par_name,
+            expand_master_maps=False,
         )
     if strategy == "previous":
         return do_partition_from_previous(
@@ -390,7 +394,9 @@ def do_partition_from_previous(
             assert isinstance(nid, list)
             dpm[name] = frozenset(nid)
     res.dynamic_part_map = dpm
-    do_hard_coded_partition(taxalotl_config, res, part_name_to_split)
+    partition_from_res_maps(
+        taxalotl_config, res, part_name_to_split, expand_master_maps=True
+    )
     # TODO - won't work for
     # print(f"part_name_to_split={part_name_to_split}")
     # print(json.dumps(NAME_TO_PARENT_FRAGMENT))
@@ -398,8 +404,8 @@ def do_partition_from_previous(
     # raise NotImplementedError("previous strategy")
 
 
-def do_hard_coded_partition(
-    taxalotl_config, res, part_name_to_split, new_par_name=None
+def partition_from_res_maps(
+    taxalotl_config, res, part_name_to_split, new_par_name=None, expand_master_maps=True
 ):
     """Partition a parent taxon into descendants and garbage (__misc__) dir
 
@@ -422,10 +428,15 @@ def do_hard_coded_partition(
 
     found_new_par_in_misc = False
     if new_par_name is None:
-        part_keys = pm.get_daughter_names(part_name_to_split)
-        _LOG.debug(f"part_keys = {part_keys}")
         master_map = res.get_primary_partition_map()
         _LOG.debug(f"master_map = {master_map}")
+        if (not expand_master_maps) and (part_name_to_split not in master_map):
+            _LOG.debug(
+                f"Not partitioning at the level on {part_name_to_split} when using the hard-coded strategy."
+            )
+            return
+        part_keys = pm.get_daughter_names(part_name_to_split)
+        _LOG.debug(f"part_keys = {part_keys}")
         mapping = [(k, master_map[k]) for k in part_keys if k in master_map]
         _LOG.debug(f"mapping = {mapping}")
         if not mapping:
