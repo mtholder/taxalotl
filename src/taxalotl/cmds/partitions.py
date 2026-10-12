@@ -457,7 +457,7 @@ def partition_from_res_maps(
         for subn in part_name_to_split:
             name_pat = re.compile(f"^{subn}$")
             root_taxon = os.path.split(par_frag)[-1]
-            matches = grep_name_in_single_res_taxa(res, name_pat, root_taxon)
+            matches = grep_name_in_single_res_taxa(res, name_pat, root_taxon=root_taxon)
             line_matches = []
             for fp, line in matches:
                 if "__misc__" in fp:
