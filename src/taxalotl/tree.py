@@ -179,6 +179,7 @@ class TaxonTree(object):
     def node_is_higher_taxon(self, nd):
         if self.node_is_specimen_typed(nd):
             return False
+        return True
 
     def node_is_specimen_typed(self, nd):
         """Return True for taxa at or below species level."""
@@ -256,9 +257,8 @@ class TaxonTree(object):
                 taxon = self.id_to_taxon[uid]
             except:
                 if warn_missing_target:
-                    _LOG.warning(
-                        "could not find target taxon for {}".format(synonym_set)
-                    )
+                    msg = f"could not find target taxon for {synonym_set}"
+                    _LOG.warning(msg)
                 continue
             taxon.synonyms = synonym_set
 

@@ -93,9 +93,10 @@ class Taxon(object):
             self.flags.add(f)
 
     def rank_sorting_number(self):
-        if (self.rank is None) or self.rank.startswith("no rank"):
+        r = self.rank
+        if (r is None) or (r.startswith("no rank")) or (r == "unranked"):
             return None
-        return _RANK_TO_SORTING_NUMBER[self.rank]
+        return _RANK_TO_SORTING_NUMBER[r]
 
     def __str__(self):
         s = "rank={}".format(self.rank) if self.rank else ""

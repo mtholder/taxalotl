@@ -431,7 +431,8 @@ def do_tree_cmd(taxalotl_config, res_id_list, taxon, depth):
     if os.path.exists(misc_dir):
         raise NotImplementedError("tree on already partitioned dir")
     contents = os.listdir(fp)
-    if len(contents) != 1 or "__inputs__" not in contents:
+    ndu_contents = [i for i in contents if not i.startswith("__")]
+    if len(ndu_contents) > 0 or "__inputs__" not in contents:
         raise NotImplementedError(
             "tree on already partitioned dir. currently just supports __inputs__"
         )

@@ -31,6 +31,8 @@ _RANK_TO_SORTING_NUMBER = {
     "subspecies": 20,
     "infraspecies": 15,
     "varietas": 10,
+    "variety": 10,
+    "form": 0,
     "forma": 0,
 }
 MINIMUM_SORTING_NUMBER = _RANK_TO_SORTING_NUMBER["forma"]
