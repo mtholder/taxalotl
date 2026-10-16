@@ -17,10 +17,12 @@ from .parsing.silva import (
 )
 from .resource_wrapper import TaxonomyWrapper
 from .parsing.worms import WormsTaxonomyWrapper
+from .parsing.wikidata_taxonomy_wrapper import WikidataTaxonomyWrapper
 
 BASE_ID_TO_RES_TYPE = {
     "col": CoLTaxonomyWrapper,
     "colxr": CoLXRTaxonomyWrapper,
+    "wikidata": WikidataTaxonomyWrapper,
     "gbif": GBIFWrapper,
     "irmng_raw": IRMNGWrapper,
     "irmng_ot": TaxonomyWrapper,
