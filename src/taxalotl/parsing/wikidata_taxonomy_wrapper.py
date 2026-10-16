@@ -27,6 +27,7 @@ WIKIDATA_PARTMAP = {
     "Haptophyta": frozenset(["500531"]),
     "Hymenoptera": frozenset(["22651"]),
     "Insecta": frozenset(["1390"]),
+    "Life": frozenset(["10876", "10872", "Eukaryota"]),
     "Lepidoptera": frozenset(["28319"]),
     "Malacostraca": frozenset(["182978"]),
     "Metazoa": frozenset(["729"]),
