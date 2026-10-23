@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 import sys
 import os
+import logging
+
+LOGLEVEL = os.environ.get("LOGLEVEL", "WARNING").upper()
+logging.basicConfig(level=LOGLEVEL)
+_LOG = logging.getLogger(__name__)
 
 
 def _do_name_grep_taxonomy(fp, name_pat, outstream=sys.stdout):
@@ -16,10 +21,11 @@ def _do_tax_id_grep_taxonomy(fp, tax_id_pat, outstream=sys.stdout):
 
 
 def _do_tax_id_grep_synonyms(fp, tax_id_pat, outstream=sys.stdout):
-    return _do_grep_of_col(fp, tax_id_pat, 1, outstream=outstream)
+    return _do_grep_of_col(fp, tax_id_pat, 0, outstream=outstream)
 
 
 def _do_grep_of_col(fp, name_pat, col_idx, outstream=sys.stdout):
+    # _LOG.debug(f"_do_grep_of_col({fp}, {name_pat}, {col_idx}...)")
     if not os.path.exists(fp):
         return []
     matches = []
