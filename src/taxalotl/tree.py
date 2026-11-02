@@ -139,35 +139,11 @@ class TaxonTree(object):
                     )
                     nd.best_rank_sort_number += 1
 
-    def _get_highest_child_rank(self, nd):
-        if not nd.children_refs:
-            return None
-        hr = None
-        for c in nd.children_refs:
-            csn = c.rank_sorting_number()
-            if csn is None:
-                csn = self._get_highest_child_rank(c)
-            if csn is None:
-                continue
-            if hr is None or csn + 1 > hr:
-                hr = csn + 1
-        return hr
-
-    def _get_lowest_anc_rank_sorting_number(self, nd):
-        try:
-            par = self.id_to_taxon[nd.par_id]
-        except:
-            return None
-        psn = par.rank_sorting_number()
-        if psn is None:
-            return self._get_lowest_anc_rank_sorting_number(par) - 1
-        return psn
-
     def node_rank_sorting_number_range(self, nd):
         rsn = nd.rank_sorting_number()
         if rsn is not None:
             return rsn, rsn
-        csn = self._get_highest_child_rank(nd)
+        csn = nd._get_highest_child_rank()
         if csn is None:
             csn = MINIMUM_SORTING_NUMBER - 1
         asn = self._get_lowest_anc_rank_sorting_number(nd)
@@ -177,26 +153,11 @@ class TaxonTree(object):
         return asn - 1, csn + 1
 
     def node_is_higher_taxon(self, nd):
-        if self.node_is_specimen_typed(nd):
-            return False
-        return True
+        return not self.node_is_specimen_typed(nd)
 
     def node_is_specimen_typed(self, nd):
         """Return True for taxa at or below species level."""
-        rsn = nd.rank_sorting_number()
-        if rsn is not None:
-            return rsn <= SPECIES_SORTING_NUMBER
-        csn = self._get_highest_child_rank(nd)
-        if csn is None:
-            raise ValueError("no rank or des rank for {}".format(repr(nd)))
-        if csn >= SPECIES_SORTING_NUMBER:
-            return False
-        asn = self._get_lowest_anc_rank_sorting_number(nd)
-        if asn is None:
-            raise ValueError("no rank or anc rank for {}".format(repr(nd)))
-        if asn <= SPECIES_SORTING_NUMBER:
-            return True
-        raise ValueError("Could not narrow rank for {}".format(repr(nd)))
+        return nd.is_specimen_typed(par_tree=self)
 
     def get_taxon(self, uid):
         return self.id_to_taxon.get(uid)

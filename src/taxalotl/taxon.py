@@ -3,7 +3,10 @@
 
 from __future__ import print_function
 
-from .taxonomic_ranks import _RANK_TO_SORTING_NUMBER
+from .taxonomic_ranks import (
+    _RANK_TO_SORTING_NUMBER,
+    SPECIES_SORTING_NUMBER,
+)
 
 
 # end taxonomic ranks
@@ -27,6 +30,47 @@ class Taxon(object):
 
                 line_parser = full_ott_line_parser
             line_parser(self, line)
+
+    def _get_highest_child_rank(self):
+        if not self.children_refs:
+            return None
+        hr = None
+        for c in self.children_refs:
+            csn = c.rank_sorting_number()
+            if csn is None:
+                csn = c._get_highest_child_rank()
+            if csn is None:
+                continue
+            if hr is None or csn + 1 > hr:
+                hr = csn + 1
+        return hr
+
+    def _get_lowest_anc_rank_sorting_number(self, par_tree):
+        try:
+            par = par_tree.id_to_taxon[nd.par_id]
+        except:
+            return None
+        psn = par.rank_sorting_number()
+        if psn is None:
+            return par._get_lowest_anc_rank_sorting_number(par, par_tree) - 1
+        return psn
+
+    def is_specimen_typed(self, par_tree=None):
+        rsn = self.rank_sorting_number()
+        if rsn is not None:
+            return rsn <= SPECIES_SORTING_NUMBER
+        csn = self._get_highest_child_rank()
+        if csn is None:
+            raise ValueError("no rank or des rank for {}".format(repr(self)))
+        if csn >= SPECIES_SORTING_NUMBER:
+            return False
+        if par_tree is not None:
+            asn = self._get_lowest_anc_rank_sorting_number(par_tree)
+            if asn is None:
+                raise ValueError("no rank or anc rank for {}".format(repr(self)))
+            if asn <= SPECIES_SORTING_NUMBER:
+                return True
+        raise ValueError("Could not narrow rank for {}".format(repr(self)))
 
     def formatted_src_dict(self):
         if not self.src_dict:
